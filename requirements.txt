@@ -1,0 +1,6 @@
+Django<1.9
+wheel
+sphinx
+tox
+isort
+flake8

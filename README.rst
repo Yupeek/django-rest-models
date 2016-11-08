@@ -1,0 +1,80 @@
+==================
+django-rest-models
+==================
+
+allow to query an RestAPI (django-rest-framework + dynamic-rest) with same same interface as the django ORM. 
+
+
+.. image:: https://img.shields.io/travis/Yupeek/django-rest-models/master.svg
+    :target: https://travis-ci.org/Yupeek/django-rest-models
+
+.. image:: https://readthedocs.org/projects/django-rest-models/badge/?version=latest
+    :target: http://django-rest-models.readthedocs.org/en/latest/
+
+.. image:: https://img.shields.io/coveralls/Yupeek/django-rest-models/master.svg
+    :target: https://coveralls.io/r/Yupeek/django-rest-models?branch=master
+
+.. image:: https://img.shields.io/pypi/v/django-rest-models.svg
+    :target: https://pypi.python.org/pypi/django-rest-models
+    :alt: Latest PyPI version
+
+.. image:: https://img.shields.io/pypi/dm/django-rest-models.svg
+    :target: https://pypi.python.org/pypi/django-rest-models
+    :alt: Number of PyPI downloads per month
+
+
+
+Installation
+------------
+
+1. Install using pip:
+
+   ``pip install django-rest-models``
+
+2. Alternatively, you can install download or clone this repo and call
+
+    ``pip install -e .``.
+
+exemples
+--------
+
+comming soon !
+
+Documentation
+-------------
+
+The full documentation is at http://django-rest-models.readthedocs.org/en/latest/.
+
+
+Requirements
+------------
+
+- Python 2.7, 3.4, 3.5
+- Django >= 1.8
+
+Contributions and pull requests for other Django and Python versions are welcome.
+
+
+Bugs and requests
+-----------------
+
+If you have found a bug or if you have a request for additional functionality, please use the issue tracker on GitHub.
+
+https://github.com/Yupeek/django-rest-models/issues
+
+
+License
+-------
+
+You can use this under GPLv3.
+
+Author
+------
+
+Original author: `Darius BERNARD <https://github.com/ornoone>`_.
+
+
+Thanks
+------
+
+Thanks to django for this amazing framework.
