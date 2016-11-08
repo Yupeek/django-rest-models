@@ -21,6 +21,11 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os, sys
+sys.path[0:0] = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))]
+
+import rest_models  # noqa
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -58,8 +63,6 @@ author = 'Darius BERNARD'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-#
-import rest_models
 
 # The short X.Y version.
 version = rest_models.__VERSION__
