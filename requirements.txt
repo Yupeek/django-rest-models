@@ -4,3 +4,4 @@ sphinx
 tox
 isort
 flake8
+requests
