@@ -2,7 +2,9 @@
 django-rest-models
 ==================
 
-allow to query an RestAPI (django-rest-framework + dynamic-rest) with same same interface as the django ORM. 
+allow to query an RestAPI (django-rest-framework + dynamic-rest) with same same interface as the django ORM.
+if fact, it work like any other database engin. you add the rest_models engin in an alternate database, the router, and
+add a APIMeta class to your models, and let's go.
 
 
 .. image:: https://img.shields.io/travis/Yupeek/django-rest-models/master.svg
@@ -38,7 +40,39 @@ Installation
 exemples
 --------
 
-comming soon !
+settings.py::
+
+    DATABASES = {
+        'default': {
+            ...
+        },
+        'api': {
+            'ENGINE': 'rest_models.db.backends.base',
+            'NAME': 'https://requestb.in/',
+            'USER': 'userapi',
+            'PASSWORD': 'passwordapi',
+            'AUTH': 'rest_models.db.backends.base.auth.basic',
+        },
+    }
+
+    DATABASE_ROUTERS = [
+        'rest_models.router.RestModelRouter',
+    ]
+
+models.py::
+
+    class MyModel(models.Model):
+        field = models.IntegerField()
+        ...
+
+        class Meta:
+            # basic django meta Stuff
+            verbose_name = 'my model'
+
+        # the only customisation that make this model special
+        class APIMeta:
+            pass
+
 
 Documentation
 -------------

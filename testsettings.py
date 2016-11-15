@@ -8,6 +8,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'db.sq3',
     },
+    'api': {
+        'ENGINE': 'rest_models.db.backends.base',
+        'NAME': 'https://requestb.in/',
+        'USER': 'userapi',
+        'PASSWORD': 'passwordapi',
+        'AUTH': 'rest_models.db.backends.base.auth.basic',
+    },
 }
 
 INSTALLED_APPS = (
@@ -22,6 +29,10 @@ INSTALLED_APPS = (
     # We test this one
     'testapp',
 )
+
+DATABASE_ROUTERS = [
+    'rest_models.router.RestModelRouter',
+]
 
 MIDDLEWARE_CLASSES = DEFAULT_SETTINGS.MIDDLEWARE_CLASSES
 

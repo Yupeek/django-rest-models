@@ -20,3 +20,6 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
     def get_constraints(self, cursor, table_name):
         return []
+
+    def django_table_names(self, only_existing=False, include_views=True):
+        return []
