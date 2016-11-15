@@ -77,7 +77,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'rest_api'
     SchemaEditorClass = DatabaseSchemaEditor
 
-
     def __init__(self, *args, **kwargs):
 
         super(DatabaseWrapper, self).__init__(*args, **kwargs)

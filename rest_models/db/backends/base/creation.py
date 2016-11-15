@@ -2,6 +2,7 @@
 from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
+import re
 
 from django.db.backends.base.creation import BaseDatabaseCreation
 
@@ -32,3 +33,15 @@ class DatabaseCreation(BaseDatabaseCreation):
     sql_indexes_for_model = do_nothing
     sql_create_model = do_nothing
     destroy_test_db = do_nothing
+
+    def _get_test_db_name(self):
+        """
+        Internal implementation - returns the name of the test DB that will be
+        created. Only useful when called from create_test_db() and
+        _create_test_db() and when no external munging is done with the 'NAME'
+        settings.
+        """
+        if self.connection.settings_dict['TEST']['NAME']:
+            return self.connection.settings_dict['TEST']['NAME']
+        name = self.connection.settings_dict['NAME']
+        return re.sub('https?://', 'localapi://', name, count=1)

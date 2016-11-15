@@ -28,6 +28,9 @@ INSTALLED_APPS = (
 
     # We test this one
     'testapp',
+    'testapi',
+    'rest_framework',
+    'dynamic_rest',
 )
 
 DATABASE_ROUTERS = [
@@ -59,4 +62,8 @@ TEMPLATES = [
     },
 ]
 
-ROOT_URLCONF = None
+ROOT_URLCONF = 'testapi.urls'
+
+DEBUG = True
+
+STATIC_URL = '/static/'

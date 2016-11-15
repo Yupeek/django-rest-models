@@ -1,0 +1,89 @@
+[
+  {
+    "pk": 1,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.5,
+      "name": "cr\u00e8me"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.3,
+      "name": "tomate"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.23,
+      "name": "olive"
+    }
+  },
+  {
+    "pk": 4,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.45,
+      "name": "lardon"
+    }
+  },
+  {
+    "pk": 5,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.6,
+      "name": "champignon"
+    }
+  },
+  {
+    "pk": 6,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 1.5,
+      "name": "foie gras"
+    }
+  },
+  {
+    "pk": 1,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": null,
+      "creator": null,
+      "name": "supr\u00e8me",
+      "price": 10.0,
+      "toppings": [1, 2, 3, 4, 5],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": null,
+      "creator": null,
+      "name": "flam",
+      "price": 11.0,
+      "toppings": [1, 4],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": null,
+      "creator": null,
+      "name": "miam d'oie",
+      "price": 15.0,
+      "toppings": [1, 4, 6],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  }
+]

@@ -5,3 +5,5 @@ tox
 isort
 flake8
 requests
+dynamic-rest
+djangorestframework>=3.1.0,<=3.4.0
