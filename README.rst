@@ -47,11 +47,11 @@ settings.py::
             ...
         },
         'api': {
-            'ENGINE': 'rest_models.db.backends.base',
+            'ENGINE': 'rest_models.backend',
             'NAME': 'https://requestb.in/',
             'USER': 'userapi',
             'PASSWORD': 'passwordapi',
-            'AUTH': 'rest_models.db.backends.base.auth.basic',
+            'AUTH': 'rest_models.backend.auth.basic',
         },
     }
 

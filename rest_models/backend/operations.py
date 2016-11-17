@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseOperations(BaseDatabaseOperations):
-    compiler_module = 'rest_models.db.backends.base.compiler'
+    compiler_module = 'rest_models.backend.compiler'
 
     def sql_flush(self, *args, **kwargs):
         return ""

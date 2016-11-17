@@ -4,12 +4,11 @@ from __future__ import unicode_literals, absolute_import, print_function
 import logging
 from importlib import import_module
 
-from django.core.exceptions import ImproperlyConfigured
 from django.apps import apps
-
-from rest_models.db.backends.base.base import DatabaseWrapper
-
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+
+from rest_models.backend.base import DatabaseWrapper
 
 logger = logging.getLogger(__name__)
 

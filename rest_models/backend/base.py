@@ -7,9 +7,9 @@ from importlib import import_module
 import requests
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.base.validation import BaseDatabaseValidation
+from rest_models.backend.connexion import ApiConnexion
 
-from rest_models.db.backends.base.connexion import ApiConnexion
-from rest_models.db.backends.base.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from .client import DatabaseClient
 from .creation import DatabaseCreation
 from .features import DatabaseFeatures
@@ -61,7 +61,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.validation = BaseDatabaseValidation(self)
 
     def get_connection_params(self):
-        authpath = self.settings_dict.get('AUTH', 'rest_models.db.backends.base.auth.basic')
+        authpath = self.settings_dict.get('AUTH', 'rest_models.backend.auth.basic')
         auth = import_class(authpath)(self.settings_dict)
 
         params = {

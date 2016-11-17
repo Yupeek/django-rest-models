@@ -2,22 +2,19 @@
 from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
-from pprint import pprint
 
 import requests
 from django.core.handlers.base import BaseHandler
 from django.core.handlers.wsgi import WSGIRequest
-from django.http.response import HttpResponse
 from django.test.client import RequestFactory
 from requests.adapters import BaseAdapter
 from requests.cookies import extract_cookies_to_jar
 from requests.exceptions import Timeout, ConnectionError
-from django.test import Client
 from requests.models import Response
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
 
-from rest_models.db.backends.base.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
 

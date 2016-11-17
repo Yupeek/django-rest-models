@@ -36,10 +36,7 @@ class SQLCompiler(BaseSQLCompiler):
 
     def execute_sql(self, result_type=MULTI):
         self.setup_query()
-        if self.query.model.__name__ == "ModelA":
-            return 13,
-        elif self.query.model.__name__ == "ModelB":
-            return 1, 13
+
 
     def results_iter(self, results=None):
         """

@@ -4,9 +4,9 @@ from __future__ import unicode_literals, absolute_import, print_function
 import logging
 
 from django.test.testcases import LiveServerTestCase, TestCase
+from rest_models.backend.connexion import ApiConnexion
 
-from rest_models.db.backends.base.connexion import ApiConnexion
-from rest_models.db.backends.base.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
 

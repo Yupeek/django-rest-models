@@ -9,25 +9,25 @@ DATABASES = {
         'NAME': 'db.sq3',
     },
     'api': {
-        'ENGINE': 'rest_models.db.backends.base',
+        'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.db.backends.base.auth.basic',
+        'AUTH': 'rest_models.backend.auth.basic',
     },
     'api2': {
-        'ENGINE': 'rest_models.db.backends.base',
+        'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.db.backends.base.auth.basic',
+        'AUTH': 'rest_models.backend.auth.basic',
     },
     'TEST_api2': {
-        'ENGINE': 'rest_models.db.backends.base',
+        'ENGINE': 'rest_models.backend',
         'NAME': 'http://127.0.0.1:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.db.backends.base.auth.basic',
+        'AUTH': 'rest_models.backend.auth.basic',
     },
 }
 
