@@ -3,6 +3,7 @@ from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
 
+from django.db.utils import ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase
 from rest_models.backend.connexion import ApiConnexion
 
@@ -24,7 +25,7 @@ class TestApiConnexion(LiveServerTestCase):
 
     def test_api_timeout(self):
         self.assertRaisesMessage(FakeDatabaseDbAPI2.OperationalError, 'Read timed out',
-                                 self.client.get, 'wait', timeout=0.5)
+                                 self.client.get, 'wait', timeout=0.2)
 
     def test_api_get(self):
         r = self.client.get("pizza/1/")
@@ -89,8 +90,7 @@ class TestApiConnexion(LiveServerTestCase):
 
     def test_auth_forbiden(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=None)
-        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
-        self.assertEqual(r.status_code, 403)
+        self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
 
     def test_auth_admin(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('admin', 'admin'))
@@ -99,13 +99,11 @@ class TestApiConnexion(LiveServerTestCase):
 
     def test_auth_no_rigth(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'user1'))
-        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
-        self.assertEqual(r.status_code, 403)
+        self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
 
     def test_auth_bad_cred(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'badpasswd'))
-        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
-        self.assertEqual(r.status_code, 403)
+        self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
 
 
 class TestLocalApiHandler(TestCase):
@@ -146,7 +144,7 @@ class TestLocalApiHandler(TestCase):
                              )
         self.assertEqual(r.status_code, 201)
         data = r.json()
-        self.assertEqual(data['pizza']['id'], 4)
+        self.assertGreater(data['pizza']['id'], 3)  # 3 is the id of the fixture
 
     def test_api_put(self):
         rget = self.client.get('pizza/1')
@@ -184,8 +182,8 @@ class TestLocalApiHandler(TestCase):
 
     def test_auth_forbiden(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=None)
-        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
-        self.assertEqual(r.status_code, 403)
+
+        self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
 
     def test_auth_admin(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('admin', 'admin'))
@@ -194,5 +192,4 @@ class TestLocalApiHandler(TestCase):
 
     def test_auth_no_rigth(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'user1'))
-        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
-        self.assertEqual(r.status_code, 403)
+        self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})

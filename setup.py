@@ -29,11 +29,16 @@ if sys.argv[-1] == 'doc':
     os.system('cd docs && make html')
     sys.exit()
 
-with open('README.rst') as readme_file:
+with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme_file:
     readme = readme_file.read()
+
+with open(os.path.join(os.path.dirname(__file__), 'test_requirements.txt')) as requirements_file:
+    tests_require = requirements_file.readlines()
 
 
 def project_test_suite():
+    import django
+    django.setup()
 
     test_suite = unittest.defaultTestLoader.discover('testapp', top_level_dir='.')
     test_suite.addTest(unittest.defaultTestLoader.discover('rest_models', top_level_dir='.'))
@@ -49,12 +54,14 @@ setup(
     author_email='darius@yupeek.com',
     url='https://github.com/Yupeek/django-rest-models',
     test_suite="__main__.project_test_suite",
+    tests_require=tests_require,
+    install_requires=[
+        'requests',
+    ],
     packages=[
         'rest_models',
     ],
     include_package_data=True,
-    install_requires=[
-    ],
     license="GNU GENERAL PUBLIC LICENSE",
     zip_safe=False,
     keywords='django rest models API ORM',

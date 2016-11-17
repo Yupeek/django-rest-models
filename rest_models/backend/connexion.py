@@ -157,8 +157,10 @@ class ApiConnexion(object):
                     self.auth.raise_on_response_forbidden(response)
                 else:
                     if response.status_code == 403:
-                        raise FakeDatabaseDbAPI2.ProgrammingError("Access to database is Forbidden for user %s.\n%s" %
-                                                                  (self.auth, response.text))
+                        raise FakeDatabaseDbAPI2.ProgrammingError(
+                            "Access to database is Forbidden for user %s.\n%s" %
+                            (self.auth[0] if isinstance(self.auth, tuple) else self.auth, response.text)
+                        )
                 return response
         raise FakeDatabaseDbAPI2.OperationalError(
             "cound not connect to server: %s\nIs the API running on %s ? tried %d times" %

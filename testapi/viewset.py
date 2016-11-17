@@ -28,5 +28,5 @@ class AuthorizedPizzaViewSet(DynamicModelViewSet):
 
 
 def wait(request):
-    time.sleep(1)
+    time.sleep(0.5)
     return HttpResponse()
