@@ -28,4 +28,3 @@ class PizzaSerializer(DynamicModelSerializer):
 
     def get_cost(self, obj):
         return obj.toppings.aggregate(cost=Sum('cost'))['cost']
-

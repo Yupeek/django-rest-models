@@ -4,6 +4,7 @@ from __future__ import unicode_literals, absolute_import, print_function
 import logging
 import re
 
+from django.conf import settings
 from django.db.backends.base.creation import BaseDatabaseCreation
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,6 @@ class DatabaseCreation(BaseDatabaseCreation):
     serialize_db_to_string = do_nothing
     sql_destroy_model = do_nothing
     sql_destroy_indexes_for_fields = do_nothing
-    create_test_db = do_nothing
     sql_destroy_indexes_for_model = do_nothing
     sql_indexes_for_field = do_nothing
     sql_table_creation_suffix = do_nothing
@@ -34,6 +34,16 @@ class DatabaseCreation(BaseDatabaseCreation):
     sql_create_model = do_nothing
     destroy_test_db = do_nothing
 
+    def create_test_db(self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
+        """
+        Creates a test database, prompting the user for confirmation if the
+        database already exists. Returns the name of the test database created.
+        """
+        # Don't import django.core.management if it isn't needed.
+        test_database_name = self._get_test_db_name()
+        settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
+        self.connection.settings_dict["NAME"] = test_database_name
+
     def _get_test_db_name(self):
         """
         Internal implementation - returns the name of the test DB that will be
@@ -41,7 +51,8 @@ class DatabaseCreation(BaseDatabaseCreation):
         _create_test_db() and when no external munging is done with the 'NAME'
         settings.
         """
-        if self.connection.settings_dict['TEST']['NAME']:
-            return self.connection.settings_dict['TEST']['NAME']
+        test_alias = 'TEST_'+self.connection.alias
+        if settings.DATABASES.get(test_alias):
+            return settings.DATABASES[test_alias]['NAME']
         name = self.connection.settings_dict['NAME']
-        return re.sub('https?://', 'localapi://', name, count=1)
+        return re.sub('https?://[^/]+/', 'http://localapi/', name, count=1)

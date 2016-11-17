@@ -9,6 +9,7 @@ from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.base.validation import BaseDatabaseValidation
 
 from rest_models.db.backends.base.connexion import ApiConnexion
+from rest_models.db.backends.base.exceptions import FakeDatabaseDbAPI2
 from .client import DatabaseClient
 from .creation import DatabaseCreation
 from .features import DatabaseFeatures
@@ -32,35 +33,6 @@ def import_class(path):
     module = import_module(".".join(lpath[:-1]))
     obj = getattr(module, lpath[-1])
     return obj
-
-
-class FakeDatabaseDbAPI2(object):
-    class DataError(Exception):
-        pass
-
-    class OperationalError(Exception):
-        pass
-
-    class IntegrityError(Exception):
-        pass
-
-    class InternalError(Exception):
-        pass
-
-    class ProgrammingError(Exception):
-        pass
-
-    class NotSupportedError(Exception):
-        pass
-
-    class DatabaseError(Exception):
-        pass
-
-    class InterfaceError(Exception):
-        pass
-
-    class Error(Exception):
-        pass
 
 
 class FakeCursor(object):
@@ -116,7 +88,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def is_usable(self):
         c = self.connection  # type: requests.Session
-        c.head(self.settings_dict['NAME'], timeout=4)
+        try:
+            c.head(self.settings_dict['NAME'], timeout=4)
+            return True
+        except requests.RequestException:
+            return False
 
     def _set_autocommit(self, autocommit):
         pass

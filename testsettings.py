@@ -10,7 +10,21 @@ DATABASES = {
     },
     'api': {
         'ENGINE': 'rest_models.db.backends.base',
-        'NAME': 'https://requestb.in/',
+        'NAME': 'http://localapi/api/v2/',
+        'USER': 'userapi',
+        'PASSWORD': 'passwordapi',
+        'AUTH': 'rest_models.db.backends.base.auth.basic',
+    },
+    'api2': {
+        'ENGINE': 'rest_models.db.backends.base',
+        'NAME': 'http://localapi/api/v2/',
+        'USER': 'userapi',
+        'PASSWORD': 'passwordapi',
+        'AUTH': 'rest_models.db.backends.base.auth.basic',
+    },
+    'TEST_api2': {
+        'ENGINE': 'rest_models.db.backends.base',
+        'NAME': 'http://127.0.0.1:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.db.backends.base.auth.basic',
@@ -37,7 +51,17 @@ DATABASE_ROUTERS = [
     'rest_models.router.RestModelRouter',
 ]
 
-MIDDLEWARE_CLASSES = DEFAULT_SETTINGS.MIDDLEWARE_CLASSES
+
+MIDDLEWARE_CLASSES = (
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+)
 
 TEMPLATES = [
     {
