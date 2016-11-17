@@ -102,6 +102,11 @@ class TestApiConnexion(LiveServerTestCase):
         r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
         self.assertEqual(r.status_code, 403)
 
+    def test_auth_bad_cred(self):
+        c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'badpasswd'))
+        r = c.patch('authpizza/1', json={'pizza': {'price': 0}})
+        self.assertEqual(r.status_code, 403)
+
 
 class TestLocalApiHandler(TestCase):
     fixtures = ['data.json']

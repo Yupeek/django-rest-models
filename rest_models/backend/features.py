@@ -17,11 +17,12 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_timezones = False
     supports_1000_query_parameters = False
     supports_mixed_date_datetime_comparisons = False
-    has_bulk_insert = False
+    has_bulk_insert = True
+    can_return_id_from_insert = True
     can_combine_inserts_with_and_without_auto_increment_pk = False
     supports_foreign_keys = True
     supports_column_check_constraints = False
-    autocommits_when_autocommit_is_off = True
+    autocommits_when_autocommit_is_off = False
     can_introspect_decimal_field = False
     can_introspect_positive_integer_field = True
     can_introspect_small_integer_field = True

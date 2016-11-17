@@ -1,0 +1,20 @@
+[
+  {
+    "fields": {
+      "password": "pbkdf2_sha256$20000$3U0uiU2cp6fi$eXwXzQSdPTQK42JAykzKzTWMzPD38q5w4DMIb9ZtZQA=",
+      "last_login": null,
+      "user_permissions": [],
+      "email": "",
+      "date_joined": "2016-11-17T04:58:13.411",
+      "is_staff": false,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "username": "userapi",
+      "is_active": true,
+      "groups": []
+    },
+    "model": "auth.user",
+    "pk": 4
+  }
+]

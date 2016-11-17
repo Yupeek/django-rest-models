@@ -99,7 +99,7 @@ class ApiConnexion(object):
     def __init__(self, url, auth=None, retry=3):
         self.session = requests.Session()
         self.session.mount('http://localapi', LocalApiAdapter())
-        self.session.auth = auth
+        self.session.auth = self.auth = auth
         self.url = url
         self.retry = retry
 
@@ -144,13 +144,22 @@ class ApiConnexion(object):
 
         while error <= self.retry:
             try:
-                return self.session.request(method, self.url + url, **kwargs)
+                response = self.session.request(method, self.url + url, **kwargs)
             except Timeout as e:
                 error += 1
                 last_exception = e
             except ConnectionError as e:
                 error += 1
                 last_exception = e
+            else:
+
+                if self.auth and hasattr(self.auth, 'raise_on_response_forbidden'):
+                    self.auth.raise_on_response_forbidden(response)
+                else:
+                    if response.status_code == 403:
+                        raise FakeDatabaseDbAPI2.ProgrammingError("Access to database is Forbidden for user %s.\n%s" %
+                                                                  (self.auth, response.text))
+                return response
         raise FakeDatabaseDbAPI2.OperationalError(
             "cound not connect to server: %s\nIs the API running on %s ? tried %d times" %
             (last_exception, self.url, error))
@@ -164,6 +173,16 @@ class ApiConnexion(object):
         :return:
         """
         return self.request("get", url, params=params, json=json, **kwargs)
+
+    def head(self, url, params=None, json=None, **kwargs):
+        """
+        :param str url: the path relative to the current connexion
+        :param dict[str, any]|byes params: (optional) Dictionary or bytes to append as GET parameters
+        :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
+            in the body
+        :return:
+        """
+        return self.request("head", url, params=params, json=json, **kwargs)
 
     def post(self, url, params=None, json=None, **kwargs):
         """

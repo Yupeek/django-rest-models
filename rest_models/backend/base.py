@@ -50,6 +50,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     SchemaEditorClass = DatabaseSchemaEditor
 
     def __init__(self, *args, **kwargs):
+        self.connection = None  # type: ApiConnexion
 
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
@@ -61,7 +62,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.validation = BaseDatabaseValidation(self)
 
     def get_connection_params(self):
-        authpath = self.settings_dict.get('AUTH', 'rest_models.backend.auth.basic')
+        authpath = self.settings_dict.get('AUTH', 'rest_models.backend.auth.BasicAuth')
         auth = import_class(authpath)(self.settings_dict)
 
         params = {
@@ -74,7 +75,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return ApiConnexion(**conn_params)
 
     def init_connection_state(self):
-        pass
+        c = self.connection
+        self.autocommit = True
+        r = c.head('', timeout=4)
+        if r.status_code == 403:
+            raise FakeDatabaseDbAPI2.OperationalError("bad credentials for database %s on %s" %
+                                                      (self.alias, self.settings_dict['NAME']))
 
     def create_cursor(self):
         return FakeCursor()
@@ -89,7 +95,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def is_usable(self):
         c = self.connection  # type: requests.Session
         try:
-            c.head(self.settings_dict['NAME'], timeout=4)
+            c.head('', timeout=4)
             return True
         except requests.RequestException:
             return False

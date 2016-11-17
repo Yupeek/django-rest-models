@@ -13,21 +13,21 @@ DATABASES = {
         'NAME': 'http://localapi/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.backend.auth.basic',
+        'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
     'api2': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.backend.auth.basic',
+        'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://127.0.0.1:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
-        'AUTH': 'rest_models.backend.auth.basic',
+        'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
 }
 

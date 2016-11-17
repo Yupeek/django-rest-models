@@ -5,12 +5,13 @@
 from __future__ import unicode_literals, print_function, absolute_import
 from django.db import models
 
+
 class Menu(models.Model):
     name = models.CharField(max_length=135)
     code = models.CharField(max_length=3, primary_key=True)
 
     class APIMeta:
-        pass
+        db_name = 'api'
 
 
 class Topping(models.Model):
@@ -18,7 +19,7 @@ class Topping(models.Model):
     cost = models.FloatField()
 
     class APIMeta:
-        pass
+        db_name = 'api'
 
 
 class Pizza(models.Model):
@@ -38,4 +39,4 @@ class Pizza(models.Model):
     cost = models.FloatField()
 
     class APIMeta:
-        pass
+        db_name = 'api'

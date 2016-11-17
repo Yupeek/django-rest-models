@@ -1,35 +1,19 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
 
-import logging
+from django.db.utils import (DatabaseError, Error, IntegrityError,
+                             InterfaceError, InternalError, NotSupportedError,
+                             OperationalError, ProgrammingError)  # noqa
 
-logger = logging.getLogger(__name__)
+__ALL__ = ['ProgrammingError', 'OperationalError', 'IntegrityError', 'InternalError',
+           'NotSupportedError', 'DatabaseError', 'InterfaceError', 'Error']
 
 
 class FakeDatabaseDbAPI2(object):
-    class DataError(Exception):
-        pass
-
-    class OperationalError(Exception):
-        pass
-
-    class IntegrityError(Exception):
-        pass
-
-    class InternalError(Exception):
-        pass
-
-    class ProgrammingError(Exception):
-        pass
-
-    class NotSupportedError(Exception):
-        pass
-
-    class DatabaseError(Exception):
-        pass
-
-    class InterfaceError(Exception):
-        pass
-
-    class Error(Exception):
-        pass
+    ProgrammingError = ProgrammingError
+    OperationalError = OperationalError
+    IntegrityError = IntegrityError
+    InternalError = InternalError
+    NotSupportedError = NotSupportedError
+    DatabaseError = DatabaseError
+    InterfaceError = InterfaceError
+    Error = Error
