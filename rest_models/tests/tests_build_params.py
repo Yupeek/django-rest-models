@@ -14,7 +14,9 @@ class CompilerTestCase(TestCase):
         for k, v in res.items():
             if not isinstance(v, list):
                 res[k] = [v]
-        self.assertEqual(SQLCompiler.build_filter_params(queryset.query), res)
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        compiler.setup_query()
+        self.assertEqual(compiler.build_filter_params(queryset.query), res)
 
     def assertQsToInclude(self, queryset, res):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
@@ -22,10 +24,14 @@ class CompilerTestCase(TestCase):
         self.assertEqual(compiler.build_include_exclude_params(queryset.query), res)
 
     def assertBadQs(self, queryset):
-        self.assertRaises(NotSupportedError, SQLCompiler.check_compatibility, queryset.query)
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        # con't setup query since this call check_compatibility
+        self.assertRaises(NotSupportedError, compiler.check_compatibility, queryset.query)
 
     def assertGoodQs(self, queryset):
-        self.assertIsNone(SQLCompiler.check_compatibility(queryset.query))
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        compiler.setup_query()
+        self.assertIsNone(compiler.check_compatibility(queryset.query))
 
     def assertQsToOrder(self, queryset, res):
         # fix the fact the the test test uniq value, but the
@@ -58,10 +64,6 @@ class TestCompilerFilterParams(CompilerTestCase):
         )
 
     def test_anded_exclude(self):
-        self.assertQsToFilter(
-            Pizza.objects.exclude(pk=1, price=11.0),
-            {'filter{-id}': 1, 'filter{-price}': 11.0},
-        )
         self.assertQsToFilter(
             Pizza.objects.exclude(pk=1).exclude(price=11.0),
             {'filter{-id}': 1, 'filter{-price}': 11.0},
@@ -132,6 +134,11 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
         # but it's took complexe to detect
         self.assertBadQs(
             Pizza.objects.filter(~Q(Q(id=1) | ~Q(cost=10.0)))
+        )
+
+    def test_ored_exclude(self):
+        self.assertBadQs(
+            Pizza.objects.exclude(pk=1, price=11.0),
         )
 
 

@@ -34,7 +34,10 @@ class SQLCompiler(BaseSQLCompiler):
         self.klass_info = None
         self.subquery = False
         # check if this query is compatible with the fact the we don't support OR
-        self.check_compatibility(query)
+
+    def setup_query(self):
+        super(SQLCompiler, self).setup_query()
+        self.check_compatibility(self.query)
 
     def compile(self, node, select_format=False):
         return None
