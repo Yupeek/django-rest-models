@@ -6,6 +6,7 @@ allow to query an RestAPI (django-rest-framework + dynamic-rest) with same same 
 if fact, it work like any other database engin. you add the rest_models engin in an alternate database, the router, and
 add a APIMeta class to your models, and let's go.
 
+stable branche
 
 .. image:: https://img.shields.io/travis/Yupeek/django-rest-models/master.svg
     :target: https://travis-ci.org/Yupeek/django-rest-models
@@ -13,9 +14,8 @@ add a APIMeta class to your models, and let's go.
 .. image:: https://readthedocs.org/projects/django-rest-models/badge/?version=latest
     :target: http://django-rest-models.readthedocs.org/en/latest/
 
-.. image:: https://coveralls.io/repos/github/Yupeek/django-rest-models/badge.svg?branch=develop
-    :target: https://coveralls.io/github/Yupeek/django-rest-models?branch=develop
-
+.. image:: https://coveralls.io/repos/github/Yupeek/django-rest-models/badge.svg?branch=master
+    :target: https://coveralls.io/github/Yupeek/django-rest-models?branch=master
 
 .. image:: https://img.shields.io/pypi/v/django-rest-models.svg
     :target: https://pypi.python.org/pypi/django-rest-models
@@ -24,6 +24,14 @@ add a APIMeta class to your models, and let's go.
 .. image:: https://img.shields.io/pypi/dm/django-rest-models.svg
     :target: https://pypi.python.org/pypi/django-rest-models
     :alt: Number of PyPI downloads per month
+
+development status
+
+.. image:: https://img.shields.io/travis/Yupeek/django-rest-models/develop.svg
+    :target: https://travis-ci.org/Yupeek/django-rest-models
+
+.. image:: https://coveralls.io/repos/github/Yupeek/django-rest-models/badge.svg?branch=develop
+    :target: https://coveralls.io/github/Yupeek/django-rest-models?branch=develop
 
 
 
@@ -74,6 +82,54 @@ models.py::
         class APIMeta:
             pass
 
+limitations
+-----------
+
+since this is not a real relational database, all feathure cannot be implemented. some limitations are inherited by
+dynamic-rest filtering system too.
+
+- aggregations : is not implemented on the api endpoint. maybe in future release
+- complexe filtering using OR : all filter passed to dynamic-rest is ANDed together, so no OR is possible
+- negated AND in filtering: a negated AND give a OR, so previous limitation apply
+- negated OR in filtering: since the compitation of nested filter is complexe and error prone, we disable all OR. in
+  fact, only some nested of AND is accepted. only the final value of the Q() object can be negated
+
+    for short, you can't ::
+
+        Pizza.objects.aggregate()
+        Pizza.objects.annotate()
+        Pizza.objects.filter(Q(..) | Q(..))
+        Pizza.objects.exclude(Q(..) & Q(..))
+        Pizza.objects.exclude(Q(..) | Q(..))
+
+    but you can ::
+
+        Pizza.objects.create
+        Pizza.objects.filter(..., ..., ...)
+        Pizza.objects.filter(...).filter(...).exclude(...)
+        Pizza.objects.exclude(..., ...).exclude(...)
+        Pizza.objects.filter(Q(..) & Q(..))
+
+- bulk update
+- bulk delete
+
+support
+-------
+
+this database api support :
+
+- select_related
+- order_by
+- only
+- defer
+- filter
+- exclude
+- delete
+- update
+- create
+- bulk create (with retrive of pk)
+- ManyToManyField
+- ForeignKey
 
 Documentation
 -------------

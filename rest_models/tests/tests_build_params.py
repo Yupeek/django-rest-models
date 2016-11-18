@@ -39,7 +39,6 @@ class CompilerTestCase(TestCase):
 
 
 class TestCompilerFilterParams(CompilerTestCase):
-
     def test_no_filter(self):
         self.assertQsToFilter(
             Pizza.objects.all(),
@@ -100,7 +99,6 @@ class TestCompilerFilterParams(CompilerTestCase):
 
 
 class TestIncompatibleBuildCompiler(CompilerTestCase):
-
     def test_or_filter(self):
         self.assertBadQs(
             Pizza.objects.filter(Q(id=1) | Q(cost=10.0))
@@ -138,7 +136,6 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
 
 
 class TestLookupCompliler(CompilerTestCase):
-
     def test_in(self):
         self.assertQsToFilter(
             Pizza.objects.filter(id__in=[1, 2]),
