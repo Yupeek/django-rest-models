@@ -201,3 +201,9 @@ class TestOrderByCompiler(CompilerTestCase):
             Pizza.objects.all().order_by('menu', 'name'),
             {'sort[]': ['menu', 'name']},
         )
+
+    def test_order_related(self):
+        self.assertQsToOrder(
+            Pizza.objects.all().order_by('menu__name'),
+            {'sort[]': ['menu.name']},
+        )

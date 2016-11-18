@@ -39,23 +39,7 @@ class SQLCompiler(BaseSQLCompiler):
     def compile(self, node, select_format=False):
         return None
 
-    def execute_sql(self, result_type=MULTI):
-        self.setup_query()
-
-    def results_iter(self, results=None):
-        """
-        Returns an iterator over the results from executing this query.
-        """
-        if self.query.model.__name__ == "ModelA":
-            yield (13,)
-            yield (14,)
-            yield (15,)
-        elif self.query.model.__name__ == "ModelB":
-            yield (1, 13)
-            yield (2, 14)
-
-    @classmethod
-    def get_ressource_path(cls, model):
+    def get_ressource_path(self, model):
         """
         return the ressource path relative to the base of the api.
         it use ressource_path and ressource_path, and fallback to the get_ressource_name()
@@ -63,11 +47,9 @@ class SQLCompiler(BaseSQLCompiler):
         :return: the path of the ressource
         :rtype: str
         """
-        return getattr(model.APIMeta, 'ressource_path', None) or cls.get_ressource_name(model, False)
+        return getattr(model.APIMeta, 'ressource_path', None) or self.get_ressource_name(model, False)
 
-
-    @classmethod
-    def get_ressource_name(cls, model, many=False):
+    def get_ressource_name(self, model, many=False):
         """
         return the name of the ressource on the server
         if multi is True, it's the url for the «many» models, so we add a «s».
@@ -83,8 +65,7 @@ class SQLCompiler(BaseSQLCompiler):
         else:
             return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
 
-    @classmethod
-    def check_compatibility(cls, query):
+    def check_compatibility(self, query):
         """
         check if the query is not using some feathure that we don't provide
         :param django.db.models.sql.query.Query query:
@@ -121,8 +102,7 @@ class SQLCompiler(BaseSQLCompiler):
                     "%s in queryset is not supported yet" % reason
                 )
 
-    @classmethod
-    def flaten_where_clause(cls, where_node):
+    def flaten_where_clause(self, where_node):
         """
         take the where_node, and flatend it into a list of (negated, lookup),
         :param WhereNode where_node:
@@ -132,13 +112,12 @@ class SQLCompiler(BaseSQLCompiler):
         res = []
         for child in where_node.children:
             if isinstance(child, WhereNode):
-                res.extend(cls.flaten_where_clause(child))
+                res.extend(self.flaten_where_clause(child))
             else:
                 res.append((where_node.negated, child))
         return res
 
-    @classmethod
-    def build_filter_params(cls, query):
+    def build_filter_params(self, query):
         """
         build the GET parameters to pass for DREST alowing to filter the results.
         :param django.db.models.sql.query.Query query:
@@ -147,7 +126,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         res = {}
 
-        for negated, lookup in cls.flaten_where_clause(query.where):  # type: tuple[bool, Lookup]
+        for negated, lookup in self.flaten_where_clause(query.where):  # type: bool, Lookup
             negated_mark = "-" if negated else ""
             field = lookup.lhs.field.name
             if lookup.lookup_name == 'exact':  # implicite lookup is not needed
@@ -194,13 +173,40 @@ class SQLCompiler(BaseSQLCompiler):
         """
         res = {}
         if query.order_by:
-            res['sort[]'] = query.order_by[:]
+            res['sort[]'] = [lookup.replace('__', '.') for lookup in query.order_by]
         return res
+
+    def build_params(self, query):
+        params = {}
+        params.update(self.build_filter_params(query))
+        params.update(self.build_include_exclude_params(query))
+        params.update(self.build_sort_params(query))
+        return params
+
+    # #####################################
+    #       real query for select
+    # #####################################
+
+    def execute_sql(self, result_type=MULTI):
+        self.setup_query()
+
+    def results_iter(self, results=None):
+        """
+        Returns an iterator over the results from executing this query.
+        """
+        if self.query.model.__name__ == "ModelA":
+            yield (13,)
+            yield (14,)
+            yield (15,)
+        elif self.query.model.__name__ == "ModelB":
+            yield (1, 13)
+            yield (2, 14)
 
 
 class SQLInsertCompiler(SQLCompiler):
     def execute_sql(self, return_id=False):
         query = self.query
+        """:type: django.db.models.sql.subqueries.InsertQuery"""
         opts = query.get_meta()
         can_bulk = not return_id and self.connection.features.has_bulk_insert
 
@@ -210,7 +216,7 @@ class SQLInsertCompiler(SQLCompiler):
                 data = [
                     {
                         f.column: f.get_db_prep_save(
-                            getattr(obj, f.attname) if self.query.raw else f.pre_save(obj, True),
+                            getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
                             connection=self.connection
                         )
                         for f in query.fields
@@ -226,16 +232,19 @@ class SQLInsertCompiler(SQLCompiler):
                     json=json
                 )
                 if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %d %s.\n%s" %
-                                                              (len(query_objs), opts.verbose_name, response.json()['errors']))
+                    raise FakeDatabaseDbAPI2.ProgrammingError(
+                        "error while creating %d %s.\n%s" %
+                        (len(query_objs), opts.verbose_name, response.json()['errors'])
+                    )
                 result_json = response.json()
                 for old, new in zip(query_objs, result_json[self.get_ressource_name(query.model, many=True)]):
                     setattr(old, opts.pk.attname, new[opts.pk.attname])
         else:
+            result = None
             for obj in query_objs:
                 data = {
                     f.column: f.get_db_prep_save(
-                        getattr(obj, f.attname) if self.query.raw else f.pre_save(obj, True),
+                        getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
                         connection=self.connection
                     )
                     for f in query.fields
