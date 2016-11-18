@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.db import connections
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError
 from django.test import TestCase
@@ -15,16 +16,35 @@ class CompilerTestCase(TestCase):
                 res[k] = [v]
         self.assertEqual(SQLCompiler.build_filter_params(queryset.query), res)
 
+    def assertQsToInclude(self, queryset, res):
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        compiler.setup_query()
+        self.assertEqual(compiler.build_include_exclude_params(queryset.query), res)
 
     def assertBadQs(self, queryset):
         self.assertRaises(NotSupportedError, SQLCompiler.check_compatibility, queryset.query)
 
-
     def assertGoodQs(self, queryset):
         self.assertIsNone(SQLCompiler.check_compatibility(queryset.query))
 
+    def assertQsToOrder(self, queryset, res):
+        # fix the fact the the test test uniq value, but the
+        # compiler return a dict of list (even if there is on element each times)
+        for k, v in res.items():
+            if not isinstance(v, list):
+                res[k] = [v]
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        compiler.setup_query()
+        self.assertEqual(compiler.build_sort_params(queryset.query), res)
+
 
 class TestCompilerFilterParams(CompilerTestCase):
+
+    def test_no_filter(self):
+        self.assertQsToFilter(
+            Pizza.objects.all(),
+            {}
+        )
 
     def test_simple_filter(self):
         self.assertQsToFilter(
@@ -137,4 +157,50 @@ class TestLookupCompliler(CompilerTestCase):
         self.assertQsToFilter(
             Pizza.objects.exclude(name__icontains='sup'),
             {'filter{-name.icontains}': 'sup'}
+        )
+
+
+class TestIncludeCompiler(CompilerTestCase):
+    def test_only_get(self):
+        self.assertQsToInclude(
+            Pizza.objects.all().only('id'),
+            {'exclude[]': '*', 'include[]': ['id']},
+        )
+
+    def test_defered_get(self):
+        self.assertQsToInclude(
+            Pizza.objects.all().defer('name'),
+            {'exclude[]': '*', 'include[]': ['id', 'price', 'from_date', 'to_date', 'code', 'cost']},
+        )
+
+    def test_normal_get(self):
+        self.assertQsToInclude(
+            Pizza.objects.all(),
+            {'include[]': '*'},
+        )
+
+
+class TestOrderByCompiler(CompilerTestCase):
+    def test_normal(self):
+        self.assertQsToOrder(
+            Pizza.objects.all(),
+            {},
+        )
+
+    def test_order_asc(self):
+        self.assertQsToOrder(
+            Pizza.objects.all().order_by('name'),
+            {'sort[]': 'name'},
+        )
+
+    def test_order_desc(self):
+        self.assertQsToOrder(
+            Pizza.objects.all().order_by('-name'),
+            {'sort[]': '-name'},
+        )
+
+    def test_order_multi(self):
+        self.assertQsToOrder(
+            Pizza.objects.all().order_by('menu', 'name'),
+            {'sort[]': ['menu', 'name']},
         )

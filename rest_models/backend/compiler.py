@@ -161,10 +161,7 @@ class SQLCompiler(BaseSQLCompiler):
                 res.setdefault(key, []).append(lookup.rhs)
         return res
 
-
-
-    @classmethod
-    def build_include_exclude_params(cls, query):
+    def build_include_exclude_params(self, query):
         """
         build the parameters to eclude/include some data from the serializers
         :param django.db.models.sql.query.Query query:
@@ -172,9 +169,33 @@ class SQLCompiler(BaseSQLCompiler):
         :rtype: dict[unicode, unicode]
         """
 
+        opts = query.get_meta()
+        """:type: django.db.models.options.Options"""
 
+        select_fields = {col.target.name for col, _, _ in self.select}
+        model_fields = {f.name for f in opts.concrete_fields}
+        if select_fields == model_fields:
+            res = {
+                'include[]': '*'
+            }
+        else:
+            res = {
+                'exclude[]': '*',
+                'include[]': [col.field.name for col, _, _ in self.select]
+            }
+        return res
 
-
+    def build_sort_params(self, query):
+        """
+        build the sort param from the order_by provided by the query
+        :param django.db.models.sql.query.Query query:  the query to inspect
+        :return: a dict with or without the sort[]
+        :rtype: dict[str, str]
+        """
+        res = {}
+        if query.order_by:
+            res['sort[]'] = query.order_by[:]
+        return res
 
 
 class SQLInsertCompiler(SQLCompiler):

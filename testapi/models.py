@@ -21,10 +21,16 @@ class Menu(models.Model):
     name = models.CharField(max_length=135)
     code = models.CharField(max_length=3, primary_key=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField()
+
+    def __str__(self):
+        return self.name
 
 
 class Pizza(models.Model):
@@ -38,4 +44,5 @@ class Pizza(models.Model):
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
     menu = models.ForeignKey(Menu, null=True)
 
-
+    def __str__(self):
+        return self.name
