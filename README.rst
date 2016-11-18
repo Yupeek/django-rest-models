@@ -13,8 +13,9 @@ add a APIMeta class to your models, and let's go.
 .. image:: https://readthedocs.org/projects/django-rest-models/badge/?version=latest
     :target: http://django-rest-models.readthedocs.org/en/latest/
 
-.. image:: https://img.shields.io/coveralls/Yupeek/django-rest-models/master.svg
-    :target: https://coveralls.io/r/Yupeek/django-rest-models?branch=master
+.. image:: https://coveralls.io/repos/github/Yupeek/django-rest-models/badge.svg?branch=develop
+    :target: https://coveralls.io/github/Yupeek/django-rest-models?branch=develop
+
 
 .. image:: https://img.shields.io/pypi/v/django-rest-models.svg
     :target: https://pypi.python.org/pypi/django-rest-models

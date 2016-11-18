@@ -193,3 +193,5 @@ class TestLocalApiHandler(TestCase):
     def test_auth_no_rigth(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'user1'))
         self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
+
+

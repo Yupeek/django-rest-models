@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+from unittest.case import skip
 
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
@@ -129,3 +130,16 @@ class TestQueryInsert(TestCase):
         for p in pizzas:
             self.assertIsNone(p.pk)
 
+
+class TestQueryDelete(TestCase):
+    fixtures = ['data.json']
+
+    @skip
+    def test_delete_obj(self):
+
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 3)
+        p = client_models.Pizza(pk=1)
+        p.delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 2)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())

@@ -2,10 +2,12 @@
 from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
-from random import randint
 
 from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
+from django.db.models.sql.where import WhereNode
+from django.db.models.lookups import Lookup
+from django.db.utils import ProgrammingError
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
@@ -15,8 +17,8 @@ logger = logging.getLogger(__name__)
 class SQLCompiler(BaseSQLCompiler):
     def __init__(self, query, connection, using):
         """
-        :param django.db.models.sql.query.Query query:
-        :param rest_models.backend.base.DatabaseWrapper connection:
+        :param django.db.models.sql.query.Query query: the query
+        :param rest_models.backend.base.DatabaseWrapper connection: the connection
         :param str using:
         """
         self.query = query
@@ -31,6 +33,8 @@ class SQLCompiler(BaseSQLCompiler):
         self.annotation_col_map = None
         self.klass_info = None
         self.subquery = False
+        # check if this query is compatible with the fact the we don't support OR
+        self.check_compatibility(query)
 
     def compile(self, node, select_format=False):
         return None
@@ -50,20 +54,20 @@ class SQLCompiler(BaseSQLCompiler):
             yield (1, 13)
             yield (2, 14)
 
-    def get_ressource_path(self, model, many=False):
+    @classmethod
+    def get_ressource_path(cls, model):
         """
         return the ressource path relative to the base of the api.
-        it use ressource_path and ressource_path_plurial, and fallback to the get_ressource_name()
+        it use ressource_path and ressource_path, and fallback to the get_ressource_name()
         :param model: the model
-        :param bool many: True if the ressource is for a many endpoint (list instead of details)
-        :return:
+        :return: the path of the ressource
+        :rtype: str
         """
-        if many:
-            return getattr(model.APIMeta, 'ressource_path_plurial', None) or self.get_ressource_name(model, many)
-        else:
-            return getattr(model.APIMeta, 'ressource_path', None) or self.get_ressource_name(model, many)
+        return getattr(model.APIMeta, 'ressource_path', None) or cls.get_ressource_name(model, False)
 
-    def get_ressource_name(self, model, many=False):
+
+    @classmethod
+    def get_ressource_name(cls, model, many=False):
         """
         return the name of the ressource on the server
         if multi is True, it's the url for the «many» models, so we add a «s».
@@ -71,12 +75,106 @@ class SQLCompiler(BaseSQLCompiler):
         it will guess the value from the model name.(lower)
         :param model: the model
         :param bool many: if true, the url of many results
-        :return:
+        :return: the ressource name (plural if needed)
+        :rtype: str
         """
         if many:
             return getattr(model.APIMeta, 'resource_name_plural', None) or model.__name__.lower() + 's'
         else:
             return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
+
+    @classmethod
+    def check_compatibility(cls, query):
+        """
+        check if the query is not using some feathure that we don't provide
+        :param django.db.models.sql.query.Query query:
+        :return: nothing
+        :raise: NotSupportedError
+        """
+        if query.group_by is not None:
+            raise FakeDatabaseDbAPI2.NotSupportedError('group by is not supported')
+        if query.distinct:
+            raise FakeDatabaseDbAPI2.NotSupportedError('distinct is not supported')
+        # check where
+        where_nodes = [query.where]
+        while where_nodes:
+            where = where_nodes.pop()
+            is_and = where.connector == 'AND'
+            is_negated = where.negated
+            # AND xor negated
+            if len(where.children) == 1 or (is_and and not is_negated):
+                for child in where.children:
+                    if isinstance(child, WhereNode):
+                        where_nodes.append(child)
+                    elif isinstance(child, Lookup):
+                        if not child.rhs_is_direct_value():
+                            raise FakeDatabaseDbAPI2.NotSupportedError(
+                                "nested queryset is not supported"
+                            )
+                    else:
+                        raise ProgrammingError("unknown type for compiling the query : %s."
+                                               " expeced a Lookup or WhereNode" % child.__class__)
+            else:
+
+                reason = "NOT (.. AND ..)" if is_negated else "OR"
+                raise FakeDatabaseDbAPI2.NotSupportedError(
+                    "%s in queryset is not supported yet" % reason
+                )
+
+    @classmethod
+    def flaten_where_clause(cls, where_node):
+        """
+        take the where_node, and flatend it into a list of (negated, lookup),
+        :param WhereNode where_node:
+        :return: the list of lookup, with a bool telling us if it's negated
+        :rtype: list[tuple[bool, Lookup]]
+        """
+        res = []
+        for child in where_node.children:
+            if isinstance(child, WhereNode):
+                res.extend(cls.flaten_where_clause(child))
+            else:
+                res.append((where_node.negated, child))
+        return res
+
+    @classmethod
+    def build_filter_params(cls, query):
+        """
+        build the GET parameters to pass for DREST alowing to filter the results.
+        :param django.db.models.sql.query.Query query:
+        :return: the dict to pass to params for requests to filter results
+        :rtype: dict[unicode, unicode]
+        """
+        res = {}
+
+        for negated, lookup in cls.flaten_where_clause(query.where):  # type: tuple[bool, Lookup]
+            negated_mark = "-" if negated else ""
+            field = lookup.lhs.field.name
+            if lookup.lookup_name == 'exact':  # implicite lookup is not needed
+                fieldname = field
+            else:
+                fieldname = "{field}.{lookup}".format(field=field, lookup=lookup.lookup_name)
+            key = 'filter{%s%s}' % (negated_mark, fieldname)
+            if isinstance(lookup.rhs, (tuple, list)):
+                res.setdefault(key, []).extend(lookup.rhs)
+            else:
+                res.setdefault(key, []).append(lookup.rhs)
+        return res
+
+
+
+    @classmethod
+    def build_include_exclude_params(cls, query):
+        """
+        build the parameters to eclude/include some data from the serializers
+        :param django.db.models.sql.query.Query query:
+        :return: the dict to pass to params for requests to exclude some fields
+        :rtype: dict[unicode, unicode]
+        """
+
+
+
+
 
 
 class SQLInsertCompiler(SQLCompiler):
@@ -103,7 +201,7 @@ class SQLInsertCompiler(SQLCompiler):
                     self.get_ressource_name(query.model, many=True): data
                 }
                 response = self.connection.connection.post(
-                    self.get_ressource_path(self.query.model, many=False),
+                    self.get_ressource_path(self.query.model),
                     json=json
                 )
                 if response.status_code != 201:
@@ -126,7 +224,7 @@ class SQLInsertCompiler(SQLCompiler):
                     self.get_ressource_name(query.model, many=False): data
                 }
                 response = self.connection.connection.post(
-                    self.get_ressource_path(self.query.model, many=False),
+                    self.get_ressource_path(self.query.model),
                     json=json
                 )
                 if response.status_code != 201:
@@ -138,7 +236,12 @@ class SQLInsertCompiler(SQLCompiler):
 
 
 class SQLDeleteCompiler(SQLCompiler):
-    pass
+    def execute_sql(self, result_type=MULTI):
+        q = self.query
+        self.connection.connection.delete(
+            self.get_ressource_name(q.model, many=True),
+            params=self.build_params(q),
+        )
 
 
 class SQLUpdateCompiler(SQLCompiler):
