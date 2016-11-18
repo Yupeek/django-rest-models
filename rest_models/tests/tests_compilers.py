@@ -134,7 +134,7 @@ class TestQueryInsert(TestCase):
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
 
-    @skip
+    @skip("no delete currently")
     def test_delete_obj(self):
 
         n = api_models.Pizza.objects.count()
