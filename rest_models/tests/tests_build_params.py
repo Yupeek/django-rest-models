@@ -3,8 +3,9 @@ from django.db import connections
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError
 from django.test import TestCase
-from rest_models.backend.compiler import SQLCompiler
-from testapp.models import Pizza, Topping
+from rest_models.backend.compiler import SQLCompiler, QueryParser, Alias
+
+from testapp.models import Pizza, Topping, Menu
 
 
 class CompilerTestCase(TestCase):
@@ -16,22 +17,28 @@ class CompilerTestCase(TestCase):
                 res[k] = [v]
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
-        self.assertEqual(compiler.build_filter_params(queryset.query), res)
+        self.assertEqual(compiler.build_filter_params(), res)
 
-    def assertQsToInclude(self, queryset, res):
+    def assertQsToInclude(self, queryset, expected):
+        for k, v in expected.items():
+            if isinstance(v, list):
+                expected[k] = set(expected[k])
+            elif not isinstance(v, set):
+                expected[k] = {v}
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
-        self.assertEqual(compiler.build_include_exclude_params(queryset.query), res)
+
+        self.assertEqual(compiler.build_include_exclude_params(), expected)
 
     def assertBadQs(self, queryset):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         # con't setup query since this call check_compatibility
-        self.assertRaises(NotSupportedError, compiler.check_compatibility, queryset.query)
+        self.assertRaises(NotSupportedError, compiler.check_compatibility)
 
     def assertGoodQs(self, queryset):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
-        self.assertIsNone(compiler.check_compatibility(queryset.query))
+        self.assertIsNone(compiler.check_compatibility())
 
     def assertQsToOrder(self, queryset, res):
         # fix the fact the the test test uniq value, but the
@@ -41,7 +48,167 @@ class CompilerTestCase(TestCase):
                 res[k] = [v]
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
-        self.assertEqual(compiler.build_sort_params(queryset.query), res)
+        self.assertEqual(compiler.build_sort_params(), res)
+
+
+class QueryParesTest(TestCase):
+
+    def assertParsedAliasEqual(self, queryset, res):
+        queryset.query.get_initial_alias()
+        parser = QueryParser(queryset.query)
+        # remove the alias key, which is useless for our testing
+        alieses_dict_testable = {alias[0].__name__: alias for alias in parser.aliases.values()}
+        res_dict_testable = {
+            expected[0]: expected
+            for expected in (
+                (t[0] if isinstance(t[0], str) else t[0].__name__,) + t[1:]
+                for t in res
+            )
+        }
+
+        self.assertEqual(
+            set(alieses_dict_testable.keys()),
+            set(res_dict_testable.keys()),
+            "%s = %s" % (set(alieses_dict_testable.keys()), set(res_dict_testable.keys()))
+        )
+        for model_alias, alias in alieses_dict_testable.items():  # type: str, Alias
+            model_name, parent, field, attrname, m2m = res_dict_testable[model_alias]
+
+            self.assertEqual(model_name, alias.model.__name__)
+            self.assertEqual(field, alias.field and alias.field.name)
+            self.assertEqual(attrname, alias.attrname)
+            self.assertEqual(m2m, alias.m2m is not None)
+
+    def assertPathToColEqual(self, queryset, expected):
+        queryset.query.get_initial_alias()
+        parser = QueryParser(queryset.query)
+        result = {parser.get_rest_path_for_col(col) for col in queryset.query.select}
+        self.assertEqual(set(expected), result)
+
+    def test_aliases_one_table(self):
+        self.assertParsedAliasEqual(
+            Pizza.objects.all(),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().values('id'),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().values('name'),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().only('name'),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().defer('name'),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().filter(id=1),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().filter(name="supreme"),
+            [
+                (Pizza, None, None, None, False)
+            ]
+        )
+
+    def test_aliases_two_tables(self):
+        # alias : 'model,parent,field,attrname,m2m'
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().filter(menu__name='menu'),
+            [
+                (Pizza, None, None, None, False),
+                (Menu, Pizza, 'menu', 'menu', False),
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Pizza.objects.all().values("menu__code"),
+            [
+                (Pizza, None, None, None, False),
+                (Menu, Pizza, 'menu', 'menu', False),
+            ]
+        )
+
+    def test_aliases_three_tables(self):
+        # alias : 'model,parent,field,attrname,m2m'
+        self.assertParsedAliasEqual(
+            Menu.objects.all().filter(pizzas__toppings__name='crème'),
+            [
+                (Menu, None, None, None, False),
+                (Pizza, Menu, 'pizzas', 'pizzas', False),
+                (Topping, Pizza, 'toppings', 'toppings', False),
+                ('Pizza_toppings', Pizza, 'Pizza_toppings+', 'Pizza_toppings+', True),
+
+            ]
+        )
+        self.assertParsedAliasEqual(
+            Menu.objects.all().values("pizzas__toppings__name"),
+            [
+                (Menu, None, None, None, False),
+                (Pizza, Menu, 'pizzas', 'pizzas', False),
+                (Topping, Pizza, 'toppings', 'toppings', False),
+                ('Pizza_toppings', Pizza, 'Pizza_toppings+', 'Pizza_toppings+', True),
+            ]
+        )
+
+    def test_column_resolution_fk(self):
+        self.assertPathToColEqual(
+            Pizza.objects.all().values('name'),
+            {
+                'name'
+            }
+        )
+        self.assertPathToColEqual(
+            Pizza.objects.all().values('name', 'id'),
+            {
+                'name',
+                'id'
+            }
+        )
+        self.assertPathToColEqual(
+            Pizza.objects.all().values('menu__name', 'id'),
+            {
+                'menu.name',
+                'id'
+            }
+        )
+
+    def test_column_resolution_m2m(self):
+        self.assertPathToColEqual(
+            Pizza.objects.all().values('toppings__name'),
+            {
+                'toppings.name'
+            }
+        )
+
+    def test_colum_resolution_m2m_id(self):
+        self.assertPathToColEqual(
+            Pizza.objects.all().values('toppings__id'),
+            {
+                'toppings'
+            }
+        )
+
+
 
 
 class TestCompilerFilterParams(CompilerTestCase):
@@ -171,16 +338,44 @@ class TestIncludeCompiler(CompilerTestCase):
             {'exclude[]': '*', 'include[]': ['id']},
         )
 
+    def test_values_get(self):
+        self.assertQsToInclude(
+            Pizza.objects.all().values('id'),
+            {'exclude[]': '*', 'include[]': ['id']},
+        )
+
     def test_defered_get(self):
         self.assertQsToInclude(
             Pizza.objects.all().defer('name'),
-            {'exclude[]': '*', 'include[]': ['id', 'price', 'from_date', 'to_date', 'code', 'cost']},
+            {'exclude[]': '*',
+             'include[]': ['id', 'price', 'from_date', 'to_date', 'menu', 'cost']},
         )
 
     def test_normal_get(self):
         self.assertQsToInclude(
             Pizza.objects.all(),
-            {'include[]': '*'},
+            {'exclude[]': '*',
+             'include[]': ['id', 'price', 'from_date', 'to_date', 'menu', 'cost', 'name']}
+        )
+
+    def test_include_related(self):
+        self.assertQsToInclude(
+            Pizza.objects.all().values('id', 'menu__name', 'toppings__name'),
+            {'exclude[]': ['*', 'menu.*', 'toppings.*'], 'include[]': ['id', 'menu.name', 'toppings.name']},
+        )
+
+    def test_include_related_resolution(self):
+        self.assertQsToInclude(
+            Menu.objects.all().values('code', 'pizzas__name', 'pizzas__toppings__name'),
+            {'exclude[]': ['*', 'pizzas.*', 'pizzas.toppings.*'],
+             'include[]': ['code', 'pizzas.name', 'pizzas.toppings.name']},
+        )
+
+    def test_include_realted_pk(self):
+        self.assertQsToInclude(
+            Pizza.objects.all().values('id', 'menu__code', 'toppings__id'),
+            {'exclude[]': ['*', 'menu.*'],
+             'include[]': ['id', 'menu.code', 'toppings']},
         )
 
 

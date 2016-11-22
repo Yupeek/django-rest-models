@@ -7,8 +7,8 @@ from django.http.response import HttpResponse
 from dynamic_rest.viewsets import DynamicModelViewSet
 from rest_framework.permissions import DjangoModelPermissions
 
-from testapi.models import Pizza, Topping
-from testapi.serializers import PizzaSerializer, ToppingSerializer
+from testapi.models import Pizza, Topping, Menu
+from testapi.serializers import PizzaSerializer, ToppingSerializer, MenuSerializer
 
 
 class PizzaViewSet(DynamicModelViewSet):
@@ -25,6 +25,11 @@ class AuthorizedPizzaViewSet(DynamicModelViewSet):
     queryset = Pizza.objects.all()
     serializer_class = PizzaSerializer
     permission_classes = [DjangoModelPermissions]
+
+
+class MenuViewSet(DynamicModelViewSet):
+    queryset = Menu.objects.all()
+    serializer_class = MenuSerializer
 
 
 def wait(request):

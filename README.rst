@@ -82,6 +82,20 @@ models.py::
         class APIMeta:
             pass
 
+constraints
+-----------
+
+to allow this database adaptater to work like a relational one, the API targeted must respect some requirments
+
+- dynamic-rest installed and all the serializers must provide it's functionnality (hinerit from DynamicModelSerializer)
+
+each serializers must :
+
+- provide the id fields
+- provide the related field (ManyToMany and ForeignKey on Models) as DynamicRelationField
+- provide the reverse related field (each ForeignKey and manyToMany add a relation on the other models.
+  the serializer from the other model must provide the DynamicRelationField for these relation
+
 limitations
 -----------
 

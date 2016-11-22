@@ -19,7 +19,7 @@ def auto_now_plus_5d():
 
 class Menu(models.Model):
     name = models.CharField(max_length=135)
-    code = models.CharField(max_length=3, primary_key=True)
+    code = models.CharField(max_length=3)
 
     def __str__(self):
         return self.name
@@ -42,7 +42,7 @@ class Pizza(models.Model):
 
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
-    menu = models.ForeignKey(Menu, null=True)
+    menu = models.ForeignKey(Menu, null=True, related_name='pizzas')
 
     def __str__(self):
         return self.name

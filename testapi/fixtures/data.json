@@ -8,7 +8,7 @@
       "date_joined": "2016-11-16T03:14:51.962",
       "email": "admin@localhost",
       "last_name": "",
-      "password": "pbkdf2_sha256$20000$BbipUw4RPY5g$DsXChoo/WzUTdfoRThN7S9Y3FOHy8sphrct9ksmtq8Y=",
+      "password": "21232f297a57a5a743894a0e4a801fc3",
       "last_login": "2016-11-16T03:32:20.463",
       "groups": [],
       "user_permissions": [],
@@ -26,7 +26,7 @@
       "date_joined": "2016-11-16T03:32:32.967",
       "email": "",
       "last_name": "",
-      "password": "pbkdf2_sha256$20000$oxWSDLaZHmL2$Y2Xi//k09azpTfetrpFFWSF3YgQ2l6ljBsC49vmhf64=",
+      "password": "24c9e15e52afc47c225b757e7bee1f9d",
       "last_login": null,
       "groups": [],
       "user_permissions": [],
@@ -44,7 +44,7 @@
       "date_joined": "2016-11-16T03:32:51.656",
       "email": "",
       "last_name": "",
-      "password": "pbkdf2_sha256$20000$rODsddmMd2cX$9zVt4YAlnW834dHPOP7OSswEIY/aqa51L2PgXAfGV6o=",
+      "password": "19d3894f53ce79c3f836f26cf8a3be3b",
       "last_login": null,
       "groups": [],
       "user_permissions": [],
@@ -54,10 +54,11 @@
     "pk": 3
   },
   {
-    "pk": "mne",
+    "pk": 1,
     "model": "testapi.menu",
     "fields": {
-      "name": "main menu"
+      "name": "main menu",
+      "code": "mn"
     }
   },
   {
@@ -112,7 +113,7 @@
     "pk": 1,
     "model": "testapi.pizza",
     "fields": {
-      "menu": "mne",
+      "menu": 1,
       "creator": null,
       "name": "supr\u00e8me",
       "price": 10.0,
