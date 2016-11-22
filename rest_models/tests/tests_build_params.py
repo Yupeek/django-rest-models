@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from django.db import connections
+from django.db.models.aggregates import Sum
 from django.db.models.query_utils import Q
-from django.db.utils import NotSupportedError
+from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
 from rest_models.backend.compiler import SQLCompiler, QueryParser, Alias
 
@@ -30,10 +31,10 @@ class CompilerTestCase(TestCase):
 
         self.assertEqual(compiler.build_include_exclude_params(), expected)
 
-    def assertBadQs(self, queryset):
+    def assertBadQs(self, queryset, expected=NotSupportedError):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         # con't setup query since this call check_compatibility
-        self.assertRaises(NotSupportedError, compiler.check_compatibility)
+        self.assertRaises(expected, compiler.check_compatibility)
 
     def assertGoodQs(self, queryset):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
@@ -283,6 +284,22 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
         )
         self.assertBadQs(
             Pizza.objects.filter(~Q(id=1, cost=10.0))
+        )
+
+    def test_distinct(self):
+        self.assertBadQs(
+            Pizza.objects.all().distinct('name')
+        )
+
+    def test_annotate(self):
+        self.assertBadQs(
+            Pizza.objects.all().annotate(Sum('toppings__cost'))
+        )
+
+    def test_nested_qs(self):
+        self.assertBadQs(
+            Pizza.objects.all().filter(menu__in=Menu.objects.all()),
+            expected=NotSupportedError
         )
 
     def test_ok_filter(self):

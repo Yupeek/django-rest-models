@@ -3,11 +3,10 @@ from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
 from collections import namedtuple
-from typing import List, Tuple
 
 from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.where import WhereNode
+from django.db.models.sql.where import WhereNode, SubqueryConstraint
 from django.db.models.lookups import Lookup
 from django.db.utils import ProgrammingError
 
@@ -47,7 +46,7 @@ class QueryParser(object):
     @property
     def aliases(self):
         """
-        :rtype: typing.Dict[str, Alias]
+        :rtype: dict[str, Alias]
         """
         if self._aliases is None:
             self._aliases = self._build_aliases()
@@ -110,7 +109,7 @@ class QueryParser(object):
     def resolve_path(self, col):
         """
         resolve the path giving the ressource path as a list.
-        :rtype: Tuple[str], str
+        :rtype: tuple[str], str
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
         current = self.aliases[col.alias]  # type: Alias
@@ -225,7 +224,11 @@ class SQLCompiler(BaseSQLCompiler):
                             raise FakeDatabaseDbAPI2.NotSupportedError(
                                 "nested queryset is not supported"
                             )
-                    else:
+                    elif isinstance(child, SubqueryConstraint):
+                        raise FakeDatabaseDbAPI2.NotSupportedError(
+                            "nested queryset is not supported"
+                        )
+                    else:  # pragma: no cover
                         raise ProgrammingError("unknown type for compiling the query : %s."
                                                " expeced a Lookup or WhereNode" % child.__class__)
             else:
@@ -320,13 +323,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         Returns an iterator over the results from executing this query.
         """
-        if self.query.model.__name__ == "ModelA":
-            yield (13,)
-            yield (14,)
-            yield (15,)
-        elif self.query.model.__name__ == "ModelB":
-            yield (1, 13)
-            yield (2, 14)
+        raise NotImplementedError()# pragma: no cover
 
 
 class SQLInsertCompiler(SQLCompiler):
@@ -396,7 +393,7 @@ class SQLDeleteCompiler(SQLCompiler):
         q = self.query
         self.connection.connection.delete(
             self.get_ressource_name(q.model, many=True),
-            params=self.build_params(q),
+            params=self.build_params(),
         )
 
 

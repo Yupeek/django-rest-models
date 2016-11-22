@@ -64,7 +64,7 @@ class LocalApiAdapter(BaseAdapter):
         response._content = http_response.content
         req = prepared_request
 
-        if isinstance(req.url, bytes):
+        if isinstance(req.url, bytes):  # pragma: no cover
             response.url = req.url.decode('utf-8')
         else:
             response.url = req.url
@@ -87,7 +87,7 @@ class LocalApiAdapter(BaseAdapter):
         requests_response = self.http_response_to_response(http_response, request)
         return requests_response
 
-    def close(self):
+    def close(self):  # pragma: no cover
         pass
 
 

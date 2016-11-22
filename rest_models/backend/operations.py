@@ -11,5 +11,5 @@ logger = logging.getLogger(__name__)
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = 'rest_models.backend.compiler'
 
-    def sql_flush(self, *args, **kwargs):
+    def sql_flush(self, *args, **kwargs):  # pragma: no cover
         return ""

@@ -7,7 +7,7 @@ from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.utils import six
 
 
-def do_nothing(*args, **kwargs):
+def do_nothing(*args, **kwargs):  # pragma: no cover
     pass
 
 
