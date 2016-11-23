@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, absolute_import, print_function
 
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from django.views.generic.base import RedirectView
 from dynamic_rest.routers import DynamicRouter
 from django.contrib import admin
