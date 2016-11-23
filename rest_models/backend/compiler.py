@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from collections import namedtuple
 
-from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
-from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.where import WhereNode, SubqueryConstraint
 from django.db.models.lookups import Lookup
+from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
+from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
+from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import ProgrammingError
-
-
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)

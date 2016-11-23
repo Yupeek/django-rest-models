@@ -5,9 +5,9 @@ from django.db.models.expressions import F
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
-from rest_models.backend.compiler import SQLCompiler, QueryParser, Alias
+from rest_models.backend.compiler import Alias, QueryParser, SQLCompiler
 
-from testapp.models import Pizza, Topping, Menu
+from testapp.models import Menu, Pizza, Topping
 
 
 class CompilerTestCase(TestCase):

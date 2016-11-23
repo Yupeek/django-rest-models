@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 from django.db.utils import ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase
 from rest_models.backend.connexion import ApiConnexion
-
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
@@ -193,5 +192,3 @@ class TestLocalApiHandler(TestCase):
     def test_auth_no_rigth(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'user1'))
         self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
-
-

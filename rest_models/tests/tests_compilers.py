@@ -5,8 +5,8 @@ from unittest.case import skip
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
 
-import testapp.models as client_models
 import testapi.models as api_models
+import testapp.models as client_models
 
 
 class TestQueryInsert(TestCase):

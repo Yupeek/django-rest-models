@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from importlib import import_module
@@ -7,7 +7,6 @@ from importlib import import_module
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-
 from rest_models.backend.base import DatabaseWrapper
 
 logger = logging.getLogger(__name__)

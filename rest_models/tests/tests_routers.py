@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
-
 from django.core.management import call_command
-
+from django.test import TestCase
 from rest_models.router import RestModelRouter
 
-
-import testapp.models as client_models
 import testapi.models as api_models
+import testapp.models as client_models
 
 
 class TestMigrationRouter(TestCase):
@@ -73,4 +70,3 @@ class TestApiResolution(TestCase):
         self.assertFalse(router.allow_migrate('api', 'testapi', 'Pizza'))  # legacy model on api db
 
         self.assertIsNone(router.allow_migrate('default', 'testapi'))  # final model not provided : don't know
-

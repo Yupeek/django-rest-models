@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -9,11 +9,10 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.test.client import RequestFactory
 from requests.adapters import BaseAdapter
 from requests.cookies import extract_cookies_to_jar
-from requests.exceptions import Timeout, ConnectionError
+from requests.exceptions import ConnectionError, Timeout
 from requests.models import Response
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
-
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
