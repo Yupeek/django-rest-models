@@ -3,6 +3,8 @@
 
 
 from __future__ import unicode_literals, print_function, absolute_import
+
+from django.conf import settings
 from django.db import models
 
 
@@ -29,7 +31,7 @@ class Pizza(models.Model):
     from_date = models.DateField(auto_now_add=True)
     to_date = models.DateTimeField()
 
-    # creator is removed from hier but is in the serializer
+    # creator is removed from here but is in the serializer
 
     # creator = models.ForeignKey(settings.AUTH_USER_MODEL)
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
@@ -40,3 +42,9 @@ class Pizza(models.Model):
 
     class APIMeta:
         db_name = 'api'
+
+
+class Bookmark(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    pizza = models.ForeignKey(Pizza)
+    date = models.DateTimeField(auto_now_add=True)

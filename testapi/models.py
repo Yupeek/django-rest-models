@@ -21,7 +21,7 @@ class Menu(models.Model):
     name = models.CharField(max_length=135)
     code = models.CharField(max_length=3)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.name
 
 
@@ -29,7 +29,7 @@ class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField()
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.name
 
 
@@ -44,5 +44,5 @@ class Pizza(models.Model):
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
     menu = models.ForeignKey(Menu, null=True, related_name='pizzas')
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.name
