@@ -127,6 +127,17 @@ dynamic-rest filtering system too.
 - bulk update
 - bulk delete
 
+specific comportments
+---------------------
+
+some specific behaviour has been implemented to use the extra functionnality of a Rest API :
+- whene inserting, the resulting model is returned by the API. the inserted model is updated with the resulting values.
+    this imply 2 behavior:
+    * if you provided a default data in the api, this data will be populated into your created instance if it was missed
+    * if the serializer have some cumputed data, its data will always be used as a replacment of the one you gave to your
+      models. (see exemple Pizza.cost which is the sum of the cost of the toppling. after each save, its value will be updated)
+
+
 support
 -------
 

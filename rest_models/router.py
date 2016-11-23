@@ -18,6 +18,7 @@ class RestModelRouter(object):
     def __init__(self):
         self._api_database_name = None
         self.cache = {}
+        self.databases = settings.DATABASES
 
     @staticmethod
     def is_restmodel_database(db_settings):
@@ -27,10 +28,14 @@ class RestModelRouter(object):
     @property
     def api_database_name(self):
         if self._api_database_name is None:
-            for db_name, db_settings in settings.DATABASES.items():
+            for db_name, db_settings in self.databases.items():
+                # prevent the special alias "TEST_" database to be used.
+                # in test environments, the value of the TEST_* is copied into the
+                # original one.
+                if self.is_restmodel_database(db_settings) and not db_name.startswith('TEST_'):
 
-                if self.is_restmodel_database(db_settings):
                     if self._api_database_name is None:
+
                         self._api_database_name = db_name
                     else:
                         raise ImproperlyConfigured("too many Api Database found (%s and %s). you must specify "
@@ -70,7 +75,7 @@ class RestModelRouter(object):
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        if self.is_restmodel_database(settings.DATABASES[db]):
+        if self.is_restmodel_database(self.databases[db]):
             return False  # no migration for our database
 
         if model_name is None:

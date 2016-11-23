@@ -2,7 +2,6 @@
 from __future__ import unicode_literals, absolute_import, print_function
 
 import logging
-from unittest.case import skip
 
 from django.db.utils import ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase

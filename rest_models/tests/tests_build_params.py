@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db import connections
 from django.db.models.aggregates import Sum
+from django.db.models.expressions import F
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
@@ -299,7 +300,11 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
     def test_nested_qs(self):
         self.assertBadQs(
             Pizza.objects.all().filter(menu__in=Menu.objects.all()),
-            expected=NotSupportedError
+        )
+
+    def test_raw_qs(self):
+        self.assertBadQs(
+            Pizza.objects.all().filter(menu_id=F('menu_id')),
         )
 
     def test_ok_filter(self):

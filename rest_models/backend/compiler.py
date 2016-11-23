@@ -361,9 +361,10 @@ class SQLInsertCompiler(SQLCompiler):
                     )
                 result_json = response.json()
                 for old, new in zip(query_objs, result_json[self.get_ressource_name(query.model, many=True)]):
-                    setattr(old, opts.pk.attname, new[opts.pk.attname])
+                    for field in opts.concrete_fields:
+                        setattr(old, field.attname, field.to_python(new[field.name]))
         else:
-            result = None
+            result_json = None
             for obj in query_objs:
                 data = {
                     f.column: f.get_db_prep_save(
@@ -382,10 +383,13 @@ class SQLInsertCompiler(SQLCompiler):
                 )
                 if response.status_code != 201:
                     raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s.\n%s" % (obj, response.text))
-                result = response.json()
+                result_json = response.json()
+                new = result_json[self.get_ressource_name(query.model, many=False)]
+                for field in opts.concrete_fields:
+                    setattr(obj, field.attname, field.to_python(new[field.name]))
 
-            if return_id and result:
-                return result[self.get_ressource_name(query.model, many=False)][opts.pk.column]
+            if return_id and result_json:
+                return result_json[self.get_ressource_name(query.model, many=False)][opts.pk.column]
 
 
 class SQLDeleteCompiler(SQLCompiler):

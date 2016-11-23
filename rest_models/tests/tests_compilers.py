@@ -28,6 +28,22 @@ class TestQueryInsert(TestCase):
         for attr in ('name','price','from_date','to_date'):
             self.assertEqual(getattr(new, attr), getattr(p, attr))
 
+    def test_insert_default_value(self):
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 0)  # there is no fixture
+        p = client_models.Pizza.objects.create(
+            name='savoyarde',
+            price=13.3,
+            from_date=datetime.datetime.today(),
+            # to_date has default value
+        )
+        self.assertEqual(api_models.Pizza.objects.count(), 1)
+        self.assertIsNotNone(p.pk)
+        new = api_models.Pizza.objects.get(pk=p.pk)
+
+        for attr in ('name', 'price', 'from_date', 'to_date'):
+            self.assertEqual(getattr(new, attr), getattr(p, attr))
+
     def test_save_normal(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 0)  # there is no fixture
@@ -65,7 +81,7 @@ class TestQueryInsert(TestCase):
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertIsNotNone(p.pk)
-        self.assertEqual(p.cost, 777)  # value not changed
+        self.assertEqual(p.cost, None)  # value was updated from the api result
 
     def test_bulk_insert(self):
         n = api_models.Pizza.objects.count()
