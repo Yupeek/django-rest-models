@@ -3,9 +3,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-from django.db.utils import ProgrammingError
+from django.db.utils import ProgrammingError, ConnectionHandler
 from django.test.testcases import LiveServerTestCase, TestCase
-from rest_models.backend.connexion import ApiConnexion
+
+from rest_models.backend.base import DatabaseWrapper
+from rest_models.backend.connexion import ApiConnexion, LocalApiAdapter
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
@@ -109,7 +111,7 @@ class TestLocalApiHandler(TestCase):
     fixtures = ['data.json']
 
     def setUp(self):
-        self.live_server_url = 'http://localapi'
+        self.live_server_url = LocalApiAdapter.SPECIAL_URL
         self.client = ApiConnexion(self.live_server_url + "/api/v2/", auth=None)
 
     def test_api_connectionerror(self):
@@ -192,3 +194,67 @@ class TestLocalApiHandler(TestCase):
     def test_auth_no_rigth(self):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'user1'))
         self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
+
+
+class TestDatabaseWrapper(TestCase):
+    fixtures = ['user.json']
+
+    def setUp(self):
+        self.ch = ConnectionHandler({
+            'default': {
+                'ENGINE': 'rest_models.backend',
+                'NAME': 'http://localapi/api/v2/',
+                'USER': 'userapi',
+                'PASSWORD': 'apipassword',
+                'AUTH': 'rest_models.backend.auth.BasicAuth',
+            },
+            'bad': {
+                'ENGINE': 'rest_models.backend',
+                'NAME': 'http://localapi/api/forbidden',
+                'USER': 'userapi',
+                'PASSWORD': 'badpassword',
+                'AUTH': 'rest_models.backend.auth.BasicAuth',
+            },
+            'unavailable': {
+                'ENGINE': 'rest_models.backend',
+                'NAME': 'http://129.0.0.1/',
+                'USER': 'userapi',
+                'PASSWORD': 'osef',
+                'AUTH': 'rest_models.backend.auth.BasicAuth',
+                'OPTIONS': {
+                    'TIMEOUT': 0.1
+                }
+            },
+
+        })
+
+    def test_bad_password(self):
+        wrapper = self.ch['bad']
+        self.assertRaisesMessage(FakeDatabaseDbAPI2.ProgrammingError,
+                                 'Access to database is Forbidden for user userapi', wrapper.ensure_connection)
+
+    def test_good_password(self):
+        wrapper = self.ch['default']
+        wrapper.ensure_connection()
+
+    def test_get_cursor(self):
+        wrapper = self.ch['default']
+        c = wrapper.create_cursor()
+        self.assertIsNotNone(c)
+        c.close()  # do nothing
+
+    def test_cursor_execute_raises(self):
+        c = self.ch['default'].create_cursor()
+        self.assertRaises(NotImplementedError, c.execute, 'select * from table')
+
+    def test_available(self):
+        wrapper = self.ch['default']
+        wrapper.connect()
+        wrapper._start_transaction_under_autocommit()  # does nothing as expeced
+        self.assertTrue(wrapper.is_usable())
+
+    def test_unavailable(self):
+        wrapper = self.ch['unavailable']
+        wrapper.init_connection_state = lambda: None  # this method will check connectivity at connect time, we skip it
+        wrapper.connect()
+        self.assertFalse(wrapper.is_usable())

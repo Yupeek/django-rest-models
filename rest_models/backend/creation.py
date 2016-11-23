@@ -7,6 +7,8 @@ import re
 from django.conf import settings
 from django.db.backends.base.creation import BaseDatabaseCreation
 
+from rest_models.backend.connexion import LocalApiAdapter
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,9 +42,11 @@ class DatabaseCreation(BaseDatabaseCreation):
         database already exists. Returns the name of the test database created.
         """
         # Don't import django.core.management if it isn't needed.
-        test_database_name = self._get_test_db_name()
-        settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
-        self.connection.settings_dict["NAME"] = test_database_name
+        if not self.connection.alias.startswith('TEST_'):
+            test_database_name = self._get_test_db_name()
+            settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
+            self.connection.settings_dict["NAME"] = test_database_name
+        return self.connection.settings_dict["NAME"]
 
     def _get_test_db_name(self):
         """
@@ -55,4 +59,4 @@ class DatabaseCreation(BaseDatabaseCreation):
         if settings.DATABASES.get(test_alias):
             return settings.DATABASES[test_alias]['NAME']
         name = self.connection.settings_dict['NAME']
-        return re.sub('https?://[^/]+/', 'http://localapi/', name, count=1)
+        return re.sub('https?://[^/]+/', LocalApiAdapter.SPECIAL_URL + "/", name, count=1)

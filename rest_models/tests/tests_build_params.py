@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import copy
+
 from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
@@ -8,6 +10,18 @@ from django.test import TestCase
 from rest_models.backend.compiler import Alias, QueryParser, SQLCompiler
 
 from testapp.models import Menu, Pizza, Topping
+
+
+def dict_of_set(expected):
+    res = {}
+    for k, v in expected.items():
+        if isinstance(v, list):
+            res[k] = set(v)
+        elif not isinstance(v, set):
+            res[k] = {v}
+        else:
+            res[k] = v
+    return res
 
 
 class CompilerTestCase(TestCase):
@@ -51,6 +65,14 @@ class CompilerTestCase(TestCase):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
         self.assertEqual(compiler.build_sort_params(), res)
+
+    def assertQsParams(self, queryset, expected):
+        # fix the fact the the test test uniq value, but the
+        # compiler return a dict of list (even if there is on element each times)
+        compiler = SQLCompiler(queryset.query, connections['api'], 'api')
+        compiler.setup_query()
+
+        self.assertEqual(dict_of_set(compiler.build_params()), dict_of_set(expected))
 
 
 class QueryParesTest(TestCase):
@@ -211,8 +233,6 @@ class QueryParesTest(TestCase):
         )
 
 
-
-
 class TestCompilerFilterParams(CompilerTestCase):
     def test_no_filter(self):
         self.assertQsToFilter(
@@ -224,6 +244,22 @@ class TestCompilerFilterParams(CompilerTestCase):
         self.assertQsToFilter(
             Pizza.objects.filter(pk=1),
             {'filter{id}': 1}
+        )
+
+    def test_models_value(self):
+        self.assertQsToFilter(
+            Pizza.objects.all().filter(
+                menu=Menu(pk=1)
+            ),
+            {'filter{menu}': 1}
+        )
+
+    def test_models_value_exclude(self):
+        self.assertQsToFilter(
+            Pizza.objects.all().exclude(
+                menu=Menu(pk=1)
+            ),
+            {'filter{-menu}': 1}
         )
 
     def test_simple_exclude(self):
@@ -266,6 +302,24 @@ class TestCompilerFilterParams(CompilerTestCase):
         self.assertQsToFilter(
             Pizza.objects.filter(Q(id=3) & Q(price=15.0)),
             {'filter{id}': 3, 'filter{price}': 15.0},
+        )
+
+    def test_related_filter(self):
+        self.assertQsToFilter(
+            Pizza.objects.filter(menu__name='chien'),
+            {'filter{menu.name}': 'chien'}
+        )
+
+    def test_related_filter_3_models(self):
+        self.assertQsToFilter(
+            Menu.objects.filter(pizzas__toppings__cost__gt=2),
+            {'filter{pizzas.toppings.cost.gt}': 2}
+        )
+
+    def test_related_filter_id_shortcut(self):
+        self.assertQsToFilter(
+            Pizza.objects.filter(menu__id=1),
+            {'filter{menu}': 1}
         )
 
 
@@ -430,4 +484,23 @@ class TestOrderByCompiler(CompilerTestCase):
         self.assertQsToOrder(
             Pizza.objects.all().order_by('menu__name'),
             {'sort[]': ['menu.name']},
+        )
+
+
+class TestFullCompiler(CompilerTestCase):
+    def test_build_params(self):
+        self.assertQsParams(
+            Pizza.objects.all().filter(
+                toppings__name__in=['chien', 'chat']
+            ).exclude(
+                menu=Menu(pk=1)
+            ).order_by('menu__code', 'cost').values('menu__code', 'toppings__name', 'cost'),
+            {
+                'sort[]': ['cost', 'menu.code'],
+                'exclude[]': ['*', 'menu.*', 'toppings.*'],
+                'include[]': ['menu.code', 'toppings.name','cost'],
+
+                'filter{toppings.name.in}': ['chien', 'chat'],
+                'filter{-menu}': 1,
+            }
         )

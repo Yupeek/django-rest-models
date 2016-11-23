@@ -74,13 +74,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def get_new_connection(self, conn_params):
         return ApiConnexion(**conn_params)
 
+    @property
+    def timeout(self):
+        return self.settings_dict['OPTIONS'].get('TIMEOUT', 4)
+
     def init_connection_state(self):
         c = self.connection
         self.autocommit = True
-        r = c.head('', timeout=4)
-        if r.status_code == 403:
-            raise FakeDatabaseDbAPI2.OperationalError("bad credentials for database %s on %s" %
-                                                      (self.alias, self.settings_dict['NAME']))
+        c.head('', timeout=self.timeout)  # it will raise an exceptions if 403
 
     def create_cursor(self):
         return FakeCursor()
@@ -93,11 +94,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         pass
 
     def is_usable(self):
-        c = self.connection  # type: requests.Session
+        c = self.connection
         try:
-            c.head('', timeout=4)
+            c.head('', timeout=self.timeout)
             return True
-        except requests.RequestException:
+        except FakeDatabaseDbAPI2.OperationalError:
             return False
 
     def _set_autocommit(self, autocommit):

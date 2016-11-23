@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 class LocalApiAdapter(BaseAdapter):
 
+    SPECIAL_URL = "http://localapi"
+
     def __init__(self):
         self.request_factory = RequestFactory()
         super(LocalApiAdapter, self).__init__()
@@ -97,7 +99,7 @@ class ApiConnexion(object):
     """
     def __init__(self, url, auth=None, retry=3):
         self.session = requests.Session()
-        self.session.mount('http://localapi', LocalApiAdapter())
+        self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
         self.session.auth = self.auth = auth
         self.url = url
         self.retry = retry

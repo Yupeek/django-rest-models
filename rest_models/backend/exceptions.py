@@ -2,7 +2,7 @@
 
 from django.db.utils import (DatabaseError, Error, IntegrityError,  # noqa
                              InterfaceError, InternalError, NotSupportedError,
-                             OperationalError, ProgrammingError)
+                             OperationalError, ProgrammingError, DataError)
 
 __ALL__ = ['ProgrammingError', 'OperationalError', 'IntegrityError', 'InternalError',
            'NotSupportedError', 'DatabaseError', 'InterfaceError', 'Error']
@@ -17,3 +17,4 @@ class FakeDatabaseDbAPI2(object):
     DatabaseError = DatabaseError
     InterfaceError = InterfaceError
     Error = Error
+    DataError = DataError

@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from collections import namedtuple
 
-from django.db.models.lookups import Lookup
+from django.db.models.lookups import Lookup, Exact, IsNull
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
@@ -22,6 +22,22 @@ Alias = namedtuple('Alias', 'model,parent,field,attrname,m2m')
 :param m2m: bool that tell us if this is a many2many table.
 """
 
+
+def extract_exact_pk_value(where):
+    """
+    check if the where node given represent a exclude(val=Model) node, which seem
+    more complicated, but can be passed as is to the api
+    :param django.db.models.sql.where.WhereNode where: the where node
+    :return: the real is exact
+    """
+    if len(where.children) == 2:
+        exact, isnull = where.children
+
+        if (
+            isinstance(exact, Exact) and isinstance(isnull, IsNull) and
+            exact.lhs.target == isnull.lhs.target):
+            return exact
+    return None
 
 
 class QueryParser(object):
@@ -213,7 +229,12 @@ class SQLCompiler(BaseSQLCompiler):
             is_and = where.connector == 'AND'
             is_negated = where.negated
             # AND xor negated
-            if len(where.children) == 1 or (is_and and not is_negated):
+            is_simple_lookup = len(where.children) == 1
+
+            exact_pk_value = extract_exact_pk_value(where)
+            if exact_pk_value is not None:
+                pass
+            elif is_simple_lookup or (is_and and not is_negated):
                 for child in where.children:
                     if isinstance(child, WhereNode):
                         where_nodes.append(child)
@@ -245,8 +266,13 @@ class SQLCompiler(BaseSQLCompiler):
         """
         res = []
         for child in where_node.children:
+
             if isinstance(child, WhereNode):
-                res.extend(self.flaten_where_clause(child))
+                exact_pk_value = extract_exact_pk_value(child)
+                if exact_pk_value is not None:
+                    res.append((child.negated, exact_pk_value))
+                else:
+                    res.extend(self.flaten_where_clause(child))
             else:
                 res.append((where_node.negated, child))
         return res
@@ -262,7 +288,7 @@ class SQLCompiler(BaseSQLCompiler):
         query = self.query
         for negated, lookup in self.flaten_where_clause(query.where):  # type: bool, Lookup
             negated_mark = "-" if negated else ""
-            field = lookup.lhs.field.name
+            field = self.query_parser.get_rest_path_for_col(lookup.lhs)
             if lookup.lookup_name == 'exact':  # implicite lookup is not needed
                 fieldname = field
             else:
@@ -321,10 +347,11 @@ class SQLCompiler(BaseSQLCompiler):
         """
         Returns an iterator over the results from executing this query.
         """
-        raise NotImplementedError()# pragma: no cover
+        raise
 
 
 class SQLInsertCompiler(SQLCompiler):
+
     def execute_sql(self, return_id=False):
         query = self.query
         """:type: django.db.models.sql.subqueries.InsertQuery"""
