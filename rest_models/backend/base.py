@@ -4,7 +4,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from importlib import import_module
 
-import requests
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.base.validation import BaseDatabaseValidation
 from rest_models.backend.connexion import ApiConnexion

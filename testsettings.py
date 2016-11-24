@@ -11,8 +11,8 @@ DATABASES = {
     'api': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v2/',
-        'USER': 'userapi',
-        'PASSWORD': 'passwordapi',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
     'api2': {

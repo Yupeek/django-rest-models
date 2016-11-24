@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-import copy
 
 from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
 from django.db.models.query_utils import Q
-from django.db.utils import NotSupportedError, ProgrammingError
+from django.db.utils import NotSupportedError
 from django.test import TestCase
-from rest_models.backend.compiler import Alias, QueryParser, SQLCompiler
+from rest_models.backend.compiler import QueryParser, SQLCompiler
 
 from testapp.models import Menu, Pizza, Topping
 
@@ -75,7 +74,7 @@ class CompilerTestCase(TestCase):
         self.assertEqual(dict_of_set(compiler.build_params()), dict_of_set(expected))
 
 
-class QueryParesTest(TestCase):
+class QueryParserPathResolutionTest(TestCase):
 
     def assertParsedAliasEqual(self, queryset, res):
         queryset.query.get_initial_alias()
@@ -230,6 +229,153 @@ class QueryParesTest(TestCase):
             {
                 'toppings'
             }
+        )
+
+
+class QueryParserIdResolutionTest(CompilerTestCase):
+    def assertResolvedId(self, queryset, expected):
+        queryset.query.get_initial_alias()
+        parser = QueryParser(queryset.query)
+        self.assertEqual(parser.resolve_ids(), expected and set(expected))
+
+    def test_pk_equal(self):
+        self.assertResolvedId(
+            Pizza.objects.filter(pk=1),
+            [1]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id=1),
+            [1]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__exact=1),
+            [1]
+        )
+        self.assertResolvedId(
+            Menu.objects.filter(id__exact=1),
+            [1]
+        )
+
+    def test_pk_or(self):
+        self.assertResolvedId(
+            Pizza.objects.filter(Q(pk=1) | Q(pk=3)),
+            [1, 3]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(Q(pk=1) | Q(pk__range=[3, 5])),
+            [1, 3, 4, 5]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(Q(pk=1) | Q(pk__in=[3, 5])),
+            [1, 3, 5],
+        )
+
+    def test_field_mix_fail(self):
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__in=[1, 3]).filter(name='lolilol'),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__in=[1, 3]).exclude(pk=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__in=[1, 3]).filter(pk=1).filter(pk=3),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__in=[1, 3]).filter(pk=1),
+            {1}
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(pk=1).filter(pk=3),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(Q(pk__in=[1, 3]) | Q(name='lolilol')),
+            None
+        )
+
+    def test_pk_in(self):
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__in=[1, 3]),
+            [1, 3]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__in=[1, 3]),
+            [1, 3]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__in=(1, 3)),
+            [1, 3]
+        )
+        self.assertResolvedId(
+            Menu.objects.filter(id__in=[1, 3]),
+            [1, 3]
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__range=[1, 3]),
+            [1, 2, 3]
+        )
+
+    def test_bad_lookup(self):
+        self.assertResolvedId(
+            Pizza.objects.filter(pk__gte=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__gte=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__lte=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__gt=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__lt=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__contains=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__icontains=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__iexact=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(id__isnull=True),
+            None
+        )
+
+    def test_bad_field(self):
+        self.assertResolvedId(
+            Pizza.objects.all(),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(menu_id=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(menu__id=1),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(name="supreme"),
+            None
+        )
+        self.assertResolvedId(
+            Pizza.objects.filter(name__contains="supreme"),
+            None
         )
 
 
@@ -498,8 +644,7 @@ class TestFullCompiler(CompilerTestCase):
             {
                 'sort[]': ['cost', 'menu.code'],
                 'exclude[]': ['*', 'menu.*', 'toppings.*'],
-                'include[]': ['menu.code', 'toppings.name','cost'],
-
+                'include[]': ['menu.code', 'toppings.name', 'cost'],
                 'filter{toppings.name.in}': ['chien', 'chat'],
                 'filter{-menu}': 1,
             }

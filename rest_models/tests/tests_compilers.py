@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-from unittest.case import skip
 
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
@@ -25,7 +24,7 @@ class TestQueryInsert(TestCase):
         self.assertIsNotNone(p.pk)
         new = api_models.Pizza.objects.get(pk=p.pk)
 
-        for attr in ('name','price','from_date','to_date'):
+        for attr in ('name', 'price', 'from_date', 'to_date'):
             self.assertEqual(getattr(new, attr), getattr(p, attr))
 
     def test_insert_default_value(self):
@@ -58,12 +57,12 @@ class TestQueryInsert(TestCase):
         self.assertIsNotNone(p.pk)
         new = api_models.Pizza.objects.get(pk=p.pk)
 
-        for attr in ('name','price','from_date','to_date'):
+        for attr in ('name', 'price', 'from_date', 'to_date'):
             self.assertEqual(getattr(new, attr), getattr(p, attr))
 
     def test_insert_missing_data(self):
         with self.assertRaises(ProgrammingError):
-            p = client_models.Pizza.objects.create(
+            client_models.Pizza.objects.create(
                 name='savoyarde',
                 from_date=datetime.datetime.today(),
                 to_date=datetime.datetime.today() + datetime.timedelta(days=3)
@@ -150,9 +149,7 @@ class TestQueryInsert(TestCase):
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
 
-    @skip("no delete currently")
     def test_delete_obj(self):
-
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
         p = client_models.Pizza(pk=1)

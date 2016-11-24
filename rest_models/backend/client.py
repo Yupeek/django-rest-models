@@ -3,7 +3,6 @@ import subprocess
 
 from django.db.backends.base.client import BaseDatabaseClient
 from django.test.testcases import LiveServerThread, _StaticFilesHandler
-
 from rest_models.backend.connexion import LocalApiAdapter
 
 

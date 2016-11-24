@@ -6,7 +6,6 @@ import re
 
 from django.conf import settings
 from django.db.backends.base.creation import BaseDatabaseCreation
-
 from rest_models.backend.connexion import LocalApiAdapter
 
 logger = logging.getLogger(__name__)

@@ -4,12 +4,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from collections import namedtuple
 
-from django.db.models.lookups import Lookup, Exact, IsNull
+from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.constants import MULTI, NO_RESULTS, SINGLE
+from django.db.models.sql.constants import MULTI
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import ProgrammingError
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
+from rest_models.router import RestModelRouter
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,8 @@ def extract_exact_pk_value(where):
     if len(where.children) == 2:
         exact, isnull = where.children
 
-        if (
-            isinstance(exact, Exact) and isinstance(isnull, IsNull) and
-            exact.lhs.target == isnull.lhs.target):
+        if (isinstance(exact, Exact) and isinstance(isnull, IsNull) and
+                exact.lhs.target == isnull.lhs.target):
             return exact
     return None
 
@@ -45,6 +45,7 @@ class QueryParser(object):
     an object helper that parse a attached query to return the
     models, attributes and fields from the list of aliases and select.
     """
+
     def __init__(self, query):
         """
         :param django.db.models.sql.query.Query query: the query
@@ -146,6 +147,26 @@ class QueryParser(object):
 
         return tuple(attrs), final_att_name
 
+    def flaten_where_clause(self, where_node):
+        """
+        take the where_node, and flatend it into a list of (negated, lookup),
+        :param WhereNode where_node:
+        :return: the list of lookup, with a bool telling us if it's negated, and if it was a and
+        :rtype: list[tuple[bool, bool, Lookup]]
+        """
+        res = []
+        for child in where_node.children:
+
+            if isinstance(child, WhereNode):
+                exact_pk_value = extract_exact_pk_value(child)
+                if exact_pk_value is not None:
+                    res.append((child.negated, where_node.connector == 'AND', exact_pk_value))
+                else:
+                    res.extend(self.flaten_where_clause(child))
+            else:
+                res.append((where_node.negated, where_node.connector == 'AND', child))
+        return res
+
     def get_ressources_for_cols(self, cols):
         """
         return the list of ressources used and the list of attrubutes for each cols
@@ -153,7 +174,44 @@ class QueryParser(object):
         :return:
         """
         resolved = [self.resolve_path(col) for col in cols]
-        return {r[0] for r in resolved}, {r[0] + (r[1], ) for r in resolved}
+        return {r[0] for r in resolved}, {r[0] + (r[1],) for r in resolved}
+
+    def resolve_ids(self):
+        """
+        read the query and resolve the ids if the query is a simple one. return None if it's impossible and it require
+        a query on the api to fetch the ids.
+        :return: the list of ids found, or None if it was not possible to find out.
+        """
+        ids = None
+        first_connector = None
+        # we check if this is a OR all along, or if it's mixed with AND.
+        # if there is only one AND, it's ok
+        # if there is all OR, it's ok
+        # if there is AND and OR, so it will break
+        for negated, is_and, lookup in self.flaten_where_clause(self.query.where):
+            if first_connector is None:
+                first_connector = is_and
+            if negated or not lookup.rhs_is_direct_value() or first_connector != is_and:
+                return None
+            if lookup.lhs.field != self.query.get_meta().pk:
+                return None
+            if isinstance(lookup, Exact):
+                to_add = {lookup.rhs}
+            elif isinstance(lookup, In):
+                to_add = set(lookup.rhs)
+            elif isinstance(lookup, Range):
+                to_add = set(range(lookup.rhs[0], lookup.rhs[1] + 1))
+            else:
+                return None
+            if ids is None:
+                ids = to_add
+            elif is_and:
+                ids &= to_add
+            else:
+                ids |= to_add
+        if not ids:
+            return None
+        return ids
 
 
 class SQLCompiler(BaseSQLCompiler):
@@ -181,10 +239,13 @@ class SQLCompiler(BaseSQLCompiler):
         super(SQLCompiler, self).setup_query()
         self.check_compatibility()
 
+    def is_api_model(self):
+        return RestModelRouter.is_api_model(self.query.model)
+
     def compile(self, node, select_format=False):
         return None
 
-    def get_ressource_path(self, model):
+    def get_ressource_path(self, model, pk=None):
         """
         return the ressource path relative to the base of the api.
         it use ressource_path and ressource_path, and fallback to the get_ressource_name()
@@ -192,7 +253,10 @@ class SQLCompiler(BaseSQLCompiler):
         :return: the path of the ressource
         :rtype: str
         """
-        return getattr(model.APIMeta, 'ressource_path', None) or self.get_ressource_name(model, False)
+        ret = getattr(model.APIMeta, 'ressource_path', None) or self.get_ressource_name(model, False)
+        if pk is not None:
+            ret += "/%s/" % pk
+        return ret
 
     def get_ressource_name(self, model, many=False):
         """
@@ -257,26 +321,6 @@ class SQLCompiler(BaseSQLCompiler):
                     "%s in queryset is not supported yet" % reason
                 )
 
-    def flaten_where_clause(self, where_node):
-        """
-        take the where_node, and flatend it into a list of (negated, lookup),
-        :param WhereNode where_node:
-        :return: the list of lookup, with a bool telling us if it's negated
-        :rtype: list[tuple[bool, Lookup]]
-        """
-        res = []
-        for child in where_node.children:
-
-            if isinstance(child, WhereNode):
-                exact_pk_value = extract_exact_pk_value(child)
-                if exact_pk_value is not None:
-                    res.append((child.negated, exact_pk_value))
-                else:
-                    res.extend(self.flaten_where_clause(child))
-            else:
-                res.append((where_node.negated, child))
-        return res
-
     def build_filter_params(self):
         """
         build the GET parameters to pass for DREST alowing to filter the results.
@@ -286,7 +330,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         res = {}
         query = self.query
-        for negated, lookup in self.flaten_where_clause(query.where):  # type: bool, Lookup
+        for negated, _, lookup in self.query_parser.flaten_where_clause(query.where):  # type: bool, Lookup
             negated_mark = "-" if negated else ""
             field = self.query_parser.get_rest_path_for_col(lookup.lhs)
             if lookup.lookup_name == 'exact':  # implicite lookup is not needed
@@ -307,8 +351,8 @@ class SQLCompiler(BaseSQLCompiler):
         :return: the dict to pass to params for requests to exclude some fields
         :rtype: dict[unicode, unicode]
         """
-        query = self.query
-        """:type: django.db.models.options.Options"""
+        if self.select is None:
+            return {}
         ressources, fields = self.query_parser.get_ressources_for_cols([col for col, _, _ in self.select])
         res = {
             'exclude[]': {".".join(r + ('*',)) for r in ressources},
@@ -340,6 +384,25 @@ class SQLCompiler(BaseSQLCompiler):
     #       real query for select
     # #####################################
 
+    def resolve_ids(self):
+        """
+        attempt to resolve the ids for the current query. if the query is too complex to guess the ids,
+        it will execute the query to get the ids
+        :return:
+        """
+        ids = self.query_parser.resolve_ids()
+        if ids is None:
+
+            pk_name = self.query.get_meta().pk.name
+            result = self.connection.connection.get(
+                self.get_ressource_path(self.query.model),
+                params={'exclude[]': '*', 'include[]': pk_name}
+            )
+            if result.status_code != 200:
+                raise ProgrammingError("error while querying the database : %s" % result.text)
+            ids = {res['id'] for res in result.json()[self.get_ressource_name(self.query.model, many=True)]}
+        return ids
+
     def execute_sql(self, result_type=MULTI):
         self.setup_query()
 
@@ -351,7 +414,6 @@ class SQLCompiler(BaseSQLCompiler):
 
 
 class SQLInsertCompiler(SQLCompiler):
-
     def execute_sql(self, return_id=False):
         query = self.query
         """:type: django.db.models.sql.subqueries.InsertQuery"""
@@ -361,33 +423,33 @@ class SQLInsertCompiler(SQLCompiler):
         query_objs = query.objs
         if can_bulk:
             # bulk insert
-                data = [
-                    {
-                        f.column: f.get_db_prep_save(
-                            getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
-                            connection=self.connection
-                        )
-                        for f in query.fields
+            data = [
+                {
+                    f.column: f.get_db_prep_save(
+                        getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
+                        connection=self.connection
+                    )
+                    for f in query.fields
                     }
-                    for obj in query_objs
+                for obj in query_objs
                 ]
 
-                json = {
-                    self.get_ressource_name(query.model, many=True): data
-                }
-                response = self.connection.connection.post(
-                    self.get_ressource_path(self.query.model),
-                    json=json
+            json = {
+                self.get_ressource_name(query.model, many=True): data
+            }
+            response = self.connection.connection.post(
+                self.get_ressource_path(self.query.model),
+                json=json
+            )
+            if response.status_code != 201:
+                raise FakeDatabaseDbAPI2.ProgrammingError(
+                    "error while creating %d %s.\n%s" %
+                    (len(query_objs), opts.verbose_name, response.json()['errors'])
                 )
-                if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError(
-                        "error while creating %d %s.\n%s" %
-                        (len(query_objs), opts.verbose_name, response.json()['errors'])
-                    )
-                result_json = response.json()
-                for old, new in zip(query_objs, result_json[self.get_ressource_name(query.model, many=True)]):
-                    for field in opts.concrete_fields:
-                        setattr(old, field.attname, field.to_python(new[field.name]))
+            result_json = response.json()
+            for old, new in zip(query_objs, result_json[self.get_ressource_name(query.model, many=True)]):
+                for field in opts.concrete_fields:
+                    setattr(old, field.attname, field.to_python(new[field.name]))
         else:
             result_json = None
             for obj in query_objs:
@@ -397,7 +459,7 @@ class SQLInsertCompiler(SQLCompiler):
                         connection=self.connection
                     )
                     for f in query.fields
-                }
+                    }
 
                 json = {
                     self.get_ressource_name(query.model, many=False): data
@@ -419,11 +481,18 @@ class SQLInsertCompiler(SQLCompiler):
 
 class SQLDeleteCompiler(SQLCompiler):
     def execute_sql(self, result_type=MULTI):
-        q = self.query
-        self.connection.connection.delete(
-            self.get_ressource_name(q.model, many=True),
-            params=self.build_params(),
-        )
+        if self.is_api_model():
+
+            q = self.query
+            if self.query.get_meta().auto_created:
+                pass  # we don't care about many2many table, the api will clean it for us
+            else:
+                for id in self.resolve_ids():
+                    result = self.connection.connection.delete(
+                        self.get_ressource_path(q.model, pk=id),
+                    )
+                    if result.status_code not in (200, 202, 204):
+                        raise ProgrammingError("the deletion was unseccesfull : %s" % result.text)
 
 
 class SQLUpdateCompiler(SQLCompiler):

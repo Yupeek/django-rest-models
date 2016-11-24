@@ -3,10 +3,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-from django.db.utils import ProgrammingError, ConnectionHandler
+from django.db.utils import ConnectionHandler, ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase
-
-from rest_models.backend.base import DatabaseWrapper
 from rest_models.backend.connexion import ApiConnexion, LocalApiAdapter
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 

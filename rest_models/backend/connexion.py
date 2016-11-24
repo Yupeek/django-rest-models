@@ -5,7 +5,6 @@ import logging
 
 import requests
 from django.core.handlers.base import BaseHandler
-from django.core.handlers.wsgi import WSGIRequest
 from django.test.client import RequestFactory
 from requests.adapters import BaseAdapter
 from requests.cookies import extract_cookies_to_jar
@@ -31,7 +30,7 @@ class LocalApiAdapter(BaseAdapter):
         transform a PreparedRequest into a WsgiRequest for django to use
         :param requests.models.PreparedRequest prepared_request:
         :return: the request ready to use for django
-        :rtype: WSGIRequest
+        :rtype: django.core.handlers.wsgi.WSGIRequest
         """
         wsgi_request = self.request_factory.generic(
             method=prepared_request.method,

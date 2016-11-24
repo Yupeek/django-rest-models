@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 from django.core.management import call_command
 from django.test.testcases import TestCase
-
 from rest_models.backend.client import DatabaseClient
 
 
@@ -46,7 +45,7 @@ class ClientTest(TestCase):
         DatabaseClient.port_range = (80, 80)  # this port wont work
 
         def tmp_exec(self_dc, args, env):
-            raise AssertionError('the exec shall not being called')
+            raise AssertionError('the exec shall not being called')  # pragma: no cover
 
         DatabaseClient.execute_subprocess = tmp_exec
         self.assertRaises(Exception, call_command, 'dbshell', database='api')

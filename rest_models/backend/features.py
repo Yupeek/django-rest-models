@@ -1,8 +1,5 @@
 from __future__ import unicode_literals
 
-import sys
-
-from django.db import utils
 from django.db.backends.base.features import BaseDatabaseFeatures
 
 

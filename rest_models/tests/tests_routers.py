@@ -10,7 +10,6 @@ from django.core.management import call_command
 from django.test import TestCase
 from rest_models.router import RestModelRouter
 
-import testapi.models as api_models
 import testapp.models as client_models
 
 

@@ -15,8 +15,13 @@ class ApiAuthBase(AuthBase):
 
     def raise_on_response_forbidden(self, response):
         if response.status_code == 403:
-            raise FakeDatabaseDbAPI2.ProgrammingError("Access to database is Forbidden for user %s.\n%s" %
-                                                  (self.settings_dict['USER'], response.text))
+            raise FakeDatabaseDbAPI2.ProgrammingError(
+                "Access to database is Forbidden for user %s on %s.\n%s" % (
+                    self.settings_dict['USER'],
+                    self.settings_dict['NAME'],
+                    response.text
+                )
+            )
 
 
 class BasicAuth(ApiAuthBase):
