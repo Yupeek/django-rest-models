@@ -5,13 +5,14 @@ import collections
 import logging
 from collections import namedtuple
 
+import itertools
 from django.db.models.base import ModelBase
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import MULTI, NO_RESULTS, CURSOR, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
-from django.db.utils import ProgrammingError
+from django.db.utils import ProgrammingError, OperationalError
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.router import RestModelRouter
 
@@ -38,10 +39,9 @@ def extract_exact_pk_value(where):
         exact, isnull = where.children
 
         if (isinstance(exact, Exact) and isinstance(isnull, IsNull) and
-                exact.lhs.target == isnull.lhs.target):
+                    exact.lhs.target == isnull.lhs.target):
             return exact
     return None
-
 
 
 def get_ressource_path(model, pk=None):
@@ -75,12 +75,40 @@ def get_ressource_name(model, many=False):
         return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
 
 
+def find_m2m_field(field_on_through):
+    """
+    find the many2many field that correspond to the field_on_through field
+    A.b <= x through y => B.a
+    if A.b is a many2many field, the table throug wil be created with 2 FK, one for A (x) and one for B (y)
+    this function give you A.b if you give x, and give B.a if you give y.
+    :param field_on_through:
+    :return:
+    """
+    related_model = field_on_through.related_model  # find A or B
+    from testapi.models import Topping, Pizza
+
+    # chain all m2mrel : first the one on the current model found by the manytomany list,
+    # 2nd the one dirrectly in related_objects for backward link
+    for field, m2mrel in itertools.chain(
+            ((field, getattr(related_model, field.name, None)) for field in related_model._meta.many_to_many),
+            zip(related_model._meta.related_objects, related_model._meta.related_objects)
+    ):
+        try:
+            if m2mrel.through == field_on_through.model:
+                return field
+        except AttributeError:
+            pass  # the field can be other than a M2Mfield
+    raise Exception("can't find a M2M field which use %s on the model %s" %
+                    (field_on_through.model, field_on_through.related_model))
+
+
 class ApiResonseReader(object):
     """
     a helper class the read the response of an api, and give
     some convenient tools to recover the data from it.
 
     """
+
     def __init__(self, json):
         self.json = json
         self.cache = {}
@@ -95,14 +123,19 @@ class ApiResonseReader(object):
         """
         assert isinstance(model, ModelBase), "you must ask for a django model"
         res = None
-        if not model in self.cache:
-            ressource_name = get_ressource_name(model, many=True)
-            pk = model._meta.pk.name
-            res = self.cache[model] = collections.OrderedDict(
-                (apidata[pk], apidata)
-                for apidata in self.json[ressource_name]
-            )
+        try:
+            if model not in self.cache:
+                ressource_name = get_ressource_name(model, many=True)
+                pk = model._meta.pk.name
+
+                res = self.cache[model] = collections.OrderedDict(
+                    (apidata[pk], apidata)
+                    for apidata in self.json[ressource_name]
+                )
+        except KeyError:
+            raise OperationalError("the response from the server does not contains the ID of the model.")
         return res or self.cache[model]
+
 
 class QueryParser(object):
     """
@@ -146,25 +179,25 @@ class QueryParser(object):
                 aliases[table.table_alias] = Alias(query.model, None, None, None, None)
                 current_fail = 0
                 continue
-
+            # table is current model repr, join_field is the field on the remote model that triggered the link
+            # and so the related model is the current one
+            current_model = table.join_field.related_model
             try:
                 m2m_field = None
-                if table.join_field.related_model._meta.auto_created:
-                    # no need to add the M2M table table.
-                    for m2m in table.join_field.model._meta.local_many_to_many:
-                        if getattr(table.join_field.model, m2m.name).through == table.join_field.related_model:
-                            # m2m is the M2M field that created the current join
-                            m2m_resolved[table.table_alias] = m2m, aliases[table.parent_alias]
-                            m2m_field = m2m
-                            break
+                parent_alias = aliases[table.parent_alias]
+
+                if current_model._meta.auto_created:
+                    m2m = find_m2m_field(table.join_field.field)
+                    m2m_resolved[table.table_alias] = m2m, parent_alias
+                    m2m_field = m2m
 
                 # not M2M relathionship, but may be folowing previous m2m
                 if table.parent_alias in m2m_resolved:
                     field, parent = m2m_resolved[table.parent_alias]
                     # expand the previous alias that is useless
                 else:
-                    field, parent = table.join_field, aliases[table.parent_alias]
-                aliases[table.table_alias] = Alias(table.join_field.related_model, parent,
+                    field, parent = table.join_field, parent_alias
+                aliases[table.table_alias] = Alias(current_model, parent,
                                                    field, field.name, m2m_field)
                 current_fail = 0
             except KeyError:
@@ -232,13 +265,15 @@ class QueryParser(object):
         """
         return the list of ressources used and the list of attrubutes for each cols
         :param list[django.db.models.expressions.Col] cols: the list of Col
-        :return: 2 sets, the first if the ressources, the 2nd is the set of the full path of the ressources, with the
+        :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the ressources, with the
                  attributes
         """
         resolved = [self.resolve_path(col) for col in cols]
 
-        return {tuple(a.attrname for a in r[0]) for r in resolved}, \
-               {tuple(a.attrname for a in r[0]) + (r[1],) for r in resolved}
+        return (
+            set(tuple(a for a in r[0]) for r in resolved),  # set of tuple of Alias successives
+            set(tuple(a.attrname for a in r[0]) + (r[1],) for r in resolved)
+        )
 
     def resolve_ids(self):
         """
@@ -388,10 +423,22 @@ class SQLCompiler(BaseSQLCompiler):
         """
         if self.select is None:
             return {}
+        # ressources is a set of tuple, each item in the tuple is the alias
         ressources, fields = self.query_parser.get_ressources_for_cols([col for col, _, _ in self.select])
+        # build the list of all pks for selected ressources.
+        # this prevent the exclusion of the pks if they are not included in the query
+        pks = []
+        for aliases in ressources:
+            path = []
+            model = self.query.model
+            for alias in aliases:
+                path.append(alias.attrname)
+                model = alias.model
+            pks.append(".".join(path + [model._meta.pk.name]))
+
         res = {
-            'exclude[]': {".".join(r + ('*',)) for r in ressources},
-            'include[]': {".".join(r) for r in fields},
+            'exclude[]': {".".join(tuple(a.attrname for a in aliases) + ('*',)) for aliases in ressources},
+            'include[]': {".".join(r) for r in fields} | set(pks),
         }
         return res
 
@@ -450,9 +497,18 @@ class SQLCompiler(BaseSQLCompiler):
             aliases, attname = self.query_parser.resolve_path(col)
 
             cur_data, cur_model = item, self.query.model
+            fk_val = True  # True is not None, and will be replaced in the for
             for alias in aliases:  # type: Alias
                 cur_model = alias.model
-                cur_data = responsereader[cur_model][cur_data[alias.attrname]]
+                fk_val = cur_data[alias.attrname]
+                if fk_val is None:
+                    break
+
+                cur_data = responsereader[cur_model][fk_val]
+            if fk_val is None:
+                # a lookup through models has seen a None: we stop put none
+                res.append(None)
+                continue
             val = cur_data[attname]
             field = cur_model._meta.get_field(attname)
             res.append(field.to_python(val))
@@ -473,16 +529,18 @@ class SQLCompiler(BaseSQLCompiler):
         if not result_type:
             result_type = NO_RESULTS
         try:
+            params = self.build_params()
+            url = get_ressource_path(self.query.model)
             response = self.connection.cursor().get(
-                get_ressource_path(self.query.model),
-                params=self.build_params()
+                url,
+                params=params
             )
 
             if response.status_code == 204:
                 raise EmptyResultSet
             elif response.status_code != 200:
-                raise ProgrammingError("the query to the api has failed : [%s] %s" %
-                                       (response.status_code, response.text))
+                raise ProgrammingError("the query to the api has failed : GET %s %s \n=> [%s]:%s" %
+                                       (url, params, response.status_code, response.text))
             json = response.json()
         except EmptyResultSet:
             if result_type == MULTI:
@@ -503,6 +561,7 @@ class SQLCompiler(BaseSQLCompiler):
         if not self.connection.features.can_use_chunked_reads:
             return list(result)
         return result
+
 
 class SQLInsertCompiler(SQLCompiler):
     def execute_sql(self, return_id=False):

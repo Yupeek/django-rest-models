@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+from unittest.case import skip
 
 from django.db.models.query_utils import Q
 from django.db.utils import ProgrammingError
@@ -181,6 +182,43 @@ class TestQueryGet(TestCase):
                 "name": "main menu",
                 "code": "mn"
             }
+        )
+
+    def test_get_many2many(self):
+        p = client_models.Pizza.objects.get(pk=1)
+        with self.assertNumQueries(1, using='api'):
+            toppings = list(p.toppings.all())
+
+        self.assertEqual(len(toppings), 5)
+        self.assertEqual([t.id for t in toppings], [1, 2, 3, 4, 5])
+
+    def test_get_values_list_simple(self):
+        with self.assertNumQueries(1, using='api') as ctx:
+            res = list(client_models.Pizza.objects.values_list('id', 'name').order_by('-id'))
+        self.assertEqual(
+            res,
+            [
+                (3, "miam d'oie"),
+                (2, 'flam'),
+                (1, 'suprème')
+            ]
+        )
+
+    def test_get_values_list_fk(self):
+        with self.assertNumQueries(1, using='api') as ctx:
+            res = list(client_models.Pizza.objects.values_list('id', 'menu__name').order_by('-id'))
+        self.assertEqual(
+            res,
+            [(3, None), (2, None), (1, 'main menu')]
+        )
+
+    @skip('not implemented')
+    def test_get_values_list_backward_fk(self):
+        with self.assertNumQueries(1, using='api') as ctx:
+            res = list(client_models.Menu.objects.values_list('id', 'pizzas__name').order_by('-id'))
+        self.assertEqual(
+            res,
+            [(1, 'suprème')]
         )
 
 

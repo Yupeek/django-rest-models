@@ -184,7 +184,7 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
             duration = stop - start
             sql = "%s %s" % (method.upper(), url)
             self.db.queries_log.append({
-                'sql': sql,
+                'sql': "%s %s" %(sql, kwargs),
                 'time': "%.3f" % duration,
             })
             logger.debug('(%.3f) %s; args=%s' % (duration, sql, kwargs),

@@ -6,7 +6,7 @@ from django.db.models.expressions import F
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError
 from django.test import TestCase
-from rest_models.backend.compiler import QueryParser, SQLCompiler
+from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field
 
 from testapp.models import Menu, Pizza, Topping
 
@@ -430,6 +430,12 @@ class TestCompilerFilterParams(CompilerTestCase):
             {'filter{id}': 3, 'filter{price}': 15.0},
         )
 
+    def test_filter_auto_created_replacment(self):
+        self.assertQsToFilter(
+            Topping.objects.filter(**{'Pizza_toppings+__pizza': 1}),
+            {'filter{pizzas}': 1}
+        )
+
     def test_exclude_and_filter(self):
         self.assertQsToFilter(
             Pizza.objects.filter(id=3).exclude(price=11.0),
@@ -583,21 +589,22 @@ class TestIncludeCompiler(CompilerTestCase):
     def test_include_related(self):
         self.assertQsToInclude(
             Pizza.objects.all().values('id', 'menu__name', 'toppings__name'),
-            {'exclude[]': ['*', 'menu.*', 'toppings.*'], 'include[]': ['id', 'menu.name', 'toppings.name']},
+            {'exclude[]': ['*', 'menu.*', 'toppings.*'],
+             'include[]': ['id', 'menu.name', 'toppings.name', 'menu.id', 'toppings.id']},
         )
 
     def test_include_related_resolution(self):
         self.assertQsToInclude(
             Menu.objects.all().values('code', 'pizzas__name', 'pizzas__toppings__name'),
             {'exclude[]': ['*', 'pizzas.*', 'pizzas.toppings.*'],
-             'include[]': ['code', 'pizzas.name', 'pizzas.toppings.name']},
+             'include[]': ['code', 'pizzas.name', 'pizzas.toppings.name', 'id', 'pizzas.id', 'pizzas.toppings.id']},
         )
 
     def test_include_realted_pk(self):
         self.assertQsToInclude(
             Pizza.objects.all().values('id', 'menu__code', 'toppings__id'),
             {'exclude[]': ['*', 'menu.*'],
-             'include[]': ['id', 'menu.code', 'toppings']},
+             'include[]': ['id', 'menu.code', 'toppings', 'menu.id']},
         )
 
 
@@ -644,8 +651,28 @@ class TestFullCompiler(CompilerTestCase):
             {
                 'sort[]': ['cost', 'menu.code'],
                 'exclude[]': ['*', 'menu.*', 'toppings.*'],
-                'include[]': ['menu.code', 'toppings.name', 'cost'],
+                'include[]': ['menu.code', 'toppings.name', 'cost', 'menu.id', 'id', 'toppings.id'],
                 'filter{toppings.name.in}': ['chien', 'chat'],
                 'filter{-menu}': 1,
             }
         )
+
+
+class TestFindM2MField(TestCase):
+    def setUp(self):
+        self.throug = Pizza.toppings.through
+
+    def test_forward_check(self):
+        self.assertEqual(
+            Pizza._meta.get_field('toppings'),
+            find_m2m_field(self.throug._meta.get_field('pizza'))
+        )
+
+    def test_backward_check(self):
+        self.assertEqual(
+            Topping._meta.get_field('pizzas'),
+            find_m2m_field(self.throug._meta.get_field('topping'))
+        )
+
+    def test_failed(self):
+        self.assertRaises(Exception, find_m2m_field, Pizza._meta.get_field('menu'))
