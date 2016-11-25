@@ -237,12 +237,12 @@ class TestDatabaseWrapper(TestCase):
 
     def test_get_cursor(self):
         wrapper = self.ch['default']
-        c = wrapper.create_cursor()
+        c = wrapper.cursor()
         self.assertIsNotNone(c)
         c.close()  # do nothing
 
     def test_cursor_execute_raises(self):
-        c = self.ch['default'].create_cursor()
+        c = self.ch['default'].cursor()
         self.assertRaises(NotImplementedError, c.execute, 'select * from table')
 
     def test_available(self):

@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import requests
+import time
 from django.core.handlers.base import BaseHandler
 from django.test.client import RequestFactory
 from requests.adapters import BaseAdapter
@@ -91,80 +92,7 @@ class LocalApiAdapter(BaseAdapter):
         pass
 
 
-class ApiConnexion(object):
-    """
-    wrapper for request.Session that in fact implement useless methods like rollback which
-    is not possible with a rest API
-    """
-    def __init__(self, url, auth=None, retry=3):
-        self.session = requests.Session()
-        self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
-        self.session.auth = self.auth = auth
-        self.url = url
-        self.retry = retry
-
-    def rollback(self):  # pragma: no cover
-        pass
-
-    def commit(self):  # pragma: no cover
-        pass
-
-    def get_timeout(self):
-        return 3.0
-
-    def request(self, method, url, **kwargs):
-        """
-        wrapper for requests.Session.get
-
-        :param unicode method: the method to use
-        :param str url: the path relative to the current connexion
-        :param dict[str, any]|byes params: (optional) Dictionary or bytes to append as GET parameters
-        :param dict[str, any]|bytes data: (optional) Dictionary, bytes, or file-like object to send
-            in the body
-        :param headers: (optional) Dictionary of HTTP Headers to send with the
-            :class:`Request`.
-        :param cookies: (optional) Dict or CookieJar object to send with the
-            :class:`Request`.
-        :param files: (optional) Dictionary of ``'filename': file-like-objects``
-            for multipart encoding upload.
-        :param auth: (optional) Auth tuple or callable to enable
-            Basic/Digest/Custom HTTP Auth.
-        :param float|tuple[float, float] timeout: (optional) How long to wait for the server to send
-            data before giving up, as a float, or a :ref:`(connect timeout,
-            read timeout) <timeouts>` tuple.
-        :rtype: requests.Response
-
-        """
-        kwargs.setdefault("allow_redirects", False)
-        kwargs.setdefault("timeout", self.get_timeout())
-
-        assert not url.startswith("/"), "the url should not start with a «/»"
-        error = 0
-        last_exception = None
-
-        while error <= self.retry:
-            try:
-                response = self.session.request(method, self.url + url, **kwargs)
-            except Timeout as e:
-                error += 1
-                last_exception = e
-            except ConnectionError as e:
-                error += 1
-                last_exception = e
-            else:
-
-                if self.auth and hasattr(self.auth, 'raise_on_response_forbidden'):
-                    self.auth.raise_on_response_forbidden(response)
-                else:
-                    if response.status_code == 403:
-                        raise FakeDatabaseDbAPI2.ProgrammingError(
-                            "Access to database is Forbidden for user %s.\n%s" %
-                            (self.auth[0] if isinstance(self.auth, tuple) else self.auth, response.text)
-                        )
-                return response
-        raise FakeDatabaseDbAPI2.OperationalError(
-            "cound not connect to server: %s\nIs the API running on %s ? tried %d times" %
-            (last_exception, self.url, error))
+class ApiVerbShortcutMixin(object):
 
     def get(self, url, params=None, json=None, **kwargs):
         """
@@ -235,3 +163,112 @@ class ApiConnexion(object):
         :return:
         """
         return self.request("delete", url, params=params, json=json, **kwargs)
+
+
+class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
+    def __init__(self, connection, db):
+        self.connection = connection
+        self.db = db
+
+    def __getattr__(self, attr):
+        cursor_attr = getattr(self.connection, attr)
+        return cursor_attr
+
+    def request(self, method, url, **kwargs):
+
+        start = time.time()
+        try:
+            return self.connection.request(method, url, **kwargs)
+        finally:
+            stop = time.time()
+            duration = stop - start
+            sql = "%s %s" % (method.upper(), url)
+            self.db.queries_log.append({
+                'sql': sql,
+                'time': "%.3f" % duration,
+            })
+            logger.debug('(%.3f) %s; args=%s' % (duration, sql, kwargs),
+                         extra={'duration': duration, 'sql': sql, 'params': kwargs}
+                         )
+
+
+class ApiConnexion(ApiVerbShortcutMixin):
+    """
+    wrapper for request.Session that in fact implement useless methods like rollback which
+    is not possible with a rest API
+    """
+    def __init__(self, url, auth=None, retry=3):
+        self.session = requests.Session()
+        self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
+        self.session.auth = self.auth = auth
+        self.url = url
+        self.retry = retry
+
+    def close(self):
+        pass  # do nothing, http is stateless
+
+    def execute(self, sql):
+        raise NotImplementedError("this is not a SQL database, so no cursor is available")
+
+    def rollback(self):  # pragma: no cover
+        pass
+
+    def commit(self):  # pragma: no cover
+        pass
+
+    def get_timeout(self):
+        return 3.0
+
+    def request(self, method, url, **kwargs):
+        """
+        wrapper for requests.Session.get
+
+        :param unicode method: the method to use
+        :param str url: the path relative to the current connexion
+        :param dict[str, any]|byes params: (optional) Dictionary or bytes to append as GET parameters
+        :param dict[str, any]|bytes data: (optional) Dictionary, bytes, or file-like object to send
+            in the body
+        :param headers: (optional) Dictionary of HTTP Headers to send with the
+            :class:`Request`.
+        :param cookies: (optional) Dict or CookieJar object to send with the
+            :class:`Request`.
+        :param files: (optional) Dictionary of ``'filename': file-like-objects``
+            for multipart encoding upload.
+        :param auth: (optional) Auth tuple or callable to enable
+            Basic/Digest/Custom HTTP Auth.
+        :param float|tuple[float, float] timeout: (optional) How long to wait for the server to send
+            data before giving up, as a float, or a :ref:`(connect timeout,
+            read timeout) <timeouts>` tuple.
+        :rtype: requests.Response
+
+        """
+        kwargs.setdefault("allow_redirects", False)
+        kwargs.setdefault("timeout", self.get_timeout())
+
+        assert not url.startswith("/"), "the url should not start with a «/»"
+        error = 0
+        last_exception = None
+
+        while error <= self.retry:
+            try:
+                response = self.session.request(method, self.url + url, **kwargs)
+            except Timeout as e:
+                error += 1
+                last_exception = e
+            except ConnectionError as e:
+                error += 1
+                last_exception = e
+            else:
+
+                if self.auth and hasattr(self.auth, 'raise_on_response_forbidden'):
+                    self.auth.raise_on_response_forbidden(response)
+                else:
+                    if response.status_code == 403:
+                        raise FakeDatabaseDbAPI2.ProgrammingError(
+                            "Access to database is Forbidden for user %s.\n%s" %
+                            (self.auth[0] if isinstance(self.auth, tuple) else self.auth, response.text)
+                        )
+                return response
+        raise FakeDatabaseDbAPI2.OperationalError(
+            "cound not connect to server: %s\nIs the API running on %s ? tried %d times" %
+            (last_exception, self.url, error))

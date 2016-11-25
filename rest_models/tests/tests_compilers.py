@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 
+from django.db.models.query_utils import Q
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
 
@@ -146,6 +147,43 @@ class TestQueryInsert(TestCase):
             self.assertIsNone(p.pk)
 
 
+class TestQueryGet(TestCase):
+    fixtures = ['data.json']
+
+    def assertObjectEqual(self, obj, data):
+        for k, v in data.items():
+            self.assertEqual(getattr(obj, k), v)
+
+    def test_get(self):
+        with self.assertNumQueries(1, using='api'):
+            p = client_models.Pizza.objects.get(pk=1)
+        with self.assertNumQueries(0, using='api'):
+            self.assertObjectEqual(
+                p,
+                {
+                    "id": 1,
+                    "menu_id": 1,
+                    "name": "supr\u00e8me",
+                    "price": 10.0,
+                    "from_date": datetime.date(2016, 11, 15),
+                    "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000),
+                }
+            )
+
+    def test_get_related(self):
+        with self.assertNumQueries(1, using='api'):
+            p = client_models.Pizza.objects.get(pk=1)
+        with self.assertNumQueries(1, using='api'):
+            menu = p.menu
+        self.assertObjectEqual(
+            menu,
+            {
+                "name": "main menu",
+                "code": "mn"
+            }
+        )
+
+
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
 
@@ -153,6 +191,58 @@ class TestQueryDelete(TestCase):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
         p = client_models.Pizza(pk=1)
-        p.delete()
+        with self.assertNumQueries(1, using='api'):
+            p.delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+
+    def test_delete_qs_one(self):
+        n = api_models.Pizza.objects.count()
+
+        self.assertEqual(n, 3)
+        with self.assertNumQueries(2, using='api'):
+            client_models.Pizza.objects.filter(pk=1).delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 2)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=2).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=3).exists())
+
+    def test_delete_qs_many(self):
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 3)
+        with self.assertNumQueries(3, using='api'):
+            client_models.Pizza.objects.filter(Q(pk__in=(1,2))).delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 1)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+        self.assertFalse(api_models.Pizza.objects.filter(pk=2).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=3).exists())
+
+    def test_delete_qs_many_range(self):
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 3)
+        with self.assertNumQueries(3, using='api'):
+            client_models.Pizza.objects.filter(pk__range=(1, 2)).delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 1)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+        self.assertFalse(api_models.Pizza.objects.filter(pk=2).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=3).exists())
+
+    def test_delete_qs_no_pk(self):
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 3)
+        with self.assertNumQueries(2, using='api'):
+            client_models.Pizza.objects.filter(name='suprème').delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 2)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=2).exists())
+        self.assertTrue(api_models.Pizza.objects.filter(pk=3).exists())
+
+    def test_delete_qs_all(self):
+        n = api_models.Pizza.objects.count()
+        self.assertEqual(n, 3)
+        with self.assertNumQueries(4, using='api'):
+            client_models.Pizza.objects.all().delete()
+        self.assertEqual(api_models.Pizza.objects.count(), 0)
+        self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
+        self.assertFalse(api_models.Pizza.objects.filter(pk=2).exists())
+        self.assertFalse(api_models.Pizza.objects.filter(pk=3).exists())

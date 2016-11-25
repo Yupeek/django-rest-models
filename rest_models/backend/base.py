@@ -6,7 +6,7 @@ from importlib import import_module
 
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.base.validation import BaseDatabaseValidation
-from rest_models.backend.connexion import ApiConnexion
+from rest_models.backend.connexion import ApiConnexion, DebugApiConnectionWrapper
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 from .client import DatabaseClient
@@ -33,13 +33,6 @@ def import_class(path):
     obj = getattr(module, lpath[-1])
     return obj
 
-
-class FakeCursor(object):
-    def execute(self, sql):
-        raise NotImplementedError("this is not a SQL database, so no cursor is available")
-
-    def close(self):
-        pass
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
@@ -83,7 +76,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         c.head('', timeout=self.timeout)  # it will raise an exceptions if 403
 
     def create_cursor(self):
-        return FakeCursor()
+        return self.connection
+
+    def make_cursor(self, cursor):
+        return cursor
+
+    def make_debug_cursor(self, cursor):
+        return DebugApiConnectionWrapper(cursor, self)
 
     def close(self):
         # do nothing

@@ -13,7 +13,7 @@ class ToppingSerializer(DynamicModelSerializer):
     class Meta:
         model = Topping
         name = 'topping'
-        fields = ('name', 'cost', 'pizzas')
+        fields = ('id', 'name', 'cost', 'pizzas')
 
 
 class MenuSerializer(DynamicModelSerializer):
@@ -22,7 +22,7 @@ class MenuSerializer(DynamicModelSerializer):
     class Meta:
         model = Menu
         name = 'menu'
-        fields = ('code', 'name', 'pizzas')
+        fields = ('id', 'code', 'name', 'pizzas')
         deferred_fields = ('pizza_set', )
 
 

@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import logging
 from collections import namedtuple
 
+from django.db.models.base import ModelBase
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
+from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.constants import MULTI
+from django.db.models.sql.constants import MULTI, NO_RESULTS, CURSOR, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import ProgrammingError
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
@@ -39,6 +42,67 @@ def extract_exact_pk_value(where):
             return exact
     return None
 
+
+
+def get_ressource_path(model, pk=None):
+    """
+    return the ressource path relative to the base of the api.
+    it use ressource_path and ressource_path, and fallback to the get_ressource_name()
+    :param model: the model
+    :return: the path of the ressource
+    :rtype: str
+    """
+    ret = getattr(model.APIMeta, 'ressource_path', None) or get_ressource_name(model, False)
+    if pk is not None:
+        ret += "/%s/" % pk
+    return ret
+
+
+def get_ressource_name(model, many=False):
+    """
+    return the name of the ressource on the server
+    if multi is True, it's the url for the «many» models, so we add a «s».
+    the resulotion try first to check the APIMeta resource_name and resource_name_plural. if it don't exists,
+    it will guess the value from the model name.(lower)
+    :param model: the model
+    :param bool many: if true, the url of many results
+    :return: the ressource name (plural if needed)
+    :rtype: str
+    """
+    if many:
+        return getattr(model.APIMeta, 'resource_name_plural', None) or model.__name__.lower() + 's'
+    else:
+        return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
+
+
+class ApiResonseReader(object):
+    """
+    a helper class the read the response of an api, and give
+    some convenient tools to recover the data from it.
+
+    """
+    def __init__(self, json):
+        self.json = json
+        self.cache = {}
+
+    def __getitem__(self, model):
+        """
+        return the data for the given model on the response.
+        the data is a dict which for a pk, give back the data representing it.
+        :param model: the model to parse the response for
+        :return: all the data found in the response corresponding to the model
+        :rtype: dict[str|int, dict[str, any]]
+        """
+        assert isinstance(model, ModelBase), "you must ask for a django model"
+        res = None
+        if not model in self.cache:
+            ressource_name = get_ressource_name(model, many=True)
+            pk = model._meta.pk.name
+            res = self.cache[model] = collections.OrderedDict(
+                (apidata[pk], apidata)
+                for apidata in self.json[ressource_name]
+            )
+        return res or self.cache[model]
 
 class QueryParser(object):
     """
@@ -119,12 +183,13 @@ class QueryParser(object):
         :return:
         """
         path, att_name = self.resolve_path(col)
-        return ".".join(tuple(path) + (att_name,))
+        return ".".join(tuple(alias.attrname for alias in path) + (att_name,))
 
     def resolve_path(self, col):
         """
-        resolve the path giving the ressource path as a list.
-        :rtype: tuple[str], str
+        resolve the path of Alias to find the final model, with the final name of the attr
+
+        :rtype: tuple[Alias], str
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
         current = self.aliases[col.alias]  # type: Alias
@@ -140,12 +205,8 @@ class QueryParser(object):
             current = current.parent
             ancestors.insert(0, current)
         # ancesstors is a list of aliass
-        attrs = []
-        for alias in ancestors:
-            if alias.attrname is not None:
-                attrs.append(alias.attrname)
 
-        return tuple(attrs), final_att_name
+        return tuple(alias for alias in ancestors if alias.attrname is not None), final_att_name
 
     def flaten_where_clause(self, where_node):
         """
@@ -171,10 +232,13 @@ class QueryParser(object):
         """
         return the list of ressources used and the list of attrubutes for each cols
         :param list[django.db.models.expressions.Col] cols: the list of Col
-        :return:
+        :return: 2 sets, the first if the ressources, the 2nd is the set of the full path of the ressources, with the
+                 attributes
         """
         resolved = [self.resolve_path(col) for col in cols]
-        return {r[0] for r in resolved}, {r[0] + (r[1],) for r in resolved}
+
+        return {tuple(a.attrname for a in r[0]) for r in resolved}, \
+               {tuple(a.attrname for a in r[0]) + (r[1],) for r in resolved}
 
     def resolve_ids(self):
         """
@@ -244,35 +308,6 @@ class SQLCompiler(BaseSQLCompiler):
 
     def compile(self, node, select_format=False):
         return None
-
-    def get_ressource_path(self, model, pk=None):
-        """
-        return the ressource path relative to the base of the api.
-        it use ressource_path and ressource_path, and fallback to the get_ressource_name()
-        :param model: the model
-        :return: the path of the ressource
-        :rtype: str
-        """
-        ret = getattr(model.APIMeta, 'ressource_path', None) or self.get_ressource_name(model, False)
-        if pk is not None:
-            ret += "/%s/" % pk
-        return ret
-
-    def get_ressource_name(self, model, many=False):
-        """
-        return the name of the ressource on the server
-        if multi is True, it's the url for the «many» models, so we add a «s».
-        the resulotion try first to check the APIMeta resource_name and resource_name_plural. if it don't exists,
-        it will guess the value from the model name.(lower)
-        :param model: the model
-        :param bool many: if true, the url of many results
-        :return: the ressource name (plural if needed)
-        :rtype: str
-        """
-        if many:
-            return getattr(model.APIMeta, 'resource_name_plural', None) or model.__name__.lower() + 's'
-        else:
-            return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
 
     def check_compatibility(self):
         """
@@ -394,24 +429,80 @@ class SQLCompiler(BaseSQLCompiler):
         if ids is None:
 
             pk_name = self.query.get_meta().pk.name
-            result = self.connection.connection.get(
-                self.get_ressource_path(self.query.model),
+            result = self.connection.cursor().get(
+                get_ressource_path(self.query.model),
                 params={'exclude[]': '*', 'include[]': pk_name}
             )
             if result.status_code != 200:
                 raise ProgrammingError("error while querying the database : %s" % result.text)
-            ids = {res['id'] for res in result.json()[self.get_ressource_name(self.query.model, many=True)]}
+            ids = {res['id'] for res in result.json()[get_ressource_name(self.query.model, many=True)]}
         return ids
+
+    def response_to_table(self, responsereader, item):
+        """
+        take the total result, and return flatened data into a list, including all cols in the select.
+        :param ApiResponseReader responsereader: the full response as a convenient ApiResponseReader
+        :param dict item: the current item to parse
+        :return:
+        """
+        res = []
+        for col, _, _ in self.select:
+            aliases, attname = self.query_parser.resolve_path(col)
+
+            cur_data, cur_model = item, self.query.model
+            for alias in aliases:  # type: Alias
+                cur_model = alias.model
+                cur_data = responsereader[cur_model][cur_data[alias.attrname]]
+            val = cur_data[attname]
+            field = cur_model._meta.get_field(attname)
+            res.append(field.to_python(val))
+        yield [res]
+
+    def result_iter(self, responsereader):
+        """
+        iterate over the result given by the ApiResponseReader
+        :param ApiResponseReader responsereader:
+        :return:
+        """
+        for item in responsereader[self.query.model].values():
+            for subitem in self.response_to_table(responsereader, item):
+                yield subitem
 
     def execute_sql(self, result_type=MULTI):
         self.setup_query()
+        if not result_type:
+            result_type = NO_RESULTS
+        try:
+            response = self.connection.cursor().get(
+                get_ressource_path(self.query.model),
+                params=self.build_params()
+            )
 
-    def results_iter(self, results=None):
-        """
-        Returns an iterator over the results from executing this query.
-        """
-        raise
+            if response.status_code == 204:
+                raise EmptyResultSet
+            elif response.status_code != 200:
+                raise ProgrammingError("the query to the api has failed : [%s] %s" %
+                                       (response.status_code, response.text))
+            json = response.json()
+        except EmptyResultSet:
+            if result_type == MULTI:
+                return iter([])
+            else:
+                return
 
+        if result_type == CURSOR:
+            # Caller didn't specify a result_type, so just give them back the
+            # cursor to process (and close).
+            raise ProgrammingError("returning a curson for this database is not supported")
+        if result_type == SINGLE:
+            return self.response_to_table(json, self.extract_items(json)[0])
+        if result_type == NO_RESULTS:
+            return
+        response_reader = ApiResonseReader(json)
+        result = self.result_iter(response_reader)
+        if not self.connection.features.can_use_chunked_reads:
+            return list(result)
+        return result
 
 class SQLInsertCompiler(SQLCompiler):
     def execute_sql(self, return_id=False):
@@ -435,10 +526,10 @@ class SQLInsertCompiler(SQLCompiler):
                 ]
 
             json = {
-                self.get_ressource_name(query.model, many=True): data
+                get_ressource_name(query.model, many=True): data
             }
-            response = self.connection.connection.post(
-                self.get_ressource_path(self.query.model),
+            response = self.connection.cursor().post(
+                get_ressource_path(self.query.model),
                 json=json
             )
             if response.status_code != 201:
@@ -447,7 +538,7 @@ class SQLInsertCompiler(SQLCompiler):
                     (len(query_objs), opts.verbose_name, response.json()['errors'])
                 )
             result_json = response.json()
-            for old, new in zip(query_objs, result_json[self.get_ressource_name(query.model, many=True)]):
+            for old, new in zip(query_objs, result_json[get_ressource_name(query.model, many=True)]):
                 for field in opts.concrete_fields:
                     setattr(old, field.attname, field.to_python(new[field.name]))
         else:
@@ -462,21 +553,21 @@ class SQLInsertCompiler(SQLCompiler):
                     }
 
                 json = {
-                    self.get_ressource_name(query.model, many=False): data
+                    get_ressource_name(query.model, many=False): data
                 }
-                response = self.connection.connection.post(
-                    self.get_ressource_path(self.query.model),
+                response = self.connection.cursor().post(
+                    get_ressource_path(self.query.model),
                     json=json
                 )
                 if response.status_code != 201:
                     raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s.\n%s" % (obj, response.text))
                 result_json = response.json()
-                new = result_json[self.get_ressource_name(query.model, many=False)]
+                new = result_json[get_ressource_name(query.model, many=False)]
                 for field in opts.concrete_fields:
                     setattr(obj, field.attname, field.to_python(new[field.name]))
 
             if return_id and result_json:
-                return result_json[self.get_ressource_name(query.model, many=False)][opts.pk.column]
+                return result_json[get_ressource_name(query.model, many=False)][opts.pk.column]
 
 
 class SQLDeleteCompiler(SQLCompiler):
@@ -488,8 +579,8 @@ class SQLDeleteCompiler(SQLCompiler):
                 pass  # we don't care about many2many table, the api will clean it for us
             else:
                 for id in self.resolve_ids():
-                    result = self.connection.connection.delete(
-                        self.get_ressource_path(q.model, pk=id),
+                    result = self.connection.cursor().delete(
+                        get_ressource_path(q.model, pk=id),
                     )
                     if result.status_code not in (200, 202, 204):
                         raise ProgrammingError("the deletion was unseccesfull : %s" % result.text)
