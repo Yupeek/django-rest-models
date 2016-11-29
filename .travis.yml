@@ -8,8 +8,6 @@ python:
   - "3.4"
   - "3.5"
 
-drest15: dynamic-rest==1.5.0
-    drf34: djangorestframework==3.4.0
 # Django versions for matrix
 env:
   - DJANGO_VERSION='>=1.8,<1.9'
