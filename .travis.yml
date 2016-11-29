@@ -8,14 +8,18 @@ python:
   - "3.4"
   - "3.5"
 
+drest15: dynamic-rest==1.5.0
+    drf34: djangorestframework==3.4.0
 # Django versions for matrix
 env:
   - DJANGO_VERSION='>=1.8,<1.9'
   - DJANGO_VERSION='>=1.9,<1.10'
+  - DREST_VERSION='==1.5.0'
+  - DRE_VERSION='==3.4.0'
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-  - pip install -q Django$DJANGO_VERSION --quiet
+  - pip install -q Django$DJANGO_VERSION djangorestframework$DRE_VERSION dynamic-rest$DREST_VERSION --quiet
   - pip install  python-coveralls
   # virtualenv>=14.0.0 has dropped Python 3.2 support
   - travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
