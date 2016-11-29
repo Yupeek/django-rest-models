@@ -20,6 +20,21 @@ from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 logger = logging.getLogger(__name__)
 
 
+def build_url(url, params):
+    """
+    only for display purpose, parse the params and url to build the final api
+    :param str url: the url path to use
+    :param dict params: the dict with the GET parameters, as accepted by requests
+    :return: the url with the get part
+    :rtype: str
+    """
+    if params is None:
+        result = url
+    else:
+        result = "%s?%s" % (url, RequestEncodingMixin._encode_params(params))
+    return result
+
+
 class LocalApiAdapter(BaseAdapter):
 
     SPECIAL_URL = "http://localapi"
@@ -184,12 +199,9 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
         finally:
             stop = time.time()
             duration = stop - start
-            if kwargs['params'] is None:
-                sql = "%s %s" % (method.upper(), url)
-            else:
-                sql = "%s %s?%s" % (method.upper(), url, RequestEncodingMixin._encode_params(kwargs['params']))
+            sql = build_url(url, kwargs['params'])
             self.db.queries_log.append({
-                'sql': "%s ||| %s" % (sql, kwargs),
+                'sql': "%s %s ||| %s" % (method, sql, kwargs),
                 'time': "%.3f" % duration,
             })
             logger.debug('(%.3f) %s; args=%s' % (duration, sql, kwargs),

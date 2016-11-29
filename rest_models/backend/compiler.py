@@ -4,10 +4,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import itertools
 import logging
+import re
 from collections import namedtuple
 
 from django.db.models.base import ModelBase
-from django.db.models.expressions import Col
+from django.db.models.expressions import Col, RawSQL
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
@@ -15,6 +16,7 @@ from django.db.models.sql.constants import (CURSOR, MULTI, NO_RESULTS,
                                             ORDER_DIR, SINGLE)
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import OperationalError, ProgrammingError
+from rest_models.backend.connexion import build_url
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.router import RestModelRouter
@@ -128,6 +130,7 @@ class ApiResponseReader(object):
             def nonext():
                 # this will trigger the StopIteration at first iter_next
                 return []
+
             self.next = nonext
         else:
             self.next = next_
@@ -159,7 +162,7 @@ class ApiResponseReader(object):
         :return: all the data found in the response corresponding to the model
         :rtype: dict[str|int, dict[str, any]]
         """
-        assert isinstance(model, ModelBase), "you must ask for a django model"
+        assert isinstance(model, ModelBase), "you must ask for a django model. not %s" % model
         res = None
         try:
             if model not in self.cache:
@@ -194,6 +197,7 @@ class QueryParser(object):
     an object helper that parse a attached query to return the
     models, attributes and fields from the list of aliases and select.
     """
+    quote_rexep = re.compile(r'quoted\(!([^\)]+)!\)')
 
     def __init__(self, query):
         """
@@ -268,7 +272,8 @@ class QueryParser(object):
         :return:
         """
         current_alias, att_name = self.resolve_path(col)
-        return ".".join(tuple(alias.attrname for alias in ancestors(current_alias) if alias.attrname is not None) + (att_name,))
+        return ".".join(
+            tuple(alias.attrname for alias in ancestors(current_alias) if alias.attrname is not None) + (att_name,))
 
     def resolve_path(self, col):
         """
@@ -277,12 +282,21 @@ class QueryParser(object):
         :rtype: tuple[Alias], str
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
-        current = self.aliases[col.alias]  # type: Alias
+        if isinstance(col, RawSQL):
+            matches = self.quote_rexep.findall(col.sql)
+            if len(matches) == 2:
+                table, field = matches
+                current = self.aliases[table]
+            else:
+                raise OperationalError("Only col in sql select is supported")
+        else:
+            current = self.aliases[col.alias]  # type: Alias
+            field = col.target.name
         if current.m2m is not None:
             final_att_name = current.m2m.name
             current = current.parent
         else:
-            final_att_name = col.target.name
+            final_att_name = field
 
         return current, final_att_name
 
@@ -313,7 +327,7 @@ class QueryParser(object):
         :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the ressources, with the
                  attributes
         """
-        resolved = [self.resolve_path(col) for col in cols]
+        resolved = [self.resolve_path(col) for col in cols if not isinstance(col, RawSQL) or col.sql != '1']
 
         return (
             set(r[0] for r in resolved),  # set of tuple of Alias successives
@@ -394,7 +408,9 @@ def join_aliases(aliases_tree, responsereader, existing_aliases, current_data):
         alias = alias_tree.alias
         if alias in existing_aliases:
             # already exists. no need to work on it
-            yield from join_aliases(alias_tree, responsereader, existing_aliases, current_data=existing_aliases[alias])
+            for subresult in join_aliases(alias_tree, responsereader, existing_aliases,
+                                          current_data=existing_aliases[alias]):
+                yield subresult
         else:
             # resolve the values of next jump
             val_for_model = responsereader[alias.model]
@@ -408,7 +424,41 @@ def join_aliases(aliases_tree, responsereader, existing_aliases, current_data):
                 obj = val_for_model[pk]
                 resolved_aliases = existing_aliases.copy()
                 resolved_aliases[alias] = obj
-                yield from join_aliases(aliases_tree, responsereader, resolved_aliases, current_data=obj)
+                for subresult in join_aliases(aliases_tree, responsereader, resolved_aliases, current_data=obj):
+                    yield subresult
+
+
+def join_results(row, resolved):
+    """
+    a generator that will generate each results possible for the row data and the resolved data
+    :param row:
+    :param resolved:
+    :return:
+    """
+    if not resolved:
+        yield []
+        return
+    alias, attrname = resolved[0]
+
+    try:
+        raw_val = row[alias][attrname]
+    except KeyError:
+        raw_val = None  # left outer join give None for no value
+
+    field = alias.model._meta.get_field(attrname)
+    if hasattr(field, "to_python"):
+        python_val = field.to_python(raw_val)
+        for subresult in join_results(row, resolved[1:]):
+            yield [python_val] + subresult
+    else:
+        if isinstance(raw_val, list):
+            for val in raw_val:
+                for subresult in join_results(row, resolved[1:]):
+                    yield [val] + subresult
+
+        else:
+            raise OperationalError("the result from the api for %s is not supported : %s" %
+                                   field, raw_val)
 
 
 class SQLCompiler(BaseSQLCompiler):
@@ -526,15 +576,20 @@ class SQLCompiler(BaseSQLCompiler):
         # build the list of all pks for selected ressources.
         # this prevent the exclusion of the pks if they are not included in the query
         pks = []
+        ressources_bases = []
         for aliases in ressources:
             path = []
             model = self.query.model
             for alias in ancestors(aliases):
                 if alias.attrname is not None:
                     path.append(alias.attrname)
+
                 model = alias.model
             pks.append(".".join(path + [model._meta.pk.name]))
+            ressources_bases.append(".".join(path))
 
+        # exclude[) contains all ressources queried forowed by a *
+        # include[] contains all pk of each ressources along with the queried fields minus the ressources itselfs
         res = {
             'exclude[]': {
                 ".".join(
@@ -544,7 +599,7 @@ class SQLCompiler(BaseSQLCompiler):
                         if a.attrname is not None
                     ) + ('*',))
                 for aliases in ressources},
-            'include[]': {".".join(r) for r in fields} | set(pks),
+            'include[]': ({".".join(r) for r in fields} | set(pks)) - set(ressources_bases),
         }
         return res
 
@@ -564,7 +619,7 @@ class SQLCompiler(BaseSQLCompiler):
         order_by = [
             self.find_ordering_name(field, self.query.get_meta(), default_order=asc)
             for field in self.query.order_by
-        ]
+            ]
 
         resolved_order_by = []
         for ob1 in order_by:
@@ -574,18 +629,27 @@ class SQLCompiler(BaseSQLCompiler):
                     resolved_order_by.append((ob2.descending, ob2.expression))
 
         if order_by:
-
             res['sort[]'] = [
                 ("-" if desc else "") + self.query_parser.get_rest_path_for_col(col)
                 for desc, col in resolved_order_by
-            ]
+                ]
         return res
+
+    def build_limit(self):
+        if self.query.high_mark is not None:
+            if self.query.low_mark not in (0, None):
+                raise OperationalError("the api query does not support OFFSET in queryset")
+            return {
+                'per_page': self.query.high_mark,
+            }
+        return {}
 
     def build_params(self):
         params = {}
         params.update(self.build_filter_params())
         params.update(self.build_include_exclude_params())
         params.update(self.build_sort_params())
+        params.update(self.build_limit())
         return params
 
     # #####################################
@@ -623,17 +687,21 @@ class SQLCompiler(BaseSQLCompiler):
         :param dict item: the current item to parse
         :return:
         """
-        resolved = [self.query_parser.resolve_path(col) for col, _, _ in self.select]
-
+        resolved = [
+            self.query_parser.resolve_path(col)
+            for col, _, _ in self.select
+            if not isinstance(col, RawSQL) or col.sql != '1'  # skip special case with exists()
+            ]
+        if not resolved:
+            # nothing in select. special case in exists()
+            yield [[]]
+            return
         uniq_aliases = set(list(zip(*resolved))[0])
         alias_tree = build_aliases_tree(uniq_aliases)
+
         for row in join_aliases(alias_tree, responsereader, {alias_tree.alias: item}, item):
-            yield [
-                alias.model._meta.get_field(attrname).to_python(row[alias][attrname])
-                if alias in row
-                else None  # LEFT OUTER Join give None as value not joined
-                for alias, attrname in resolved
-            ]
+            for subresult in join_results(row, resolved):
+                yield subresult
 
     def result_iter(self, responsereader):
         """
@@ -660,12 +728,16 @@ class SQLCompiler(BaseSQLCompiler):
             if response.status_code == 204:
                 raise EmptyResultSet
             elif response.status_code != 200:
-                raise ProgrammingError("the query to the api has failed : GET %s %s \n=> [%s]:%s" %
-                                       (url, params, response.status_code, response.text))
+                raise ProgrammingError("the query to the api has failed : GET %s \n=> [%s]:%s" %
+                                       (build_url(url, params), response.status_code, response.text))
             json = response.json()
             if json.get('meta'):
                 # pagination and others thing
+                high_mark = self.query.high_mark
+                page_to_stop = None if high_mark is None else (high_mark // json['meta']['per_page'])
+
                 def next_from_query():
+                    last_response = json
                     for i in range(2, json['meta']['total_pages'] + 1):
                         response = self.connection.cursor().get(
                             url,
@@ -674,7 +746,10 @@ class SQLCompiler(BaseSQLCompiler):
                                 **params
                             )
                         )
-                        yield response.json()
+                        last_response = response.json()
+                        if page_to_stop is not None and page_to_stop > last_response['meta']['page']:
+                            return
+                        yield last_response
             else:
                 next_from_query = None
 
@@ -690,11 +765,9 @@ class SQLCompiler(BaseSQLCompiler):
             raise ProgrammingError("returning a cursor for this database is not supported")
         if result_type == SINGLE:
             response_reader = ApiResponseReader(json)
-
-            return next(self.response_to_table(
-                response_reader,
-                next(iter(response_reader)))
-            )
+            for result in self.result_iter(response_reader):
+                return result
+            return
         if result_type == NO_RESULTS:
             return
         response_reader = ApiResponseReader(json, next_=next_from_query)
@@ -795,7 +868,7 @@ class SQLUpdateCompiler(SQLCompiler):
             get_ressource_name(self.query.model, many=False): {
                 field.name: field.get_db_prep_save(val, connection=self.connection)
                 for field, _, val in self.query.values
-            }
+                }
         }
 
     def execute_sql(self, result_type=MULTI):

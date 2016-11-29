@@ -13,3 +13,6 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def sql_flush(self, *args, **kwargs):  # pragma: no cover
         return ""
+
+    def quote_name(self, name):
+        return "quoted(!%s!)" % name

@@ -266,6 +266,79 @@ class TestQueryGet(TestCase):
             ]
         )
 
+    def test_query_backward(self):
+        res = list(client_models.Topping.objects.filter(pizzas=client_models.Pizza.objects.get(pk=1)))
+        self.assertEqual(len(res), 5)
+
+    def test_query_backward_values_sample(self):
+        res = list(api_models.Topping.objects.filter(pizzas=api_models.Pizza.objects.get(pk=1)).values_list('pizzas'))
+        self.assertEqual(len(res), 5)
+        self.assertEqual(res, [(1, )] * 5)
+
+    def test_query_backward_values_sample2(self):
+        res = list(api_models.Topping.objects.values_list('pizzas'))
+        self.assertEqual(len(res), 10)
+        self.assertEqual(res, [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,), (3,)])
+
+    def test_query_backward_values(self):
+        # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
+        # the test «test_query_backward_values_sample» which is the sample for a real database for this one return
+        # only the list of 1. it is because of the filter which filter the pk of pizzas to 1. and then
+        # the only pk for pizza returnid match this where clause. this is because the filter and the select
+        # is done by only one query, and so contraints on the where apply to the select
+        #
+        # in our api, we make first the filter, and after we make other query retreiving the pk of pizzas. (as a list)
+        # so, we first list all Toppings in pizza 1, and then we retrive all pizzas for these toppings. whith return
+        # many more data than with one query filtered.
+
+        res = list(client_models.Topping.objects.filter(pizzas=client_models.Pizza.objects.get(pk=1)).values_list('pizzas'))
+        self.assertEqual(len(res), 9)
+        self.assertEqual(res, [
+            (1, ),
+            (2, ),
+            (3, ),
+            (1, ),
+            (1, ),
+            (1, ),
+            (2, ),
+            (3, ),
+            (1,)
+        ])
+
+    def test_without_get_select_related_sample(self):
+        with self.assertNumQueries(1, using='api'):
+            p = client_models.Pizza.objects.get(pk=1)
+        with self.assertNumQueries(1, using='api'):
+            m = p.menu
+        with self.assertNumQueries(0, using='api'):
+            self.assertEqual(m.name, 'main menu')
+
+    def test_get_select_related(self):
+        with self.assertNumQueries(1, using='api'):
+            p = client_models.Pizza.objects.select_related('menu').get(pk=1)
+        with self.assertNumQueries(0, using='api'):
+            m = p.menu
+        with self.assertNumQueries(0, using='api'):
+            self.assertEqual(m.name, 'main menu')
+
+    def test_prefetch_related_sample(self):
+        with self.assertNumQueries(2):
+            p = api_models.Pizza.objects.prefetch_related('toppings').get(pk=1)
+        with self.assertNumQueries(0):
+            self.assertEqual(len(list(p.toppings.all())), 5)
+
+    def test_prefetch_related(self):
+        with self.assertNumQueries(2, using='api'):
+            p = client_models.Pizza.objects.prefetch_related('toppings').get(pk=1)
+        with self.assertNumQueries(0, using='api'):
+            self.assertEqual(len(list(p.toppings.all())), 5)
+
+    def test_exists(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertTrue(client_models.Pizza.objects.filter(pk=1).exists())
+        with self.assertNumQueries(1, using='api'):
+            self.assertFalse(client_models.Pizza.objects.filter(name="une pizza").exists())
+
 
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
