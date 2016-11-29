@@ -502,6 +502,7 @@ class SQLCompiler(BaseSQLCompiler):
     SPECIAL_CASES = [
         simple_count
     ]
+
     def __init__(self, query, connection, using):
         """
         :param django.db.models.sql.query.Query query: the query
