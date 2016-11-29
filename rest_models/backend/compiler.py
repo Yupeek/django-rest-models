@@ -2,17 +2,20 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
+import itertools
 import logging
 from collections import namedtuple
 
-import itertools
 from django.db.models.base import ModelBase
+from django.db.models.expressions import Col
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.constants import MULTI, NO_RESULTS, CURSOR, SINGLE
+from django.db.models.sql.constants import (CURSOR, MULTI, NO_RESULTS,
+                                            ORDER_DIR, SINGLE)
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
-from django.db.utils import ProgrammingError, OperationalError
+from django.db.utils import OperationalError, ProgrammingError
+
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.router import RestModelRouter
 
@@ -25,6 +28,13 @@ Alias = namedtuple('Alias', 'model,parent,field,attrname,m2m')
 :param field: the field on the parent model that link to the current model
 :param attrname: the name of the attrubute for the parent model to link to us
 :param m2m: bool that tell us if this is a many2many table.
+"""
+AliasTree = namedtuple('AliasTree', 'alias,children')
+"""
+a recursive struct that provide a représentation of all the aliases
+
+:param Alias alias: the current alias
+:param list[AliasTree] childs: the child alias tree
 """
 
 
@@ -69,10 +79,13 @@ def get_ressource_name(model, many=False):
     :return: the ressource name (plural if needed)
     :rtype: str
     """
-    if many:
-        return getattr(model.APIMeta, 'resource_name_plural', None) or model.__name__.lower() + 's'
-    else:
-        return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
+    try:
+        if many:
+            return getattr(model.APIMeta, 'resource_name_plural', None) or model.__name__.lower() + 's'
+        else:
+            return getattr(model.APIMeta, 'resource_name', None) or model.__name__.lower()
+    except AttributeError:
+        raise OperationalError("the given model %s is not a api model" % model)
 
 
 def find_m2m_field(field_on_through):
@@ -85,7 +98,6 @@ def find_m2m_field(field_on_through):
     :return:
     """
     related_model = field_on_through.related_model  # find A or B
-    from testapi.models import Topping, Pizza
 
     # chain all m2mrel : first the one on the current model found by the manytomany list,
     # 2nd the one dirrectly in related_objects for backward link
@@ -102,16 +114,42 @@ def find_m2m_field(field_on_through):
                     (field_on_through.model, field_on_through.related_model))
 
 
-class ApiResonseReader(object):
+class ApiResponseReader(object):
     """
     a helper class the read the response of an api, and give
     some convenient tools to recover the data from it.
 
     """
 
-    def __init__(self, json):
+    def __init__(self, json, next_=None):
         self.json = json
         self.cache = {}
+        if next_ is None:
+            def nonext():
+                # this will trigger the StopIteration at first iter_next
+                return []
+            self.next = nonext
+        else:
+            self.next = next_
+
+    def iterate(self, model):
+        """
+        shortcut that iterate over the result of model. if next was given in the start, it will iterate over the
+        result when the result of the model is cosumed
+        :param model:
+        :return:
+        """
+        try:
+            iter_next = iter(self.next())
+            ressource_name = get_ressource_name(model, many=True)
+            while True:
+                for data in self.json[ressource_name]:
+                    yield data
+
+                self.json = next(iter_next)
+                self.cache = {}
+        except StopIteration:
+            pass
 
     def __getitem__(self, model):
         """
@@ -135,6 +173,20 @@ class ApiResonseReader(object):
         except KeyError:
             raise OperationalError("the response from the server does not contains the ID of the model.")
         return res or self.cache[model]
+
+
+def ancestors(alias):
+    """
+    generator the return the list of ancestors of an alias
+    :param alias:
+    :return:
+    """
+    res = [alias]
+    current = alias
+    while current.parent is not None:
+        current = current.parent
+        res.insert(0, current)
+    return res
 
 
 class QueryParser(object):
@@ -215,13 +267,13 @@ class QueryParser(object):
         :param django.db.models.sql.Col col: the column
         :return:
         """
-        path, att_name = self.resolve_path(col)
-        return ".".join(tuple(alias.attrname for alias in path) + (att_name,))
+        current_alias, att_name = self.resolve_path(col)
+        return ".".join(tuple(alias.attrname for alias in ancestors(current_alias) if alias.attrname is not None) + (att_name,))
 
     def resolve_path(self, col):
         """
         resolve the path of Alias to find the final model, with the final name of the attr
-
+        :param Col col: the column to resolve
         :rtype: tuple[Alias], str
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
@@ -232,14 +284,7 @@ class QueryParser(object):
         else:
             final_att_name = col.target.name
 
-        ancestors = [current]
-
-        while current.parent is not None:
-            current = current.parent
-            ancestors.insert(0, current)
-        # ancesstors is a list of aliass
-
-        return tuple(alias for alias in ancestors if alias.attrname is not None), final_att_name
+        return current, final_att_name
 
     def flaten_where_clause(self, where_node):
         """
@@ -271,8 +316,8 @@ class QueryParser(object):
         resolved = [self.resolve_path(col) for col in cols]
 
         return (
-            set(tuple(a for a in r[0]) for r in resolved),  # set of tuple of Alias successives
-            set(tuple(a.attrname for a in r[0]) + (r[1],) for r in resolved)
+            set(r[0] for r in resolved),  # set of tuple of Alias successives
+            set(tuple(a.attrname for a in ancestors(r[0]) if a.attrname is not None) + (r[1],) for r in resolved)
         )
 
     def resolve_ids(self):
@@ -313,6 +358,59 @@ class QueryParser(object):
         return ids
 
 
+def build_aliases_tree(aliases):
+    """
+    build a tree graph of the aliases. wich give a nested list of list. each list cotains the alias
+    :param Iterable[Alias] aliases: the list of aliases, which ancestors is resolved via Alias.parent
+    :return: the AliasTree representing the imbicked aliases given
+    :rtype: AliasTree
+    """
+    buildt = {  # type: dict[Alias, AliasTree]
+        None: AliasTree(None, [])
+    }
+    for top_alias in aliases:
+        for alias in ancestors(top_alias):
+            if alias not in buildt:
+                buildt[alias] = AliasTree(alias, [])
+            buildt[alias.parent].children.append(buildt[alias])
+
+    return buildt[None].children[0]
+
+
+def join_aliases(aliases_tree, responsereader, existing_aliases, current_data):
+    """
+    @private
+    a genenartor that flaten a nested structure of data by traversing the given list of alias.
+    :param AliasTree aliases_tree: the aliases tree to propagate
+    :param responsereader: the ResponseReader with all data from the response
+    :param dict[Alias, dict] existing_aliases: the existing alias previously resolved. a dict that.
+    :return:
+    :rtype: Iterable
+    """
+    if not aliases_tree.children:
+        yield existing_aliases
+        return
+    for alias_tree in aliases_tree.children:
+        alias = alias_tree.alias
+        if alias in existing_aliases:
+            # already exists. no need to work on it
+            yield from join_aliases(alias_tree, responsereader, existing_aliases, current_data=existing_aliases[alias])
+        else:
+            # resolve the values of next jump
+            val_for_model = responsereader[alias.model]
+            val = current_data[alias.attrname]
+            if not isinstance(val, list):
+                val = [val]
+            for pk in val:
+                if pk is None:
+                    yield existing_aliases
+                    continue
+                obj = val_for_model[pk]
+                resolved_aliases = existing_aliases.copy()
+                resolved_aliases[alias] = obj
+                yield from join_aliases(aliases_tree, responsereader, resolved_aliases, current_data=obj)
+
+
 class SQLCompiler(BaseSQLCompiler):
     def __init__(self, query, connection, using):
         """
@@ -342,7 +440,7 @@ class SQLCompiler(BaseSQLCompiler):
         return RestModelRouter.is_api_model(self.query.model)
 
     def compile(self, node, select_format=False):
-        return None
+        return None, None
 
     def check_compatibility(self):
         """
@@ -431,13 +529,21 @@ class SQLCompiler(BaseSQLCompiler):
         for aliases in ressources:
             path = []
             model = self.query.model
-            for alias in aliases:
-                path.append(alias.attrname)
+            for alias in ancestors(aliases):
+                if alias.attrname is not None:
+                    path.append(alias.attrname)
                 model = alias.model
             pks.append(".".join(path + [model._meta.pk.name]))
 
         res = {
-            'exclude[]': {".".join(tuple(a.attrname for a in aliases) + ('*',)) for aliases in ressources},
+            'exclude[]': {
+                ".".join(
+                    tuple(
+                        a.attrname
+                        for a in ancestors(aliases)
+                        if a.attrname is not None
+                    ) + ('*',))
+                for aliases in ressources},
             'include[]': {".".join(r) for r in fields} | set(pks),
         }
         return res
@@ -450,9 +556,29 @@ class SQLCompiler(BaseSQLCompiler):
         :rtype: dict[str, str]
         """
         res = {}
-        query = self.query
-        if query.order_by:
-            res['sort[]'] = [lookup.replace('__', '.') for lookup in query.order_by]
+        if self.query.standard_ordering:
+            asc, desc = ORDER_DIR['ASC']
+        else:
+            asc, desc = ORDER_DIR['DESC']
+
+        order_by = [
+            self.find_ordering_name(field, self.query.get_meta(), default_order=asc)
+            for field in self.query.order_by
+        ]
+
+        resolved_order_by = []
+        for ob1 in order_by:
+            for ob1bis in ob1:
+                ob2, boolosef = ob1bis
+                if isinstance(ob2.expression, Col):
+                    resolved_order_by.append((ob2.descending, ob2.expression))
+
+        if order_by:
+
+            res['sort[]'] = [
+                ("-" if desc else "") + self.query_parser.get_rest_path_for_col(col)
+                for desc, col in resolved_order_by
+            ]
         return res
 
     def build_params(self):
@@ -476,9 +602,14 @@ class SQLCompiler(BaseSQLCompiler):
         if ids is None:
 
             pk_name = self.query.get_meta().pk.name
+            params = {
+                'exclude[]': '*',
+                'include[]': pk_name,
+            }
+            params.update(self.build_filter_params())
             result = self.connection.cursor().get(
                 get_ressource_path(self.query.model),
-                params={'exclude[]': '*', 'include[]': pk_name}
+                params=params
             )
             if result.status_code != 200:
                 raise ProgrammingError("error while querying the database : %s" % result.text)
@@ -492,27 +623,17 @@ class SQLCompiler(BaseSQLCompiler):
         :param dict item: the current item to parse
         :return:
         """
-        res = []
-        for col, _, _ in self.select:
-            aliases, attname = self.query_parser.resolve_path(col)
+        resolved = [self.query_parser.resolve_path(col) for col, _, _ in self.select]
 
-            cur_data, cur_model = item, self.query.model
-            fk_val = True  # True is not None, and will be replaced in the for
-            for alias in aliases:  # type: Alias
-                cur_model = alias.model
-                fk_val = cur_data[alias.attrname]
-                if fk_val is None:
-                    break
-
-                cur_data = responsereader[cur_model][fk_val]
-            if fk_val is None:
-                # a lookup through models has seen a None: we stop put none
-                res.append(None)
-                continue
-            val = cur_data[attname]
-            field = cur_model._meta.get_field(attname)
-            res.append(field.to_python(val))
-        yield [res]
+        uniq_aliases = set(list(zip(*resolved))[0])
+        alias_tree = build_aliases_tree(uniq_aliases)
+        for row in join_aliases(alias_tree, responsereader, {alias_tree.alias: item}, item):
+            yield [
+                alias.model._meta.get_field(attrname).to_python(row[alias][attrname])
+                if alias in row
+                else None  # LEFT OUTER Join give None as value not joined
+                for alias, attrname in resolved
+            ]
 
     def result_iter(self, responsereader):
         """
@@ -520,9 +641,9 @@ class SQLCompiler(BaseSQLCompiler):
         :param ApiResponseReader responsereader:
         :return:
         """
-        for item in responsereader[self.query.model].values():
+        for item in responsereader.iterate(self.query.model):
             for subitem in self.response_to_table(responsereader, item):
-                yield subitem
+                yield [subitem]
 
     def execute_sql(self, result_type=MULTI):
         self.setup_query()
@@ -542,6 +663,21 @@ class SQLCompiler(BaseSQLCompiler):
                 raise ProgrammingError("the query to the api has failed : GET %s %s \n=> [%s]:%s" %
                                        (url, params, response.status_code, response.text))
             json = response.json()
+            if json.get('meta'):
+                # pagination and others thing
+                def next_from_query():
+                    for i in range(2, json['meta']['total_pages'] + 1):
+                        response = self.connection.cursor().get(
+                            url,
+                            params=dict(
+                                page=i,
+                                **params
+                            )
+                        )
+                        yield response.json()
+            else:
+                next_from_query = None
+
         except EmptyResultSet:
             if result_type == MULTI:
                 return iter([])
@@ -551,15 +687,18 @@ class SQLCompiler(BaseSQLCompiler):
         if result_type == CURSOR:
             # Caller didn't specify a result_type, so just give them back the
             # cursor to process (and close).
-            raise ProgrammingError("returning a curson for this database is not supported")
+            raise ProgrammingError("returning a cursor for this database is not supported")
         if result_type == SINGLE:
-            return self.response_to_table(json, self.extract_items(json)[0])
+            response_reader = ApiResponseReader(json)
+
+            return next(self.response_to_table(
+                response_reader,
+                next(iter(response_reader)))
+            )
         if result_type == NO_RESULTS:
             return
-        response_reader = ApiResonseReader(json)
+        response_reader = ApiResponseReader(json, next_=next_from_query)
         result = self.result_iter(response_reader)
-        if not self.connection.features.can_use_chunked_reads:
-            return list(result)
         return result
 
 
@@ -642,11 +781,37 @@ class SQLDeleteCompiler(SQLCompiler):
                         get_ressource_path(q.model, pk=id),
                     )
                     if result.status_code not in (200, 202, 204):
-                        raise ProgrammingError("the deletion was unseccesfull : %s" % result.text)
+                        raise ProgrammingError("the deletion has failed : %s" % result.text)
 
 
 class SQLUpdateCompiler(SQLCompiler):
-    pass
+    def resolve_data(self):
+        """
+        build the dict to send with a put/patch that contains the data to update
+
+        :return:
+        """
+        return {
+            get_ressource_name(self.query.model, many=False): {
+                field.name: field.get_db_prep_save(val, connection=self.connection)
+                for field, _, val in self.query.values
+            }
+        }
+
+    def execute_sql(self, result_type=MULTI):
+        updated = 0
+        if self.is_api_model():
+            q = self.query
+            json = self.resolve_data()
+            for id in self.resolve_ids():
+                result = self.connection.cursor().patch(
+                    get_ressource_path(q.model, pk=id),
+                    json=json
+                )
+                if result.status_code not in (200, 202, 204):
+                    raise ProgrammingError("the update has failed : %s" % result.text)
+                updated += 1
+        return updated
 
 
 class SQLAggregateCompiler(SQLCompiler):

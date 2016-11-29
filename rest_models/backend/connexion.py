@@ -2,17 +2,19 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import time
+from urllib.parse import quote_plus, unquote_plus, urlencode
 
 import requests
-import time
 from django.core.handlers.base import BaseHandler
 from django.test.client import RequestFactory
 from requests.adapters import BaseAdapter
 from requests.cookies import extract_cookies_to_jar
 from requests.exceptions import ConnectionError, Timeout
-from requests.models import Response
+from requests.models import RequestEncodingMixin, Response
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
+
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)
@@ -170,7 +172,7 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
         self.connection = connection
         self.db = db
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr):  # pragma: no cover
         cursor_attr = getattr(self.connection, attr)
         return cursor_attr
 
@@ -182,9 +184,12 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
         finally:
             stop = time.time()
             duration = stop - start
-            sql = "%s %s" % (method.upper(), url)
+            if kwargs['params'] is None:
+                sql = "%s %s" % (method.upper(), url)
+            else:
+                sql = "%s %s?%s" % (method.upper(), url, RequestEncodingMixin._encode_params(kwargs['params']))
             self.db.queries_log.append({
-                'sql': "%s %s" %(sql, kwargs),
+                'sql': "%s ||| %s" % (sql, kwargs),
                 'time': "%.3f" % duration,
             })
             logger.debug('(%.3f) %s; args=%s' % (duration, sql, kwargs),

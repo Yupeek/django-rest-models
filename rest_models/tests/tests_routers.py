@@ -8,9 +8,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.test import TestCase
-from rest_models.router import RestModelRouter
 
 import testapp.models as client_models
+from rest_models.router import RestModelRouter
 
 
 class TestMigrationRouter(TestCase):

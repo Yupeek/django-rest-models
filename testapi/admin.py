@@ -3,6 +3,6 @@
 
 from django.contrib import admin
 
-from testapi.models import Pizza, Topping, Menu
+from testapi.models import Menu, Pizza, Topping
 
 admin.site.register([Pizza, Topping, Menu])

@@ -6,8 +6,9 @@ from django.db.models.expressions import F
 from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError
 from django.test import TestCase
-from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field
 
+from rest_models.backend.compiler import (QueryParser, SQLCompiler,
+                                          find_m2m_field)
 from testapp.models import Menu, Pizza, Topping
 
 
@@ -465,7 +466,7 @@ class TestCompilerFilterParams(CompilerTestCase):
     def test_related_filter_3_models(self):
         self.assertQsToFilter(
             Menu.objects.filter(pizzas__toppings__cost__gt=2),
-            {'filter{pizzas.toppings.cost.gt}': 2}
+            {'filter{pizzas.toppings.cost.gt}': 2.0}
         )
 
     def test_related_filter_id_shortcut(self):
@@ -637,6 +638,12 @@ class TestOrderByCompiler(CompilerTestCase):
         self.assertQsToOrder(
             Pizza.objects.all().order_by('menu__name'),
             {'sort[]': ['menu.name']},
+        )
+
+    def test_order_related_id(self):
+        self.assertQsToOrder(
+            Pizza.objects.all().order_by('toppings__id'),
+            {'sort[]': ['toppings']},
         )
 
 

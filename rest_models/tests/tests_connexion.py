@@ -5,6 +5,7 @@ import logging
 
 from django.db.utils import ConnectionHandler, ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase
+
 from rest_models.backend.connexion import ApiConnexion, LocalApiAdapter
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 

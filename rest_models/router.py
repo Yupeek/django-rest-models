@@ -7,6 +7,7 @@ from importlib import import_module
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+
 from rest_models.backend.base import DatabaseWrapper
 
 logger = logging.getLogger(__name__)

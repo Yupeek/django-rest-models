@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 from django.db.models.aggregates import Sum
 from dynamic_rest.fields.fields import DynamicRelationField
 from dynamic_rest.serializers import DynamicModelSerializer
 from rest_framework.fields import SerializerMethodField
 
-from testapi.models import Pizza, Topping, Menu
+from testapi.models import Menu, Pizza, Topping
 
 
 class ToppingSerializer(DynamicModelSerializer):

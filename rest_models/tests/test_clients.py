@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from django.core.management import call_command
 from django.test.testcases import TestCase
+
 from rest_models.backend.client import DatabaseClient
 
 

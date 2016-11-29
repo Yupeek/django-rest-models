@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import logging
 
 from django.conf import settings
-
-from django.utils import timezone
-
 from django.db import models
-import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from requests.auth import AuthBase, HTTPBasicAuth
+
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 
 logger = logging.getLogger(__name__)

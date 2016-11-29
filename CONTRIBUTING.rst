@@ -67,6 +67,7 @@ Ready to contribute? Here's how to set up `django-rest-models` for local develop
 
     $ mkvirtualenv django-rest-models
     $ cd django-rest-models/
+    $ pip install -r requirements.txt
     $ python setup.py develop
 
 4. Create a branch for local development::

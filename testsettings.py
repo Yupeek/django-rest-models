@@ -63,6 +63,10 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+REST_FRAMEWORK = {
+    'PAGE_SIZE': 10
+}
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.UnsaltedMD5PasswordHasher',
 ]
