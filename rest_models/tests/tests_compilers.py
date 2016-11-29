@@ -367,7 +367,20 @@ class TestQueryGet(TestCase):
 
 
 class TestQueryCount(TestCase):
-    pass
+    fixtures = ['data.json']
+
+    def test_count(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(client_models.Pizza.objects.all().count(), 3)
+
+    def test_count_no_result(self):
+        api_models.Pizza.objects.all().delete()
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(client_models.Pizza.objects.all().count(), 0)
+
+    def test_count_filter_order_and_all(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(client_models.Pizza.objects.filter(pk__in=[1, 2]).order_by('id').count(), 2)
 
 
 class TestQueryDelete(TestCase):

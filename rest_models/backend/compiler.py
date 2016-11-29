@@ -7,6 +7,7 @@ import logging
 import re
 from collections import namedtuple
 
+from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
@@ -474,7 +475,33 @@ def join_results(row, resolved):
                                    field, raw_val)
 
 
+def simple_count(compiler, result):
+    """
+    special case that check if the query is a count on one column and shall return only one resulti.
+    this can be made by the pagination hack
+    :param SQLCompiler compiler: the compiler that is used
+    :param result: the result type
+    :return:
+    """
+    if len(compiler.select) == 1 and isinstance(compiler.select[0][0], Count) and result is SINGLE:
+        url = get_ressource_path(compiler.query.model)
+        params = compiler.build_filter_params()
+        params['per_page'] = 1
+        params['exclude[]'] = '*'
+        response = compiler.connection.cursor().get(
+            url,
+            params=params
+        )
+        compiler.raise_on_response(url, params, response)
+        return True, [response.json()['meta']['total_results']]
+
+    return False, None
+
+
 class SQLCompiler(BaseSQLCompiler):
+    SPECIAL_CASES = [
+        simple_count
+    ]
     def __init__(self, query, connection, using):
         """
         :param django.db.models.sql.query.Query query: the query
@@ -670,6 +697,20 @@ class SQLCompiler(BaseSQLCompiler):
         params.update(self.build_limit())
         return params
 
+    def raise_on_response(self, url, params, response):
+        """
+        raise a exception with a explicit message if the respones from the backend is not a 200, 202 or 204
+        :param url:
+        :param params:
+        :param response:
+        :return:
+        """
+        if response.status_code == 204:
+            raise EmptyResultSet
+        elif response.status_code != 200:
+            raise ProgrammingError("the query to the api has failed : GET %s \n=> [%s]:%s" %
+                                   (build_url(url, params), response.status_code, response.text))
+
     # #####################################
     #       real query for select
     # #####################################
@@ -731,23 +772,35 @@ class SQLCompiler(BaseSQLCompiler):
             for subitem in self.response_to_table(responsereader, item):
                 yield [subitem]
 
+    def special_cases(self, result_type):
+        """
+        a special processor that allow to bypass the normal GET process for the current query.
+        :param result_type:
+        :return: a tupel, with bool and result. the bool is meant to say if there was a special case that matched
+        """
+        for special_case in self.SPECIAL_CASES:
+            is_special, result = special_case(self, result_type)
+            if is_special:
+                return True, result
+        return False, None
+
     def execute_sql(self, result_type=MULTI):
         self.setup_query()
         if not result_type:
             result_type = NO_RESULTS
         try:
+            is_special, result = self.special_cases(result_type)
+            if is_special:
+                return result
+
             params = self.build_params()
             url = get_ressource_path(self.query.model)
             response = self.connection.cursor().get(
                 url,
                 params=params
             )
+            self.raise_on_response(url, params, response)
 
-            if response.status_code == 204:
-                raise EmptyResultSet
-            elif response.status_code != 200:
-                raise ProgrammingError("the query to the api has failed : GET %s \n=> [%s]:%s" %
-                                       (build_url(url, params), response.status_code, response.text))
             json = response.json()
             if json.get('meta'):
                 # pagination and others thing
