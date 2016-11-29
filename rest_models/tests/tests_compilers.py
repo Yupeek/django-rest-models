@@ -336,14 +336,38 @@ class TestQueryGet(TestCase):
         self.assertEqual(len(res), 1)
 
     def test_limited_query_sample(self):
-        print(api_models.Pizza.objects.all())
-        with self.assertNumQueries(1) as ctx:
+        with self.assertNumQueries(1):
             res = list(api_models.Pizza.objects.all().order_by('id')[:1])
-            print(ctx.captured_queries)
         self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].id, 1)
 
     def test_limited_with_offset(self):
-        pass
+        with self.assertNumQueries(1, using='api'):
+            res = list(client_models.Pizza.objects.all().order_by('id')[1:2])
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].id, 2)
+
+    def test_limited_with_offset_bad_offset_for_perfs(self):
+        with self.assertNumQueries(2, using='api'):
+            res = list(client_models.Pizza.objects.all().order_by('id')[1:3])
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0].id, 2)
+        self.assertEqual(res[1].id, 3)
+
+    def test_limited_with_offset_good_offset_for_perfs(self):
+        with self.assertNumQueries(1, using='api'):
+            res = list(client_models.Pizza.objects.all().order_by('id')[2:4])
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].id, 3)
+
+    def test_get_last(self):
+        with self.assertNumQueries(1, using='api'):
+            res = client_models.Pizza.objects.all().order_by('id').last()
+        self.assertEqual(res.id, 3)
+
+
+class TestQueryCount(TestCase):
+    pass
 
 
 class TestQueryDelete(TestCase):

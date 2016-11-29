@@ -46,6 +46,18 @@ Installation
 
     ``pip install -e .``.
 
+requirements
+------------
+
+this database wrapper work with
+- python 2.7, 3.4, 3.5
+- django 1.8 and 1.9
+
+on the api, this is tested against
+- django-rest-framework 3.4.0
+- dynamic-rest 1.5.0
+
+
 exemples
 --------
 

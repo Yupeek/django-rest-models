@@ -1,3 +1,1 @@
-dynamic-rest
-djangorestframework>=3.1.0,<=3.4.0
 teamcity-messages

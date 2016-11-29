@@ -654,7 +654,7 @@ class SQLCompiler(BaseSQLCompiler):
                 page_size = pgcd(self.query.high_mark, self.query.low_mark)
                 return {
                     'per_page': page_size,
-                    'page': self.query.low_mark // page_size
+                    'page': (self.query.low_mark // page_size) + 1
                 }
             else:
                 return {
@@ -756,13 +756,12 @@ class SQLCompiler(BaseSQLCompiler):
 
                 def next_from_query():
                     last_response = json
-                    for i in range(2, page_to_stop or (json['meta']['total_pages'] + 1)):
+                    for i in range(json['meta']['page'], page_to_stop or json['meta']['total_pages']):
+                        tmp_params = params.copy()
+                        tmp_params['page'] = i + 1  # + 1 because of range include start and exclude stop
                         response = self.connection.cursor().get(
                             url,
-                            params=dict(
-                                page=i,
-                                **params
-                            )
+                            params=tmp_params
                         )
                         last_response = response.json()
                         yield last_response
