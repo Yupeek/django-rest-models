@@ -35,16 +35,6 @@ with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme_file:
 with open(os.path.join(os.path.dirname(__file__), 'test_requirements.txt')) as requirements_file:
     tests_require = requirements_file.readlines()
 
-
-def project_test_suite():
-    import django
-    django.setup()
-
-    test_suite = unittest.defaultTestLoader.discover('testapp', top_level_dir='.')
-    test_suite.addTest(unittest.defaultTestLoader.discover('rest_models', top_level_dir='.'))
-
-    return test_suite
-
 setup(
     name='django-rest-models',
     version=version,
@@ -53,7 +43,6 @@ setup(
     author='Darius BERNARD',
     author_email='darius@yupeek.com',
     url='https://github.com/Yupeek/django-rest-models',
-    test_suite="__main__.project_test_suite",
     tests_require=tests_require,
     install_requires=[
         'requests',

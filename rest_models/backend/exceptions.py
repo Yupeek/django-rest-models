@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from django.db.utils import (DatabaseError, DataError, Error,  # noqa
-                             IntegrityError, InterfaceError, InternalError,
-                             NotSupportedError, OperationalError,
-                             ProgrammingError)
+from django.db.utils import (DatabaseError, DataError, Error, IntegrityError, InterfaceError, InternalError,  # noqa
+                             NotSupportedError, OperationalError, ProgrammingError)
 
 __ALL__ = ['ProgrammingError', 'OperationalError', 'IntegrityError', 'InternalError',
            'NotSupportedError', 'DatabaseError', 'InterfaceError', 'Error']

@@ -8,8 +8,7 @@ from dynamic_rest.viewsets import DynamicModelViewSet
 from rest_framework.permissions import DjangoModelPermissions
 
 from testapi.models import Menu, Pizza, Topping
-from testapi.serializers import (MenuSerializer, PizzaSerializer,
-                                 ToppingSerializer)
+from testapi.serializers import MenuSerializer, PizzaSerializer, ToppingSerializer
 
 
 class PizzaViewSet(DynamicModelViewSet):

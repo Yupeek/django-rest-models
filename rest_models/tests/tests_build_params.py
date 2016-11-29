@@ -7,8 +7,7 @@ from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError
 from django.test import TestCase
 
-from rest_models.backend.compiler import (QueryParser, SQLCompiler,
-                                          find_m2m_field)
+from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field
 from testapp.models import Menu, Pizza, Topping
 
 

@@ -3,7 +3,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
-from urllib.parse import quote_plus, unquote_plus, urlencode
 
 import requests
 from django.core.handlers.base import BaseHandler

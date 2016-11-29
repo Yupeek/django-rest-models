@@ -81,7 +81,6 @@ tests, including testing other Python versions with tox::
 
     $ flake8 rest_models tests
     $ isort rest_models
-    $ python setup.py test
     $ tox
 
 To get flake8, isort and tox, just pip install them into your virtualenv.

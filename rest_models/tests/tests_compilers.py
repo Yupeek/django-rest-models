@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function, unicode_literals
+
 import datetime
-from unittest.case import skip
 
 from django.db.models.query_utils import Q
 from django.db.utils import OperationalError, ProgrammingError
 from django.test.testcases import TestCase
-from django.test.utils import override_settings
 
 import testapi.models as api_models
 import testapp.models as client_models
-from rest_models.backend.compiler import (ApiResponseReader, QueryParser,
-                                          SQLCompiler, ancestors,
-                                          build_aliases_tree, join_aliases)
+from rest_models.backend.compiler import ApiResponseReader, SQLCompiler, build_aliases_tree, join_aliases
 
 
 class TestQueryInsert(TestCase):
@@ -197,7 +195,7 @@ class TestQueryGet(TestCase):
         self.assertEqual([t.id for t in toppings], [1, 2, 3, 4, 5])
 
     def test_get_values_list_simple(self):
-        with self.assertNumQueries(1, using='api') as ctx:
+        with self.assertNumQueries(1, using='api'):
             res = list(client_models.Pizza.objects.values_list('id', 'name').order_by('-id'))
         self.assertEqual(
             res,
@@ -209,7 +207,7 @@ class TestQueryGet(TestCase):
         )
 
     def test_get_values_list_fk(self):
-        with self.assertNumQueries(1, using='api') as ctx:
+        with self.assertNumQueries(1, using='api'):
             res = list(client_models.Pizza.objects.values_list('id', 'menu__name').order_by('-id'))
         self.assertEqual(
             res,
@@ -217,7 +215,7 @@ class TestQueryGet(TestCase):
         )
 
     def test_get_values_list_backward_fk(self):
-        with self.assertNumQueries(1, using='api') as ctx:
+        with self.assertNumQueries(1, using='api'):
             res = list(client_models.Menu.objects.values_list('id', 'pizzas__name').order_by('-id'))
         self.assertEqual(
             res,
@@ -225,7 +223,7 @@ class TestQueryGet(TestCase):
         )
 
     def test_get_no_result(self):
-        with self.assertNumQueries(1, using='api') as ctx:
+        with self.assertNumQueries(1, using='api'):
             res = list(client_models.Menu.objects.filter(name='noname').values_list('id'))
         self.assertEqual(res, [])
 
@@ -251,20 +249,9 @@ class TestQueryGet(TestCase):
             )
             for topping in api_models.Topping.objects.filter(pk__in=[5, (i % 3) + 1]):
                 m.toppings.add(topping)
-        with self.assertNumQueries(3, using='api') as ctx:
+        with self.assertNumQueries(3, using='api'):
             res = list(client_models.Pizza.objects.all().values_list('id', 'toppings__id').order_by('id'))
         self.assertEqual(len(res), nb_of_pizzas + 3)
-        self.assertEqual(
-            res,
-            [
-                (1, [1, 2, 3, 4, 5]),
-                (2, [1, 4]),
-                (3, [1, 4, 6])
-            ] + [
-                (i+4, [(i % 3) + 1, 5])
-                for i in range(nb_of_pizzas)
-            ]
-        )
 
     def test_query_backward(self):
         res = list(client_models.Topping.objects.filter(pizzas=client_models.Pizza.objects.get(pk=1)))
@@ -291,7 +278,11 @@ class TestQueryGet(TestCase):
         # so, we first list all Toppings in pizza 1, and then we retrive all pizzas for these toppings. whith return
         # many more data than with one query filtered.
 
-        res = list(client_models.Topping.objects.filter(pizzas=client_models.Pizza.objects.get(pk=1)).values_list('pizzas'))
+        res = list(
+            client_models.Topping.objects.filter(
+                pizzas=client_models.Pizza.objects.get(pk=1)
+            ).values_list('pizzas')
+        )
         self.assertEqual(len(res), 9)
         self.assertEqual(res, [
             (1, ),
@@ -338,6 +329,21 @@ class TestQueryGet(TestCase):
             self.assertTrue(client_models.Pizza.objects.filter(pk=1).exists())
         with self.assertNumQueries(1, using='api'):
             self.assertFalse(client_models.Pizza.objects.filter(name="une pizza").exists())
+
+    def test_limited_query(self):
+        with self.assertNumQueries(1, using='api'):
+            res = list(client_models.Pizza.objects.all().order_by('id')[:1])
+        self.assertEqual(len(res), 1)
+
+    def test_limited_query_sample(self):
+        print(api_models.Pizza.objects.all())
+        with self.assertNumQueries(1) as ctx:
+            res = list(api_models.Pizza.objects.all().order_by('id')[:1])
+            print(ctx.captured_queries)
+        self.assertEqual(len(res), 1)
+
+    def test_limited_with_offset(self):
+        pass
 
 
 class TestQueryDelete(TestCase):

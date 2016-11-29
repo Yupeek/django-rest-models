@@ -12,12 +12,11 @@ from django.db.models.expressions import Col, RawSQL
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.constants import (CURSOR, MULTI, NO_RESULTS,
-                                            ORDER_DIR, SINGLE)
+from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import OperationalError, ProgrammingError
-from rest_models.backend.connexion import build_url
 
+from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.router import RestModelRouter
 
@@ -50,10 +49,24 @@ def extract_exact_pk_value(where):
     if len(where.children) == 2:
         exact, isnull = where.children
 
-        if (isinstance(exact, Exact) and isinstance(isnull, IsNull) and
-                    exact.lhs.target == isnull.lhs.target):
+        if (
+            isinstance(exact, Exact) and isinstance(isnull, IsNull) and
+            exact.lhs.target == isnull.lhs.target
+        ):
             return exact
     return None
+
+
+def pgcd(a, b):
+    """
+    return the best page size for a given limited query
+    :param a: the start offset
+    :param b: the end offset
+    :return:
+    """
+    while a % b != 0:
+        a, b = b, a % b
+    return b
 
 
 def get_ressource_path(model, pk=None):
@@ -638,10 +651,15 @@ class SQLCompiler(BaseSQLCompiler):
     def build_limit(self):
         if self.query.high_mark is not None:
             if self.query.low_mark not in (0, None):
-                raise OperationalError("the api query does not support OFFSET in queryset")
-            return {
-                'per_page': self.query.high_mark,
-            }
+                page_size = pgcd(self.query.high_mark, self.query.low_mark)
+                return {
+                    'per_page': page_size,
+                    'page': self.query.low_mark // page_size
+                }
+            else:
+                return {
+                    'per_page': self.query.high_mark,
+                }
         return {}
 
     def build_params(self):
@@ -738,7 +756,7 @@ class SQLCompiler(BaseSQLCompiler):
 
                 def next_from_query():
                     last_response = json
-                    for i in range(2, json['meta']['total_pages'] + 1):
+                    for i in range(2, page_to_stop or (json['meta']['total_pages'] + 1)):
                         response = self.connection.cursor().get(
                             url,
                             params=dict(
@@ -747,8 +765,6 @@ class SQLCompiler(BaseSQLCompiler):
                             )
                         )
                         last_response = response.json()
-                        if page_to_stop is not None and page_to_stop > last_response['meta']['page']:
-                            return
                         yield last_response
             else:
                 next_from_query = None

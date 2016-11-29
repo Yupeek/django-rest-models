@@ -24,12 +24,14 @@ DATABASES = {
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
-        'NAME': 'http://127.0.0.1:8080/api/v2/',
+        'NAME': 'http://localhost:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
 }
+
+ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = (
     # Default Django apps
