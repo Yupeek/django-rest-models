@@ -15,7 +15,7 @@ from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
-from django.db.utils import OperationalError, ProgrammingError
+from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
 
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
@@ -302,10 +302,12 @@ class QueryParser(object):
                 table, field = matches
                 current = self.aliases[table]
             else:
-                raise OperationalError("Only col in sql select is supported")
-        else:
+                raise NotSupportedError("Only Col in sql select is supported")
+        elif isinstance(col, Col):
             current = self.aliases[col.alias]  # type: Alias
             field = col.target.name
+        else:
+            raise NotSupportedError("Only Col in sql select is supported")
         if current.m2m is not None:
             final_att_name = current.m2m.name
             current = current.parent
@@ -471,8 +473,8 @@ def join_results(row, resolved):
                     yield [val] + subresult
 
         else:
-            raise OperationalError("the result from the api for %s is not supported : %s" %
-                                   field, raw_val)
+            raise NotSupportedError("the result from the api for %s.%s is not supported : %s" %
+                                    (alias.model, attrname, raw_val))
 
 
 def simple_count(compiler, result):
@@ -502,6 +504,8 @@ class SQLCompiler(BaseSQLCompiler):
     SPECIAL_CASES = [
         simple_count
     ]
+
+    META_NAME = 'meta'
 
     def __init__(self, query, connection, using):
         """
@@ -600,6 +604,10 @@ class SQLCompiler(BaseSQLCompiler):
             if isinstance(lookup.rhs, (tuple, list)):
                 res.setdefault(key, []).extend(lookup.rhs)
             else:
+                if lookup.lookup_name == 'exact' and res.get(key, lookup.rhs) != lookup.rhs:
+                    # a small performance that won't trigger any query if the
+                    # queryset ask for differents exacts values
+                    raise EmptyResultSet()
                 res.setdefault(key, []).append(lookup.rhs)
         return res
 
@@ -712,6 +720,16 @@ class SQLCompiler(BaseSQLCompiler):
             raise ProgrammingError("the query to the api has failed : GET %s \n=> [%s]:%s" %
                                    (build_url(url, params), response.status_code, response.text))
 
+    def get_meta(self, json, response):
+        """
+        small shortcut to get the metadata from a response data.
+        simle for now, but allow for refactoring in future release if meta system has changed
+
+        :param dict json: the data of the response
+        :param response: the response if used
+        :return:
+        """
+        return json.get(self.META_NAME)
     # #####################################
     #       real query for select
     # #####################################
@@ -755,13 +773,13 @@ class SQLCompiler(BaseSQLCompiler):
         if not resolved:
             # nothing in select. special case in exists()
             yield [[]]
-            return
-        uniq_aliases = set(list(zip(*resolved))[0])
-        alias_tree = build_aliases_tree(uniq_aliases)
+        else:
+            uniq_aliases = set(list(zip(*resolved))[0])
+            alias_tree = build_aliases_tree(uniq_aliases)
 
-        for row in join_aliases(alias_tree, responsereader, {alias_tree.alias: item}, item):
-            for subresult in join_results(row, resolved):
-                yield subresult
+            for row in join_aliases(alias_tree, responsereader, {alias_tree.alias: item}, item):
+                for subresult in join_results(row, resolved):
+                    yield subresult
 
     def result_iter(self, responsereader):
         """
@@ -803,22 +821,23 @@ class SQLCompiler(BaseSQLCompiler):
             self.raise_on_response(url, params, response)
 
             json = response.json()
-            if json.get('meta'):
+            meta = self.get_meta(json, response)
+            if meta:
                 # pagination and others thing
+
                 high_mark = self.query.high_mark
-                page_to_stop = None if high_mark is None else (high_mark // json['meta']['per_page'])
+                page_to_stop = None if high_mark is None else (high_mark // meta['per_page'])
 
                 def next_from_query():
-                    last_response = json
-                    for i in range(json['meta']['page'], page_to_stop or json['meta']['total_pages']):
+                    for i in range(meta['page'], page_to_stop or meta['total_pages']):
                         tmp_params = params.copy()
                         tmp_params['page'] = i + 1  # + 1 because of range include start and exclude stop
-                        response = self.connection.cursor().get(
+                        last_response = self.connection.cursor().get(
                             url,
                             params=tmp_params
                         )
-                        last_response = response.json()
-                        yield last_response
+                        yield last_response.json()
+
             else:
                 next_from_query = None
 
@@ -915,9 +934,9 @@ class SQLDeleteCompiler(SQLCompiler):
         if self.is_api_model():
 
             q = self.query
-            if self.query.get_meta().auto_created:
-                pass  # we don't care about many2many table, the api will clean it for us
-            else:
+            # we don't care about many2many table, the api will clean it for us
+            if not self.query.get_meta().auto_created:
+
                 for id in self.resolve_ids():
                     result = self.connection.cursor().delete(
                         get_ressource_path(q.model, pk=id),
@@ -957,4 +976,7 @@ class SQLUpdateCompiler(SQLCompiler):
 
 
 class SQLAggregateCompiler(SQLCompiler):
-    pass
+
+    def execute_sql(self, result_type=MULTI):
+        raise NotSupportedError("the aggregation for the database %s is not supported : %s" % (
+                                self.connection.alias, self.query))  # pragma: no cover

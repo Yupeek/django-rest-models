@@ -260,6 +260,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         """
         kwargs.setdefault("allow_redirects", False)
         kwargs.setdefault("timeout", self.get_timeout())
+        kwargs.setdefault('stream', False)
 
         assert not url.startswith("/"), "the url should not start with a «/»"
         error = 0

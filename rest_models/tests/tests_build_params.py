@@ -4,7 +4,7 @@ from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
 from django.db.models.query_utils import Q
-from django.db.utils import NotSupportedError
+from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
 
 from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field
@@ -107,6 +107,12 @@ class QueryParserPathResolutionTest(TestCase):
         parser = QueryParser(queryset.query)
         result = {parser.get_rest_path_for_col(col) for col in queryset.query.select}
         self.assertEqual(set(expected), result)
+
+    def test_alias_resolution_failure(self):
+        query = Menu.objects.values_list('pizzas__toppings__name').query
+        del query.alias_map['testapp_pizza']
+        parser = QueryParser(query)
+        self.assertRaises(ProgrammingError, getattr, parser, 'aliases')
 
     def test_aliases_one_table(self):
         self.assertParsedAliasEqual(

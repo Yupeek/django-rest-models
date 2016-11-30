@@ -50,10 +50,12 @@ requirements
 ------------
 
 this database wrapper work with
+
 - python 2.7, 3.4, 3.5
 - django 1.8 and 1.9
 
 on the api, this is tested against
+
 - django-rest-framework 3.4.0
 - dynamic-rest 1.5.0
 
@@ -61,7 +63,9 @@ on the api, this is tested against
 exemples
 --------
 
-settings.py::
+settings.py:
+
+.. code-block:: python
 
     DATABASES = {
         'default': {
@@ -80,7 +84,10 @@ settings.py::
         'rest_models.router.RestModelRouter',
     ]
 
-models.py::
+
+models.py:
+
+.. code-block:: python
 
     class MyModel(models.Model):
         field = models.IntegerField()
@@ -108,6 +115,28 @@ each serializers must :
 - provide the reverse related field (each ForeignKey and manyToMany add a relation on the other models.
   the serializer from the other model must provide the DynamicRelationField for these relation
 
+.. code-block:: python
+
+    class MenuSerializer(DynamicModelSerializer):
+        pizzas = DynamicRelationField('PizzaSerializer', many=True)
+
+        class Meta:
+            model = Menu
+            name = 'menu'
+            fields = ('id', 'code', 'name', 'pizzas')
+            deferred_fields = ('pizza_set', )
+
+
+    class PizzaSerializer(DynamicModelSerializer):
+
+        toppings = DynamicRelationField(ToppingSerializer, many=True)
+        menu = DynamicRelationField(MenuSerializer)
+
+        class Meta:
+            model = Pizza
+            name = 'pizza'
+            fields = ('id', 'name', 'price', 'from_date', 'to_date', 'toppings', 'menu')
+
 limitations
 -----------
 
@@ -120,7 +149,10 @@ dynamic-rest filtering system too.
 - negated OR in filtering: since the compitation of nested filter is complexe and error prone, we disable all OR. in
   fact, only some nested of AND is accepted. only the final value of the Q() object can be negated
 
-    for short, you can't ::
+    for short, you can't :
+
+.. code-block:: python
+
 
         Pizza.objects.aggregate()
         Pizza.objects.annotate()
@@ -128,16 +160,24 @@ dynamic-rest filtering system too.
         Pizza.objects.exclude(Q(..) & Q(..))
         Pizza.objects.exclude(Q(..) | Q(..))
 
-    but you can ::
+    but you can :
+
+.. code-block:: python
 
         Pizza.objects.create
+        Pizza.objects.bulk_create
+        Pizza.objects.update
+        Pizza.objects.bulk_update
+        Pizza.objects.select_related
+        Pizza.objects.prefetch_related
+        Pizza.objects.values
+        Pizza.objects.values_list
+        Pizza.objects.delete
+        Pizza.objects.count()
         Pizza.objects.filter(..., ..., ...)
         Pizza.objects.filter(...).filter(...).exclude(...)
         Pizza.objects.exclude(..., ...).exclude(...)
         Pizza.objects.filter(Q(..) & Q(..))
-
-- bulk update
-- bulk delete
 
 specific comportments
 ---------------------
