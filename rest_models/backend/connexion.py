@@ -190,6 +190,12 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
         cursor_attr = getattr(self.connection, attr)
         return cursor_attr
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.connection.close()
+
     def request(self, method, url, **kwargs):
 
         start = time.time()
@@ -221,7 +227,13 @@ class ApiConnexion(ApiVerbShortcutMixin):
         self.retry = retry
 
     def close(self):
-        pass  # do nothing, http is stateless
+        self.session.close()
+
+    def __exit__(self, *args):
+        self.close()
+
+    def __enter__(self):
+        return self
 
     def execute(self, sql):
         raise NotImplementedError("this is not a SQL database, so no cursor is available")
@@ -263,6 +275,8 @@ class ApiConnexion(ApiVerbShortcutMixin):
         kwargs.setdefault('stream', False)
 
         assert not url.startswith("/"), "the url should not start with a «/»"
+        if url != '' and not self.url.endswith('/'):
+            url = '/' + url
         error = 0
         last_exception = None
 
@@ -280,7 +294,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
                 if self.auth and hasattr(self.auth, 'raise_on_response_forbidden'):
                     self.auth.raise_on_response_forbidden(response)
                 else:
-                    if response.status_code == 403:
+                    if response.status_code in (403, 401):
                         raise FakeDatabaseDbAPI2.ProgrammingError(
                             "Access to database is Forbidden for user %s.\n%s" %
                             (self.auth[0] if isinstance(self.auth, tuple) else self.auth, response.text)

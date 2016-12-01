@@ -25,6 +25,10 @@ stable branche
     :target: https://pypi.python.org/pypi/django-rest-models
     :alt: Number of PyPI downloads per month
 
+.. image:: https://requires.io/github/Yupeek/django-rest-models/requirements.svg?branch=master
+     :target: https://requires.io/github/Yupeek/django-rest-models/requirements/?branch=master
+     :alt: Requirements Status
+
 development status
 
 .. image:: https://img.shields.io/travis/Yupeek/django-rest-models/develop.svg
@@ -33,6 +37,9 @@ development status
 .. image:: https://coveralls.io/repos/github/Yupeek/django-rest-models/badge.svg?branch=develop
     :target: https://coveralls.io/github/Yupeek/django-rest-models?branch=develop
 
+.. image:: https://requires.io/github/Yupeek/django-rest-models/requirements.svg?branch=develop
+     :target: https://requires.io/github/Yupeek/django-rest-models/requirements/?branch=develop
+     :alt: Requirements Status
 
 
 Installation
@@ -76,7 +83,7 @@ settings.py:
             'NAME': 'https://requestb.in/',
             'USER': 'userapi',
             'PASSWORD': 'passwordapi',
-            'AUTH': 'rest_models.backend.auth.basic',
+            'AUTH': 'rest_models.backend.auth.BasicAuth',
         },
     }
 

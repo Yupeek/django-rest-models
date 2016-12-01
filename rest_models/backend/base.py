@@ -55,7 +55,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def get_connection_params(self):
         authpath = self.settings_dict.get('AUTH', 'rest_models.backend.auth.BasicAuth')
-        auth = import_class(authpath)(self.settings_dict)
+        auth = import_class(authpath)(self, self.settings_dict)
 
         params = {
             'url': self.settings_dict['NAME'],
@@ -71,9 +71,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return self.settings_dict['OPTIONS'].get('TIMEOUT', 4)
 
     def init_connection_state(self):
-        c = self.connection
         self.autocommit = True
-        c.head('', timeout=self.timeout)  # it will raise an exceptions if 403
 
     def create_cursor(self):
         return self.connection
@@ -101,3 +99,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def _set_autocommit(self, autocommit):
         pass
+
+    def cursor(self):
+        # type: () -> ApiConnexion
+        return super(DatabaseWrapper, self).cursor()
