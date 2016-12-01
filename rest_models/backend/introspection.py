@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-from django.db.backends.base.introspection import BaseDatabaseIntrospection, TableInfo, FieldInfo
+from django.db.backends.base.introspection import BaseDatabaseIntrospection, FieldInfo, TableInfo
 
 logger = logging.getLogger(__name__)
 

@@ -9,12 +9,16 @@ from django.db.utils import ProgrammingError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
+
 try:
     from urllib.parse import urlparse, urlunparse
 except ImportError:  # pragma: no cover
-    from urllib import urlparse, urlunparse
+    from urlparse import urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
+
+
+Token = namedtuple('Token', 'expiredate access_token token_type scope')
 
 
 class ApiAuthBase(AuthBase):
@@ -46,8 +50,6 @@ class BasicAuth(ApiAuthBase):
 
     def __call__(self, request):
         return self.backend(request)
-
-Token = namedtuple('Token', 'expiredate access_token token_type scope')
 
 
 class OAuthToken(ApiAuthBase):
@@ -81,8 +83,6 @@ class OAuthToken(ApiAuthBase):
         :return: the token from the api
         :rtype: Token
         """
-
-
         conn = self.databasewrapper.cursor()
         params = {'grant_type': 'client_credentials'}
         # Get client credentials params

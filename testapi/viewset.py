@@ -37,6 +37,7 @@ def wait(request):
     time.sleep(0.5)
     return HttpResponse()
 
+
 queries = []
 """:type: list[django.core.handlers.wsgi.WSGIRequest] """
 custom = {}

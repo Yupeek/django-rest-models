@@ -5,11 +5,11 @@ import logging
 
 from django.db.utils import ConnectionHandler, ProgrammingError
 from django.test.testcases import LiveServerTestCase, TestCase
-from rest_models.backend.auth import OAuthToken
 
+from rest_models.backend.auth import OAuthToken
 from rest_models.backend.connexion import ApiConnexion, LocalApiAdapter
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
-from testapi.viewset import queries, custom
+from testapi.viewset import custom, queries
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +124,11 @@ class TestOauth(TestCase):
         })
         db_wrapper = self.ch['default']
         self.oauth = OAuthToken(db_wrapper, db_wrapper.settings_dict)
+        del queries[:]
+        custom.clear()
 
     def tearDown(self):
-        queries.clear()
+        del queries[:]
         custom.clear()
 
     def test_auth_get_token_same(self):
