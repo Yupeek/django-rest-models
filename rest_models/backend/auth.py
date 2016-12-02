@@ -9,6 +9,7 @@ from django.db.utils import ProgrammingError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.utils import message_from_response
 
 try:
     from urllib.parse import urlparse, urlunparse
@@ -37,7 +38,7 @@ class ApiAuthBase(AuthBase):
                 "Access to database is Forbidden for user %s on %s.\n%s" % (
                     self.settings_dict['USER'],
                     self.settings_dict['NAME'],
-                    response.text
+                    message_from_response(response)
                 )
             )
 
@@ -94,10 +95,9 @@ class OAuthToken(ApiAuthBase):
             stream=False
         )
         if response.status_code != 200:
-            raise ProgrammingError("unable to retrive the oauth token from %s: [%s]%s" %
+            raise ProgrammingError("unable to retrive the oauth token from %s: %s" %
                                    (self.url_token,
-                                    response.status_code,
-                                    response.text if not response.text.startswith('\n<!DOCTYPE html>') else '')
+                                    message_from_response(response))
                                    )
         data = response.json()
         return Token(

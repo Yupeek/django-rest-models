@@ -15,6 +15,7 @@ from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.utils import message_from_response
 
 logger = logging.getLogger(__name__)
 
@@ -219,12 +220,13 @@ class ApiConnexion(ApiVerbShortcutMixin):
     wrapper for request.Session that in fact implement useless methods like rollback which
     is not possible with a rest API
     """
-    def __init__(self, url, auth=None, retry=3):
+    def __init__(self, url, auth=None, retry=3, timeout=3):
         self.session = requests.Session()
         self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
         self.session.auth = self.auth = auth
         self.url = url
         self.retry = retry
+        self.timeout = timeout
 
     def close(self):
         self.session.close()
@@ -245,7 +247,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         pass
 
     def get_timeout(self):
-        return 3.0
+        return self.timeout
 
     def request(self, method, url, **kwargs):
         """
@@ -297,7 +299,8 @@ class ApiConnexion(ApiVerbShortcutMixin):
                     if response.status_code in (403, 401):
                         raise FakeDatabaseDbAPI2.ProgrammingError(
                             "Access to database is Forbidden for user %s.\n%s" %
-                            (self.auth[0] if isinstance(self.auth, tuple) else self.auth, response.text)
+                            (self.auth[0] if isinstance(self.auth, tuple) else self.auth,
+                             message_from_response(response))
                         )
                 return response
         raise FakeDatabaseDbAPI2.OperationalError(

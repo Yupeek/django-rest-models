@@ -70,7 +70,7 @@ class RestModelRouter(object):
         return self.get_api_database(model)
 
     def allow_relation(self, obj1, obj2, **hints):
-        if self.is_api_model(obj1) or self.is_api_model(obj2):
+        if self.is_api_model(obj1) ^ self.is_api_model(obj2):
             return False
         return None
 

@@ -7,6 +7,7 @@ import logging
 import re
 from collections import namedtuple
 
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
@@ -19,6 +20,7 @@ from django.db.utils import NotSupportedError, OperationalError, ProgrammingErro
 
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
+from rest_models.backend.utils import message_from_response
 from rest_models.router import RestModelRouter
 
 logger = logging.getLogger(__name__)
@@ -70,29 +72,29 @@ def pgcd(a, b):
     return b
 
 
-def get_ressource_path(model, pk=None):
+def get_resource_path(model, pk=None):
     """
-    return the ressource path relative to the base of the api.
-    it use ressource_path and ressource_path, and fallback to the get_ressource_name()
+    return the resource path relative to the base of the api.
+    it use resource_path and resource_path, and fallback to the get_resource_name()
     :param model: the model
-    :return: the path of the ressource
+    :return: the path of the resource
     :rtype: str
     """
-    ret = getattr(model.APIMeta, 'ressource_path', None) or get_ressource_name(model, False)
+    ret = getattr(model.APIMeta, 'resource_path', None) or get_resource_name(model, False)
     if pk is not None:
         ret += "/%s/" % pk
     return ret
 
 
-def get_ressource_name(model, many=False):
+def get_resource_name(model, many=False):
     """
-    return the name of the ressource on the server
+    return the name of the resource on the server
     if multi is True, it's the url for the «many» models, so we add a «s».
     the resulotion try first to check the APIMeta resource_name and resource_name_plural. if it don't exists,
     it will guess the value from the model name.(lower)
     :param model: the model
     :param bool many: if true, the url of many results
-    :return: the ressource name (plural if needed)
+    :return: the resource name (plural if needed)
     :rtype: str
     """
     try:
@@ -158,15 +160,21 @@ class ApiResponseReader(object):
         """
         try:
             iter_next = iter(self.next())
-            ressource_name = get_ressource_name(model, many=True)
+            resource_name = get_resource_name(model, many=True)
             while True:
-                for data in self.json[ressource_name]:
+                for data in self.json[resource_name]:
                     yield data
 
                 self.json = next(iter_next)
                 self.cache = {}
         except StopIteration:
             pass
+        except KeyError:
+            raise ImproperlyConfigured('the response does not contains the result for %s. '
+                                       'maybe the resource name does not match the one on the api. '
+                                       'please check if %s.APIMeta.resource_name_plural is ok. '
+                                       'had %s in result' %
+                                       (resource_name, model.__name__, list(self.json.keys())))
 
     def __getitem__(self, model):
         """
@@ -180,13 +188,16 @@ class ApiResponseReader(object):
         res = None
         try:
             if model not in self.cache:
-                ressource_name = get_ressource_name(model, many=True)
+                resource_name = get_resource_name(model, many=True)
                 pk = model._meta.pk.name
 
                 res = self.cache[model] = collections.OrderedDict(
                     (apidata[pk], apidata)
-                    for apidata in self.json[ressource_name]
+                    # read all primary request result, and alternative result for the same model,
+                    # rendered in a other key prefixed by + (used for foregnkey on self)
+                    for apidata in self.json[resource_name] + self.json.get('+' + resource_name, [])
                 )
+
         except KeyError:
             raise OperationalError("the response from the server does not contains the ID of the model.")
         return res or self.cache[model]
@@ -336,11 +347,11 @@ class QueryParser(object):
                 res.append((where_node.negated, where_node.connector == 'AND', child))
         return res
 
-    def get_ressources_for_cols(self, cols):
+    def get_resources_for_cols(self, cols):
         """
-        return the list of ressources used and the list of attrubutes for each cols
+        return the list of resources used and the list of attrubutes for each cols
         :param list[django.db.models.expressions.Col] cols: the list of Col
-        :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the ressources, with the
+        :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the resources, with the
                  attributes
         """
         resolved = [self.resolve_path(col) for col in cols if not isinstance(col, RawSQL) or col.sql != '1']
@@ -486,7 +497,7 @@ def simple_count(compiler, result):
     :return:
     """
     if len(compiler.select) == 1 and isinstance(compiler.select[0][0], Count) and result is SINGLE:
-        url = get_ressource_path(compiler.query.model)
+        url = get_resource_path(compiler.query.model)
         params = compiler.build_filter_params()
         params['per_page'] = 1
         params['exclude[]'] = '*'
@@ -620,13 +631,13 @@ class SQLCompiler(BaseSQLCompiler):
         """
         if self.select is None:
             return {}
-        # ressources is a set of tuple, each item in the tuple is the alias
-        ressources, fields = self.query_parser.get_ressources_for_cols([col for col, _, _ in self.select])
-        # build the list of all pks for selected ressources.
+        # resources is a set of tuple, each item in the tuple is the alias
+        resources, fields = self.query_parser.get_resources_for_cols([col for col, _, _ in self.select])
+        # build the list of all pks for selected resources.
         # this prevent the exclusion of the pks if they are not included in the query
         pks = []
-        ressources_bases = []
-        for aliases in ressources:
+        resources_bases = []
+        for aliases in resources:
             path = []
             model = self.query.model
             for alias in ancestors(aliases):
@@ -635,10 +646,10 @@ class SQLCompiler(BaseSQLCompiler):
 
                 model = alias.model
             pks.append(".".join(path + [model._meta.pk.name]))
-            ressources_bases.append(".".join(path))
+            resources_bases.append(".".join(path))
 
-        # exclude[) contains all ressources queried forowed by a *
-        # include[] contains all pk of each ressources along with the queried fields minus the ressources itselfs
+        # exclude[) contains all resources queried forowed by a *
+        # include[] contains all pk of each resources along with the queried fields minus the resources itselfs
         res = {
             'exclude[]': {
                 ".".join(
@@ -647,8 +658,8 @@ class SQLCompiler(BaseSQLCompiler):
                         for a in ancestors(aliases)
                         if a.attrname is not None
                     ) + ('*',))
-                for aliases in ressources},
-            'include[]': ({".".join(r) for r in fields} | set(pks)) - set(ressources_bases),
+                for aliases in resources},
+            'include[]': ({".".join(r) for r in fields} | set(pks)) - set(resources_bases),
         }
         return res
 
@@ -717,8 +728,8 @@ class SQLCompiler(BaseSQLCompiler):
         if response.status_code == 204:
             raise EmptyResultSet
         elif response.status_code != 200:
-            raise ProgrammingError("the query to the api has failed : GET %s \n=> [%s]:%s" %
-                                   (build_url(url, params), response.status_code, response.text))
+            raise ProgrammingError("the query to the api has failed : GET %s \n=> %s" %
+                                   (build_url(url, params), message_from_response(response)))
 
     def get_meta(self, json, response):
         """
@@ -750,12 +761,12 @@ class SQLCompiler(BaseSQLCompiler):
             }
             params.update(self.build_filter_params())
             result = self.connection.cursor().get(
-                get_ressource_path(self.query.model),
+                get_resource_path(self.query.model),
                 params=params
             )
             if result.status_code != 200:
                 raise ProgrammingError("error while querying the database : %s" % result.text)
-            ids = {res['id'] for res in result.json()[get_ressource_name(self.query.model, many=True)]}
+            ids = {res['id'] for res in result.json()[get_resource_name(self.query.model, many=True)]}
         return ids
 
     def response_to_table(self, responsereader, item):
@@ -813,7 +824,7 @@ class SQLCompiler(BaseSQLCompiler):
                 return result
 
             params = self.build_params()
-            url = get_ressource_path(self.query.model)
+            url = get_resource_path(self.query.model)
             response = self.connection.cursor().get(
                 url,
                 params=params
@@ -885,10 +896,10 @@ class SQLInsertCompiler(SQLCompiler):
                 ]
 
             json = {
-                get_ressource_name(query.model, many=True): data
+                get_resource_name(query.model, many=True): data
             }
             response = self.connection.cursor().post(
-                get_ressource_path(self.query.model),
+                get_resource_path(self.query.model),
                 json=json
             )
             if response.status_code != 201:
@@ -897,7 +908,7 @@ class SQLInsertCompiler(SQLCompiler):
                     (len(query_objs), opts.verbose_name, response.json()['errors'])
                 )
             result_json = response.json()
-            for old, new in zip(query_objs, result_json[get_ressource_name(query.model, many=True)]):
+            for old, new in zip(query_objs, result_json[get_resource_name(query.model, many=True)]):
                 for field in opts.concrete_fields:
                     setattr(old, field.attname, field.to_python(new[field.name]))
         else:
@@ -912,21 +923,22 @@ class SQLInsertCompiler(SQLCompiler):
                     }
 
                 json = {
-                    get_ressource_name(query.model, many=False): data
+                    get_resource_name(query.model, many=False): data
                 }
                 response = self.connection.cursor().post(
-                    get_ressource_path(self.query.model),
+                    get_resource_path(self.query.model),
                     json=json
                 )
                 if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s.\n%s" % (obj, response.text))
+                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s.\n%s" % (
+                        obj, message_from_response(response)))
                 result_json = response.json()
-                new = result_json[get_ressource_name(query.model, many=False)]
+                new = result_json[get_resource_name(query.model, many=False)]
                 for field in opts.concrete_fields:
                     setattr(obj, field.attname, field.to_python(new[field.name]))
 
             if return_id and result_json:
-                return result_json[get_ressource_name(query.model, many=False)][opts.pk.column]
+                return result_json[get_resource_name(query.model, many=False)][opts.pk.column]
 
 
 class SQLDeleteCompiler(SQLCompiler):
@@ -939,7 +951,7 @@ class SQLDeleteCompiler(SQLCompiler):
 
                 for id in self.resolve_ids():
                     result = self.connection.cursor().delete(
-                        get_ressource_path(q.model, pk=id),
+                        get_resource_path(q.model, pk=id),
                     )
                     if result.status_code not in (200, 202, 204):
                         raise ProgrammingError("the deletion has failed : %s" % result.text)
@@ -953,7 +965,7 @@ class SQLUpdateCompiler(SQLCompiler):
         :return:
         """
         return {
-            get_ressource_name(self.query.model, many=False): {
+            get_resource_name(self.query.model, many=False): {
                 field.name: field.get_db_prep_save(val, connection=self.connection)
                 for field, _, val in self.query.values
                 }
@@ -966,7 +978,7 @@ class SQLUpdateCompiler(SQLCompiler):
             json = self.resolve_data()
             for id in self.resolve_ids():
                 result = self.connection.cursor().patch(
-                    get_ressource_path(q.model, pk=id),
+                    get_resource_path(q.model, pk=id),
                     json=json
                 )
                 if result.status_code not in (200, 202, 204):

@@ -75,10 +75,10 @@ class TestJoinGenerator(TestCase):
 
         compiler = SQLCompiler(qs.query, None, 'api')
         compiler.setup_query()
-        ressources, fields_path = compiler.query_parser.get_ressources_for_cols([col for col, _, _ in compiler.select])
+        resources, fields_path = compiler.query_parser.get_resources_for_cols([col for col, _, _ in compiler.select])
 
         current_obj = reader[qs.model][current_obj_pk]
-        tree = build_aliases_tree(ressources)
+        tree = build_aliases_tree(resources)
 
         results = list(join_aliases(tree, reader, {}, current_obj))
         self.assertEqual(len(results), len(expected))

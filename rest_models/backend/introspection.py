@@ -53,9 +53,17 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         return {}
 
     def get_relations(self, cursor, table_name):
-        data = cursor.get(table_name).json()
-        ressource_name = list(set(data.keys()) - {'meta'})[0]
-        obj = data[ressource_name][0]
+        res = cursor.get(
+            table_name,
+            params={'page': 1, 'per_page': 1}
+        )
+        if res.status_code != 200:
+            raise Exception("the remote api failed our query on %s : [%s]%s" %
+                            (table_name, res.status_code, res.text))
+        data = res.json()
+
+        resource_name = list(set(data.keys()) - {'meta'})[0]
+        obj = data[resource_name][0]
 
         return {
             k: ('id', v.rstrip("/"))

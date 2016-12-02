@@ -60,6 +60,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         params = {
             'url': self.settings_dict['NAME'],
             'auth': auth,
+            'timeout': self.settings_dict.get('OPTIONS', {}).get('TIMEOUT', 3)
         }
         return params
 
