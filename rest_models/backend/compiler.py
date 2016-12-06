@@ -139,9 +139,16 @@ class ApiResponseReader(object):
 
     """
 
-    def __init__(self, json, next_=None):
+    def __init__(self, json, next_=None, many=True):
+        """
+        create the read of the response
+        :param json:  the data loaded from the response
+        :param next_: the special function to call on iteration for getting the next result
+        :param many: if True, the main rows is on a plurial verbose name. (pizzas instead of pizza)
+        """
         self.json = json
         self.cache = {}
+        self.many = many
         if next_ is None:
             def nonext():
                 # this will trigger the StopIteration at first iter_next
@@ -158,15 +165,22 @@ class ApiResponseReader(object):
         :param model:
         :return:
         """
+        resource_name = get_resource_name(model, many=self.many)
+
         try:
             iter_next = iter(self.next())
-            resource_name = get_resource_name(model, many=True)
-            while True:
-                for data in self.json[resource_name]:
-                    yield data
+            if self.many:
+                # many result in the json.
+                # list of results
+                while True:
+                    for data in self.json[resource_name]:
+                        yield data
 
-                self.json = next(iter_next)
-                self.cache = {}
+                    self.json = next(iter_next)
+                    self.cache = {}
+            else:
+                # on result in the response
+                yield self.json[resource_name]
         except StopIteration:
             pass
         except KeyError:
@@ -648,7 +662,7 @@ class SQLCompiler(BaseSQLCompiler):
         :rtype: dict[unicode, unicode]
         """
         if self.select is None:
-            return {}
+            return {}  # pragma: no cover
         # resources is a set of tuple, each item in the tuple is the alias
         resources, fields = self.query_parser.get_resources_for_cols([col for col, _, _ in self.select])
         # build the list of all pks for selected resources.
@@ -684,7 +698,6 @@ class SQLCompiler(BaseSQLCompiler):
     def build_sort_params(self):
         """
         build the sort param from the order_by provided by the query
-        :param django.db.models.sql.query.Query query:  the query to inspect
         :return: a dict with or without the sort[]
         :rtype: dict[str, str]
         """
@@ -734,6 +747,19 @@ class SQLCompiler(BaseSQLCompiler):
         params.update(self.build_sort_params())
         params.update(self.build_limit())
         return params
+
+    def build_params_and_pk(self):
+        """
+        will try to get the pk on the query if there is one pk in the filter
+
+        :return:
+        """
+        ids = self.query_parser.resolve_ids()
+        if ids is not None and len(ids) == 1:
+            params = {}
+            params.update(self.build_include_exclude_params())
+            return next(iter(ids)), params
+        return None, self.build_params()
 
     def raise_on_response(self, url, params, response):
         """
@@ -842,8 +868,8 @@ class SQLCompiler(BaseSQLCompiler):
             if is_special:
                 return result
 
-            params = self.build_params()
-            url = get_resource_path(self.query.model)
+            pk, params = self.build_params_and_pk()
+            url = get_resource_path(self.query.model, pk)
             response = self.connection.cursor().get(
                 url,
                 params=params
@@ -882,13 +908,13 @@ class SQLCompiler(BaseSQLCompiler):
             # cursor to process (and close).
             raise ProgrammingError("returning a cursor for this database is not supported")
         if result_type == SINGLE:
-            response_reader = ApiResponseReader(json)
+            response_reader = ApiResponseReader(json, many=pk is None)
             for result in self.result_iter(response_reader):
                 return result
             return
         if result_type == NO_RESULTS:
             return
-        response_reader = ApiResponseReader(json, next_=next_from_query)
+        response_reader = ApiResponseReader(json, next_=next_from_query, many=pk is None)
         result = self.result_iter(response_reader)
         return result
 

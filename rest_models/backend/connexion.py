@@ -220,7 +220,16 @@ class ApiConnexion(ApiVerbShortcutMixin):
     wrapper for request.Session that in fact implement useless methods like rollback which
     is not possible with a rest API
     """
-    def __init__(self, url, auth=None, retry=3, timeout=3, backend=None):
+    def __init__(self, url, auth=None, retry=3, timeout=3, backend=None, middlewares=()):
+        """
+        create a persistent connection to the api
+        :param str url: the base url for the api (host + port + start path)
+        :param ApiAuthBase auth: the auth provider
+        :param int retry: number of retry
+        :param int|(int, int) timeout: the timeout to pass to the api
+        :param DatabaseWrapper backend: the backend
+        :param list[Middleware]|tuple[Middleware] middlewares:the list of middleware to execute for each query.
+        """
         self.session = requests.Session()
         self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
         self.session.auth = self.auth = auth
@@ -228,6 +237,8 @@ class ApiConnexion(ApiVerbShortcutMixin):
         self.retry = retry
         self.timeout = timeout
         self.backend = backend
+        self.middlewares = middlewares
+        self._requestid = 0
 
     def close(self):
         self.session.close()
@@ -238,14 +249,43 @@ class ApiConnexion(ApiVerbShortcutMixin):
     def __enter__(self):
         return self
 
-    def execute(self, sql, params={}):
+    def inc_request_id(self):
+        """
+        increment the request id and then return it
+        :return:
+        """
+        self._requestid += 1
+        return self._requestid
+
+    def execute(self, sql, params=None):
         """
 
         :param sql: the usless sql
         :param params: the userless params
         :return:
         """
-        return self.session.request(**params)
+        params = params or {}
+        return self._make_request(params)
+
+    def _make_request(self, params):
+        """
+        finaly make the request. will pass all middleware on send and recieve
+        :param params:
+        :return:
+        """
+        requestid = self.inc_request_id()
+        middlewares = self.middlewares
+        for i, middleware in enumerate(middlewares):
+            response = middleware.process_request(params, requestid)
+            if response is not None:
+                break
+        else:
+            # if the middleware did not override the real response, we make the query
+            response = self.session.request(**params)
+        for middleware in middlewares[2::-1]:  # iterate over all previously executed middlewares
+            response = middleware.process_response(params, response, requestid)
+            assert response is not None, "the ApiMiddleware.process_response must return a response"
+        return response
 
     def rollback(self):  # pragma: no cover
         pass

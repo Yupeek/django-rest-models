@@ -2,7 +2,6 @@
 quickstart
 ##########
 
-.. highlight:: python
 
 client
 ******

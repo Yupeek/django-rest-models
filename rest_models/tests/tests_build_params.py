@@ -7,7 +7,7 @@ from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
 
-from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field
+from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field, get_resource_path
 from testapp.models import Menu, Pizza, Topping
 
 
@@ -65,13 +65,15 @@ class CompilerTestCase(TestCase):
         compiler.setup_query()
         self.assertEqual(compiler.build_sort_params(), res)
 
-    def assertQsParams(self, queryset, expected):
+    def assertQsParams(self, queryset, expected, url=None):
         # fix the fact the the test test uniq value, but the
         # compiler return a dict of list (even if there is on element each times)
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
-
-        self.assertEqual(dict_of_set(compiler.build_params()), dict_of_set(expected))
+        pk, params = compiler.build_params_and_pk()
+        self.assertEqual(dict_of_set(params), dict_of_set(expected))
+        if url:
+            self.assertEqual(url, get_resource_path(queryset.model, pk=pk))
 
 
 class QueryParserPathResolutionTest(TestCase):
@@ -667,6 +669,32 @@ class TestFullCompiler(CompilerTestCase):
                 'filter{toppings.name.in}': ['chien', 'chat'],
                 'filter{-menu}': 1,
             }
+        )
+
+    def test_build_or_pk_ok(self):
+        self.assertQsParams(
+            Pizza.objects.all().filter(pk__in=[1]).order_by(
+                'menu__code', 'cost'
+            ).values('menu__code', 'toppings__name', 'cost'),
+            {
+                'exclude[]': ['*', 'menu.*', 'toppings.*'],
+                'include[]': ['menu.code', 'toppings.name', 'cost', 'menu.id', 'id', 'toppings.id'],
+            },
+            url='pizza/1/'
+        )
+
+    def test_build_or_pk_ko(self):
+        self.assertQsParams(
+            Pizza.objects.all().filter(
+                pk__in=[1, 2]
+            ).order_by('menu__code', 'cost').values('menu__code', 'toppings__name', 'cost'),
+            {
+                'sort[]': ['cost', 'menu.code'],
+                'exclude[]': ['*', 'menu.*', 'toppings.*'],
+                'include[]': ['menu.code', 'toppings.name', 'cost', 'menu.id', 'id', 'toppings.id'],
+                'filter{id.in}': [1, 2],
+            },
+            url='pizza'
         )
 
 

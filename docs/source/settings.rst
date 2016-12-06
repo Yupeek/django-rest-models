@@ -58,8 +58,8 @@ exemples :
 - ``https://api.mysite.org/``
 - ``http://customhost/api/``
 
--------------
 specials urls
+-------------
 
 the special host `localapi` can be provided to bypass the network and redirect the connection on the local running
 process in the same way as django do durring tests (via Client). this allow to test against a api database without
@@ -120,5 +120,70 @@ and eventialy raise an OperationalError.
 APIMeta
 *******
 
+on each api models, a nested class named APIMeta must be attached to the model.
+this class can contains some customisation for the model.
+
+exemple::
+
+    class Menu(models.Model):
+        name = models.CharField(max_length=135)
+        code = models.CharField(max_length=3)
+
+        class APIMeta:
+            db_name = 'api'
+            resource_path = 'menulol/'
+            resource_name = 'menu'
+            resource_name_plural = 'menus'
+
+
+db_name
+=======
+
+provide the name of the database conexion in which thi model is placed.
+if there is only one database connexion that use rest_models backend, it is optional.
+if there is more than one connexion with this backend, all models MUST give this setting on APIMeta
+
+resource_path
+=============
+
+the value to append to the path of the api to get the endpoint of this model.
+in many cases, it's the «verbose_name» on the api side. or the value given in the router:
+
+.. code-block:: python
+
+    router = DynamicRouter()
+    router.register('pizza', PizzaViewSet)  # this match the verbose_name of Pizza... default behavior will work
+    router.register('topping', ToppingViewSet)
+    router.register('menulol', MenuViewSet)  # «menulol» for path. must be specified since menulol don't match verbose_name
+
+resource_name
+=============
+
+the value for the serializer.Meta.name
+
+.. code-black:: python
+
+
+    class PizzaSerializer(DynamicModelSerializer):
+
+        class Meta:
+            model = Pizza
+            name = 'pizza' # ressource name match the verbose_name of the model. no need to customise ressource_name
+
+
+resource_name_plural
+====================
+
+this is the plural variant of resource_name. if the resource_name is customized, you will need to customize this too.
+in many cases, it will resource_name + 's'
+
+.. code-black:: python
+
+
+    class PizzaSerializer(DynamicModelSerializer):
+
+        class Meta:
+            model = Pizza
+            name = 'pizza' # ressource name match the verbose_name of the model. no need to customise ressource_name_plural
 
 

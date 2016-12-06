@@ -14,7 +14,7 @@ class Menu(models.Model):
 
     class APIMeta:
         db_name = 'api'
-        resource_path = 'menulol/'
+        resource_path = 'menulol'
 
 
 class Topping(models.Model):

@@ -54,14 +54,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.validation = BaseDatabaseValidation(self)
 
     def get_connection_params(self):
-        authpath = self.settings_dict.get('AUTH', 'rest_models.backend.auth.BasicAuth')
-        auth = import_class(authpath)(self, self.settings_dict)
+        authpath = self.settings_dict.get('AUTH', None)
+        auth = authpath and import_class(authpath)(self, self.settings_dict)
 
         params = {
             'url': self.settings_dict['NAME'],
             'auth': auth,
             'timeout': self.timeout,
-            'backend': self
+            'backend': self,
+            'middlewares': [import_class(path)() for path in self.settings_dict.get('MIDDLEWARES', ())]
         }
         return params
 

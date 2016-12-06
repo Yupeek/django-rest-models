@@ -1,7 +1,10 @@
+.. _testing:
+
 Testing
 #######
 
-.. _testing:
+localapi
+********
 
 to write tests using the api database, Rest Model allow you to bypass the usage of a remote API to loopback into the
 local process for the api query. if the host of the api is ``localapi``, Rest Model will not go to the network seeking
