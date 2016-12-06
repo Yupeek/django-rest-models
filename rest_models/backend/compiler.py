@@ -418,41 +418,54 @@ def build_aliases_tree(aliases):
     return buildt[None].children[0]
 
 
-def join_aliases(aliases_tree, responsereader, existing_aliases, current_data):
+def resolve_tree(alias_tree):
+    """
+    take a tree of aliases and make it a plane list, respecting the order in which we should
+    browse it.
+    :param alias_tree:
+    :return:
+    """
+    yield alias_tree.alias
+    for child in alias_tree.children:
+        for alias in resolve_tree(child):
+            yield alias
+
+
+def join_aliases(aliases, responsereader, existing_aliases):
     """
     @private
     a genenartor that flaten a nested structure of data by traversing the given list of alias.
-    :param AliasTree aliases_tree: the aliases tree to propagate
+    :param list[Alias] aliases: the aliases to check
     :param responsereader: the ResponseReader with all data from the response
     :param dict[Alias, dict] existing_aliases: the existing alias previously resolved. a dict that.
     :return:
     :rtype: Iterable
     """
-    if not aliases_tree.children:
+    if not aliases:
         yield existing_aliases
         return
-    for alias_tree in aliases_tree.children:
-        alias = alias_tree.alias
-        if alias in existing_aliases:
-            # already exists. no need to work on it
-            for subresult in join_aliases(alias_tree, responsereader, existing_aliases,
-                                          current_data=existing_aliases[alias]):
+
+    alias = aliases[0]
+    if alias in existing_aliases:
+        # already exists. no need to work on it
+        for subresult in join_aliases(aliases[1:], responsereader, existing_aliases):
+            yield subresult
+    else:
+        # resolve the values of next jump
+        val_for_model = responsereader[alias.model]
+        current_data = existing_aliases[alias.parent]
+        val = current_data[alias.attrname]
+        if not isinstance(val, list):
+            val = [val]
+        for pk in val:
+            if pk is None:
+                yield existing_aliases
+                continue
+            obj = val_for_model[pk]
+            resolved_aliases = existing_aliases.copy()
+            resolved_aliases[alias] = obj
+            for subresult in join_aliases(aliases[1:], responsereader, resolved_aliases):
                 yield subresult
-        else:
-            # resolve the values of next jump
-            val_for_model = responsereader[alias.model]
-            val = current_data[alias.attrname]
-            if not isinstance(val, list):
-                val = [val]
-            for pk in val:
-                if pk is None:
-                    yield existing_aliases
-                    continue
-                obj = val_for_model[pk]
-                resolved_aliases = existing_aliases.copy()
-                resolved_aliases[alias] = obj
-                for subresult in join_aliases(aliases_tree, responsereader, resolved_aliases, current_data=obj):
-                    yield subresult
 
 
 def join_results(row, resolved):
@@ -465,27 +478,32 @@ def join_results(row, resolved):
     if not resolved:
         yield []
         return
-    alias, attrname = resolved[0]
+    resolved = list(resolved)
+    res = []
+    while resolved:
+        alias, attrname = resolved.pop(0)
 
-    try:
-        raw_val = row[alias][attrname]
-    except KeyError:
-        raw_val = None  # left outer join give None for no value
+        try:
+            raw_val = row[alias][attrname]
+        except KeyError:
+            res.append(None)
+            continue
 
-    field = alias.model._meta.get_field(attrname)
-    if hasattr(field, "to_python"):
-        python_val = field.to_python(raw_val)
-        for subresult in join_results(row, resolved[1:]):
-            yield [python_val] + subresult
-    else:
-        if isinstance(raw_val, list):
+        field = alias.model._meta.get_field(attrname)
+        if hasattr(field, "to_python"):
+            python_val = field.to_python(raw_val)
+            res.append(python_val)
+
+        elif isinstance(raw_val, list):
             for val in raw_val:
-                for subresult in join_results(row, resolved[1:]):
-                    yield [val] + subresult
-
+                for subresult in join_results(row, resolved[:]):
+                    yield res + [val] + subresult
+            return
         else:
             raise NotSupportedError("the result from the api for %s.%s is not supported : %s" %
                                     (alias.model, attrname, raw_val))
+
+    yield res
 
 
 def simple_count(compiler, result):
@@ -787,8 +805,9 @@ class SQLCompiler(BaseSQLCompiler):
         else:
             uniq_aliases = set(list(zip(*resolved))[0])
             alias_tree = build_aliases_tree(uniq_aliases)
+            alias_list = list(resolve_tree(alias_tree))
 
-            for row in join_aliases(alias_tree, responsereader, {alias_tree.alias: item}, item):
+            for row in join_aliases(alias_list, responsereader, {alias_tree.alias: item}):
                 for subresult in join_results(row, resolved):
                     yield subresult
 

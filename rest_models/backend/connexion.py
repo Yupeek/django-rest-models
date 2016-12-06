@@ -220,13 +220,14 @@ class ApiConnexion(ApiVerbShortcutMixin):
     wrapper for request.Session that in fact implement useless methods like rollback which
     is not possible with a rest API
     """
-    def __init__(self, url, auth=None, retry=3, timeout=3):
+    def __init__(self, url, auth=None, retry=3, timeout=3, backend=None):
         self.session = requests.Session()
         self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
         self.session.auth = self.auth = auth
         self.url = url
         self.retry = retry
         self.timeout = timeout
+        self.backend = backend
 
     def close(self):
         self.session.close()
@@ -237,8 +238,14 @@ class ApiConnexion(ApiVerbShortcutMixin):
     def __enter__(self):
         return self
 
-    def execute(self, sql):
-        raise NotImplementedError("this is not a SQL database, so no cursor is available")
+    def execute(self, sql, params={}):
+        """
+
+        :param sql: the usless sql
+        :param params: the userless params
+        :return:
+        """
+        return self.session.request(**params)
 
     def rollback(self):  # pragma: no cover
         pass
@@ -284,7 +291,16 @@ class ApiConnexion(ApiVerbShortcutMixin):
 
         while error <= self.retry:
             try:
-                response = self.session.request(method, self.url + url, **kwargs)
+                real_url = self.url + url
+                # to stay compatible with django_debug_toolbar, we must
+                # call execute on the cursor return by the backend, since this one is replaced
+                # by django-debug-toolbar to state the query.
+                if self.backend:
+                    execute = self.backend.cursor().execute
+                else:
+                    execute = self.execute
+                response = execute("%s %s" % (method.upper(), real_url), dict(method=method, url=real_url, **kwargs))
+
             except Timeout as e:
                 error += 1
                 last_exception = e

@@ -319,10 +319,6 @@ class TestDatabaseWrapper(TestCase):
         with wrapper.cursor() as c:
             self.assertIsNotNone(c)
 
-    def test_cursor_execute_raises(self):
-        c = self.ch['default'].cursor()
-        self.assertRaises(NotImplementedError, c.execute, 'select * from table')
-
     def test_available(self):
         wrapper = self.ch['default']
         wrapper.connect()

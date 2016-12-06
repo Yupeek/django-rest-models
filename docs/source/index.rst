@@ -12,6 +12,9 @@ Contents:
    :maxdepth: 2
 
    quickstart
+   settings
+   testing
+
 
 
 

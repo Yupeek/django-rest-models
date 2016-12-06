@@ -60,7 +60,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         params = {
             'url': self.settings_dict['NAME'],
             'auth': auth,
-            'timeout': self.settings_dict.get('OPTIONS', {}).get('TIMEOUT', 3)
+            'timeout': self.timeout,
+            'backend': self
         }
         return params
 
@@ -69,7 +70,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     @property
     def timeout(self):
-        return self.settings_dict['OPTIONS'].get('TIMEOUT', 4)
+        return self.settings_dict['OPTIONS'].get('TIMEOUT', 10)
 
     def init_connection_state(self):
         self.autocommit = True

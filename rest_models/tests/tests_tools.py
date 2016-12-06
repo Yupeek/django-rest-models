@@ -7,7 +7,7 @@ from django.db import NotSupportedError, OperationalError
 from django.test import TestCase
 
 from rest_models.backend.compiler import (ApiResponseReader, QueryParser, SQLCompiler, build_aliases_tree,
-                                          join_aliases, join_results)
+                                          join_aliases, join_results, resolve_tree)
 from testapi import models as api_models
 from testapp import models as client_models
 
@@ -80,30 +80,35 @@ class TestJoinGenerator(TestCase):
         current_obj = reader[qs.model][current_obj_pk]
         tree = build_aliases_tree(resources)
 
-        results = list(join_aliases(tree, reader, {}, current_obj))
-        self.assertEqual(len(results), len(expected))
-        for result_line, expected_dict in zip(results, expected):
-            for alias, values in result_line.items():
-                self.assertEqual(expected_dict[alias.model.__name__], values)
+        aliases_list = list(resolve_tree(tree))
+        results = list(join_aliases(aliases_list, reader, {tree.alias: current_obj}))
+        formated_results = [
+            {
+                alias.model.__name__: val
+                for alias, val in d.items()
+            }
+            for d in results
+        ]
+        self.assertEqual(formated_results, expected)
 
     def test_join_alias_resolution(self):
         self.assertJoinEqual(
             client_models.Pizza.objects.values('id', 'toppings__name'),
             [
                 {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 1, 'name': 'crème'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 2, 'name': 'tomate'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 3, 'name': 'olive'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 4, 'name': 'lardon'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 5, 'name': 'champignon'}
                 },
             ],
@@ -115,7 +120,7 @@ class TestJoinGenerator(TestCase):
             client_models.Pizza.objects.values('id'),
             [
                 {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                 }
             ],
             1
@@ -126,7 +131,11 @@ class TestJoinGenerator(TestCase):
             client_models.Menu.objects.values('id', 'pizzas__menu'),
             [
                 {
-                    'Menu': {'id': 1},
+                    'Menu': {'code': 'mn',
+                             'id': 1,
+                             'name': 'main menu',
+                             'pizzas': [1],
+                             },
                     'Pizza': {'id': 1, 'menu': 1, 'toppings': [1, 2, 3, 4, 5]},
                 }
             ],
@@ -154,19 +163,19 @@ class TestJoinGenerator(TestCase):
             client_models.Pizza.objects.values('id', 'toppings__name'),
             [
                 {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 1, 'name': 'crème'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 2, 'name': 'tomate'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 3, 'name': 'olive'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 4, 'name': 'lardon'}
                 }, {
-                    'Pizza': {'id': 1},
+                    'Pizza': {'id': 1, 'toppings': [1, 2, 3, 4, 5], 'menu': 1},
                     'Topping': {'id': 5, 'name': 'champignon'}
                 }
             ],
