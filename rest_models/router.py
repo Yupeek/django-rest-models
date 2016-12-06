@@ -13,6 +13,31 @@ from rest_models.backend.base import DatabaseWrapper
 logger = logging.getLogger(__name__)
 
 
+def get_default_api_database(databases):
+    """
+    parse all database settings and return the database matching current backend.
+    raise ImproperlyConfigured if there is none or many backend.
+    :return:
+    """
+    _api_database_name = None
+    for db_name, db_settings in databases.items():
+        # prevent the special alias "TEST_" database to be used.
+        # in test environments, the value of the TEST_* is copied into the
+        # original one.
+        if RestModelRouter.is_restmodel_database(db_settings) and not db_name.startswith('TEST_'):
+
+            if _api_database_name is None:
+
+                _api_database_name = db_name
+            else:
+                raise ImproperlyConfigured("too many Api Database found (%s and %s). you must specify "
+                                           "the database to use in each model.APIMeta.db_name")
+    if _api_database_name is None:
+        raise ImproperlyConfigured("no Api Database found in settings.DATABASE. you can't use a model with "
+                                   "APIMeta in INSTALLED_APPS application")
+    return _api_database_name
+
+
 class RestModelRouter(object):
 
     def __init__(self):
@@ -28,21 +53,7 @@ class RestModelRouter(object):
     @property
     def api_database_name(self):
         if self._api_database_name is None:
-            for db_name, db_settings in self.databases.items():
-                # prevent the special alias "TEST_" database to be used.
-                # in test environments, the value of the TEST_* is copied into the
-                # original one.
-                if self.is_restmodel_database(db_settings) and not db_name.startswith('TEST_'):
-
-                    if self._api_database_name is None:
-
-                        self._api_database_name = db_name
-                    else:
-                        raise ImproperlyConfigured("too many Api Database found (%s and %s). you must specify "
-                                                   "the database to use in each model.APIMeta.db_name")
-            if self._api_database_name is None:
-                raise ImproperlyConfigured("no Api Database found in settings.DATABASE. you can't use a model with "
-                                           "APIMeta in INSTALLED_APPS application")
+            self._api_database_name = get_default_api_database(self.databases)
         return self._api_database_name
 
     @staticmethod

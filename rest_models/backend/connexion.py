@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
+import itertools
 import logging
 import time
 
@@ -237,8 +239,33 @@ class ApiConnexion(ApiVerbShortcutMixin):
         self.retry = retry
         self.timeout = timeout
         self.backend = backend
-        self.middlewares = middlewares
+        self._middlewares_scheduler = collections.defaultdict(list)
         self._requestid = 0
+        for middleware in middlewares:
+            self.push_middleware(middleware, 8)
+
+    @property
+    def middlewares(self):
+        """
+        the list of middleware to iterate over. ordered by priority from 1 to 10
+        :return:
+        """
+        return list(itertools.chain(*(v for k, v in sorted(self._middlewares_scheduler.items()))))
+
+    def push_middleware(self, middleware, priority=5):
+        """
+        push a middleware into the list, which will be called at each request and response processing
+        :param ApiMiddleware middleware: the middleware to apppend
+        :return:
+        """
+        self._middlewares_scheduler[priority].append(middleware)
+
+    def pop_middleware(self, middleware):
+        for middlewares in self._middlewares_scheduler.values():
+            try:
+                middlewares.remove(middleware)
+            except ValueError:
+                pass
 
     def close(self):
         self.session.close()
@@ -276,7 +303,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         requestid = self.inc_request_id()
         middlewares = self.middlewares
         for i, middleware in enumerate(middlewares):
-            response = middleware.process_request(params, requestid)
+            response = middleware.process_request(params, requestid, self)
             if response is not None:
                 break
         else:

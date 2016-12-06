@@ -11,7 +11,7 @@ class StoreMiddleware(ApiMiddleware):
     queries = {}
     responses = {}
 
-    def process_request(self, params, requestid):
+    def process_request(self, params, requestid, connection):
         self.queries[requestid] = params
 
     def process_response(self, params, response, requestid):
@@ -46,12 +46,12 @@ class ReturnValueMiddleware(ApiMiddleware):
         }
     }
 
-    def process_request(self, params, requestid):
+    def process_request(self, params, requestid, connection):
         return self.data_response(self.data)
 
 
 class RaiseMiddleware(ApiMiddleware):
-    def process_request(self, params, requestid):
+    def process_request(self, params, requestid, connection):
         raise Exception("opps request")
 
     def process_response(self, params, response, requestid):
@@ -59,7 +59,7 @@ class RaiseMiddleware(ApiMiddleware):
 
 
 class NoResultMiddleware(ApiMiddleware):
-    def process_request(self, params, requestid):
+    def process_request(self, params, requestid, connection):
         return self.empty_response()
 
 

@@ -29,7 +29,7 @@ class ApiMiddleware(object):
     interact with a api query/response
     """
 
-    def process_request(self, params, requestid):
+    def process_request(self, params, requestid, connection):
         """
         process the request. if return other than None, it will be the result of the request
 
@@ -41,6 +41,7 @@ class ApiMiddleware(object):
                         - data: the data given to the query to post,put, etc
                     }
         :param int requestid: the id of the current request done by this connection
+        :param connection: the connection used for this query
         :return: the response if there is no need to pursue the query.
         """
         return None
