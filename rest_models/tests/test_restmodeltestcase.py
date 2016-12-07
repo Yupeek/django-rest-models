@@ -35,7 +35,8 @@ class TestLoadFixtureTest(RestModelTestCase):
     def test_fixtures_loaded(self):
         self.assertEqual(self.client.get('c').json(), {'C': 'c'})
         self.assertEqual(self.client.get('d').json(), {'A': 'a', 'B': 'b'})
-        self.assertRaisesMessage(Exception, "the query %r was not provided as mocked data" % "/a", self.client.get, 'a')
+        self.assertRaisesMessage(Exception, "the query %r was not provided as mocked data" % "/a",
+                                 self.client.get, 'a')
         r = self.client.get('b')
         self.assertEqual(r.status_code, 503)
 
@@ -43,4 +44,4 @@ class TestLoadFixtureTest(RestModelTestCase):
         self.rest_fixtures_variables['user'] = '123'
         self.assertEqual(self.client.get('me/123/').json(), [1, 2])
         self.assertRaises(Exception, "the query %r was not provided as mocked data" % "/me/1234/",
-                                 self.client.get, 'me/1234/')
+                          self.client.get, 'me/1234/')
