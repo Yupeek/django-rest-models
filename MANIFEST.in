@@ -3,3 +3,4 @@ include README.rst
 include CONTRIBUTING.rst
 include requirements.txt
 include test_requirements.txt
+include rest_models/backend/exec/*

@@ -14,11 +14,11 @@ except ImportError:
 
 version = rest_models.__VERSION__
 
-if not 'DJANGO_SETTINGS_MODULE' in os.environ:
+if 'DJANGO_SETTINGS_MODULE' not in os.environ:
     os.environ['DJANGO_SETTINGS_MODULE'] = 'testsettings'
 
 if sys.argv[-1] == 'publish':
-    os.system('cd docs && make html')
+    # os.system('cd docs && make html')
     os.system('python setup.py sdist bdist_wheel upload')
     print("You probably want to also tag the version now:")
     print("  git tag -a %s -m 'version %s'" % (version, version))
@@ -49,6 +49,8 @@ setup(
     ],
     packages=[
         'rest_models',
+        'rest_models.backend',
+
     ],
     include_package_data=True,
     license="GNU GENERAL PUBLIC LICENSE",
