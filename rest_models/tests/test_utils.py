@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import doctest
 import os
 import tempfile
@@ -13,8 +14,8 @@ def load_tests(loader, tests, ignore):
     return tests
 
 
-PARTIAL_DATA_FIXTURES = os.path.join(os.path.dirname(__file__), 'api_fixtures', 'data_test_fixtures.json')
-FULL_TEST_FIXTURES = os.path.join(os.path.dirname(__file__), 'api_fixtures', 'full_test_fixtures.json')
+PARTIAL_DATA_FIXTURES = str(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json'))
+FULL_TEST_FIXTURES = str(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'full_test_fixtures.json'))
 
 
 class TestLoadFixtures(TestCase):
@@ -96,7 +97,7 @@ class TestLoadFixtures(TestCase):
         v = {}
         a.set_variable(v)
         with self.assertRaises(KeyError):
-            _ = a["/me/1234/"]
+            a["/me/1234/"]
         v['userid'] = 1234
         self.assertIs(a["/me/1234/"], o)
 

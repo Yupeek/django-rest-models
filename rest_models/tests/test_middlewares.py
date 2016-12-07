@@ -79,6 +79,9 @@ class TestMiddleware(TestCase):
                 'NAME': 'http://localapi/api/v2',
                 'MIDDLEWARES': [
                     'rest_models.tests.test_middlewares.DummyMiddleware',
+                    'rest_models.tests.test_middlewares.DummyMiddleware',
+                    'rest_models.tests.test_middlewares.DummyMiddleware',
+                    'rest_models.tests.test_middlewares.DummyMiddleware',
                     'rest_models.tests.test_middlewares.StoreMiddleware',
                 ]
             },

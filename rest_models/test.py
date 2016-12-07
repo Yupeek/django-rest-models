@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+from contextlib import contextmanager
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.test.testcases import TestCase
+
 from rest_models.backend.middlewares import ApiMiddleware
 from rest_models.router import get_default_api_database
-from rest_models.utils import dict_contains, JsonFixtures
+from rest_models.utils import JsonFixtures, dict_contains
 
 
 def not_found_raise(url, middleware):
@@ -63,8 +66,8 @@ class MockDataApiMiddleware(ApiMiddleware):
 
     def process_request(self, params, requestid, connection):
         if not params['url'].startswith(connection.url):
-            raise ImproperlyConfigured("strage case where the query don't go to our api") # pragma: no cover
-        url = params['url'][len(connection.url)+1:]
+            raise ImproperlyConfigured("strage case where the query don't go to our api")  # pragma: no cover
+        url = params['url'][len(connection.url):]
 
         try:
             results_for_url = self.data_for_url[url]
@@ -103,30 +106,30 @@ class RestModelTestMixin(object):
     a test case mixin that add the feathure to mock the response from an api
 
     """
-    api_fixtures = {}
+    rest_fixtures = {}
     """
     fixtures to give for this tests. all missing values will trigger a exception
     """
 
-    database_api_fixtures = None
+    database_rest_fixtures = None
 
     @classmethod
     def setUpClass(cls):
-        # populate the database_api_fixtures from the api_fixtures for moste case where
+        # populate the database_rest_fixtures from the rest_fixtures for moste case where
         # there is only one database targeting an api.
         super(RestModelTestMixin, cls).setUpClass()
-        if cls.database_api_fixtures is None:
-            cls.database_api_fixtures = {
-                get_default_api_database(settings.DATABASES): cls.api_fixtures
+        if cls.database_rest_fixtures is None:
+            cls.database_rest_fixtures = {
+                get_default_api_database(settings.DATABASES): cls.rest_fixtures
             }
 
     def setUp(self):
         # add all mock_data middleware to the databsase
         self._mock_data_middleware = {}
-        self.api_fixtures_variables = {}  # should be update by the tests, and by side effects work on mocked data
-        for db_name, fixtures in self.database_api_fixtures.items():
+        self.rest_fixtures_variables = {}  # should be update by the tests, and by side effects work on mocked data
+        for db_name, fixtures in self.database_rest_fixtures.items():
             fixtures = JsonFixtures(fixtures)
-            fixtures.set_variable(self.api_fixtures_variables)
+            fixtures.set_variable(self.rest_fixtures_variables)
             self._mock_data_middleware[db_name] = MockDataApiMiddleware(fixtures)
             dbwrapper = connections[db_name]
             dbwrapper.cursor().push_middleware(
@@ -138,6 +141,33 @@ class RestModelTestMixin(object):
         # remove all middelwaress
         for db_name, middleware in self._mock_data_middleware.items():
             connections[db_name].connection.pop_middleware(middleware)
+
+    @contextmanager
+    def mock_api(self, url, result, params=None, using=None):
+        """
+        assert that the eather one of the api have executed a query, with optionnaly the given params,
+        the query was made `count` times and by the given API
+
+        :param str|None url: the url in which the query was made. if None, all url will be count
+        :param params: the params that must be present in the query
+        :param str using: the name of connection to use
+        :param dict|None result: the temporary result to provide for the given time
+        """
+        connection = connections[using or get_default_api_database(settings.DATABASES)]
+        mocked = {
+            url: {
+                'filter': params or {},
+                'result': result
+            }
+        }
+        middleware = MockDataApiMiddleware(mocked, not_found=not_found_continue)
+        cursor = connection.cursor()
+        try:
+
+            cursor.push_middleware(middleware, priority=7)
+            yield
+        finally:
+            cursor.pop_middleware(middleware)
 
 
 class RestModelTestCase(RestModelTestMixin, TestCase):

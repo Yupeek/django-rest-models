@@ -3,6 +3,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 
+from django.utils import six
+
 try:
     from pathlib import Path
 except ImportError:
@@ -84,7 +86,7 @@ class JsonFixtures(object):
         self.files = []
         self.url_for_data = kwargs
         for file in args:
-            if isinstance(file, (str, Path)):
+            if isinstance(file, (six.text_type, six.binary_type, Path)):
                 self.files.append(file)
             elif isinstance(file, dict):
                 self.url_for_data.update(file)
@@ -112,8 +114,8 @@ class JsonFixtures(object):
         """
         try:
             return json.load(Path(path).open('r'))
-        except ValueError:
-            raise ValueError("error while loading the fixture %s" % path)
+        except ValueError as ve:
+            six.raise_from(ValueError("error while loading the fixture %s" % path), ve)
 
     def _load(self):
         """

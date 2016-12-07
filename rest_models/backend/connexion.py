@@ -302,6 +302,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         """
         requestid = self.inc_request_id()
         middlewares = self.middlewares
+        i = 0
         for i, middleware in enumerate(middlewares):
             response = middleware.process_request(params, requestid, self)
             if response is not None:
@@ -309,9 +310,8 @@ class ApiConnexion(ApiVerbShortcutMixin):
         else:
             # if the middleware did not override the real response, we make the query
             response = self.session.request(**params)
-        for middleware in middlewares[2::-1]:  # iterate over all previously executed middlewares
-            response = middleware.process_response(params, response, requestid)
-            assert response is not None, "the ApiMiddleware.process_response must return a response"
+        for middleware in middlewares[i::-1]:  # iterate over all previously executed middlewares
+            response = middleware.process_response(params, response, requestid) or response
         return response
 
     def rollback(self):  # pragma: no cover

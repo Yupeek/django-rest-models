@@ -209,9 +209,8 @@ class ApiResponseReader(object):
                     (apidata[pk], apidata)
                     # read all primary request result, and alternative result for the same model,
                     # rendered in a other key prefixed by + (used for foregnkey on self)
-                    for apidata in self.json[resource_name] + self.json.get('+' + resource_name, [])
+                    for apidata in self.json.get(resource_name, []) + self.json.get('+' + resource_name, [])
                 )
-
         except KeyError:
             raise OperationalError("the response from the server does not contains the ID of the model.")
         return res or self.cache[model]
@@ -472,11 +471,11 @@ def join_aliases(aliases, responsereader, existing_aliases):
         if not isinstance(val, list):
             val = [val]
         for pk in val:
-            if pk is None:
-                yield existing_aliases
-                continue
-            obj = val_for_model[pk]
             resolved_aliases = existing_aliases.copy()
+            if pk is not None:
+                obj = val_for_model[pk]
+            else:
+                obj = {}
             resolved_aliases[alias] = obj
             for subresult in join_aliases(aliases[1:], responsereader, resolved_aliases):
                 yield subresult

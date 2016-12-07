@@ -44,3 +44,58 @@ named ``TEST_{name}``. this database will be used for all query on the api datab
             'AUTH': 'rest_models.backend.auth.BasicAuth',
         },
     }
+
+Mock API
+********
+
+
+you can mock the api with some custom response for given url. it won't trigger any api query, but return the
+predefined data from each request matching the patterns.
+
+your test cases must inherite from either ``rest_models.test.RestModelTestMixin`` or
+``rest_models.test.RestModelTestCase``
+
+with this, you have 2 more functionnality.
+
+you can provide the matching «url» => «response» by giving the ``rest_fixtures`` like this::
+
+    class TestAnnonymousVisit(RestModelTestMixin, TestCase):
+
+        rest_fixtures = {
+                '/oauth2/token/': [
+                    {'data': {'scope': 'read write', 'access_token': 'HJKMe81faowKipJGKZSwg05LnfJmrU',
+                                            'token_type': 'Bearer', 'expires_in': 36000}}
+                ],
+                '/pizzas/': 'path/to/fixtures.json',
+            }
+        )
+
+with the file in ``path/to/fixtures.json`` ::
+
+    {
+      "/pizza/1/": {
+        "filter": {},
+        "data": {
+          "pizza": {
+            "cost": 2.08,
+            "to_date": "2016-11-20T08:46:02.016000",
+            "from_date": "2016-11-15",
+            "price": 10.0,
+            "id": 1,
+            "links": {
+              "toppings": "toppings/"
+            },
+            "name": "suprème",
+            "toppings": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "menu": 1
+          }
+        }
+      }
+    }
+
