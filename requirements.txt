@@ -5,3 +5,4 @@ tox
 isort
 flake8
 requests
+-r test_requirements.txt

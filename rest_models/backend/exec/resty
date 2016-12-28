@@ -10,7 +10,6 @@
 #   Copyright 2009, no rights reserved.
 #
 
-export _resty_host=""
 export _resty_path=""
 export _resty_nohistory=""
 
@@ -62,6 +61,7 @@ function resty() {
   [ "$method" = "-v" ] && echo "$_resty_host $_resty_opts" && return
   [ -z "$method" ] && echo "$_resty_host" && return
   [ -n "$_path" ] && _resty_path=$_path
+
   domain=$(echo -n "$_resty_host" \
     |perl -ane '/^https?:\/\/([^\/\*]+)/; print $1')
   _path="${_resty_host//\*/$_resty_path}"
@@ -166,4 +166,4 @@ echo "use GET,POST,PUT,PATCH,OPTIONS,TRACE to query the server."
 echo "ie : GET /users/"
 tput sgr0
 
-export PS1='resty> '
+export PS1='resty:$_resty_host> '

@@ -67,6 +67,7 @@ Ready to contribute? Here's how to set up `django-rest-models` for local develop
 
     $ mkvirtualenv django-rest-models
     $ cd django-rest-models/
+    $ pip install -r requirements.txt
     $ python setup.py develop
 
 4. Create a branch for local development::
@@ -80,7 +81,6 @@ tests, including testing other Python versions with tox::
 
     $ flake8 rest_models tests
     $ isort rest_models
-    $ python setup.py test
     $ tox
 
 To get flake8, isort and tox, just pip install them into your virtualenv.
