@@ -1,0 +1,164 @@
+[
+  {
+    "model": "auth.user",
+    "fields": {
+      "username": "admin",
+      "is_superuser": true,
+      "is_staff": true,
+      "date_joined": "2016-11-16T03:14:51.962",
+      "email": "admin@localhost",
+      "last_name": "",
+      "password": "21232f297a57a5a743894a0e4a801fc3",
+      "last_login": "2016-11-16T03:32:20.463",
+      "groups": [],
+      "user_permissions": [],
+      "is_active": true,
+      "first_name": ""
+    },
+    "pk": 1
+  },
+  {
+    "model": "auth.user",
+    "fields": {
+      "username": "user1",
+      "is_superuser": false,
+      "is_staff": false,
+      "date_joined": "2016-11-16T03:32:32.967",
+      "email": "",
+      "last_name": "",
+      "password": "24c9e15e52afc47c225b757e7bee1f9d",
+      "last_login": null,
+      "groups": [],
+      "user_permissions": [],
+      "is_active": true,
+      "first_name": ""
+    },
+    "pk": 2
+  },
+  {
+    "model": "auth.user",
+    "fields": {
+      "username": "inactive",
+      "is_superuser": false,
+      "is_staff": false,
+      "date_joined": "2016-11-16T03:32:51.656",
+      "email": "",
+      "last_name": "",
+      "password": "19d3894f53ce79c3f836f26cf8a3be3b",
+      "last_login": null,
+      "groups": [],
+      "user_permissions": [],
+      "is_active": true,
+      "first_name": ""
+    },
+    "pk": 3
+  },
+  {
+    "pk": 1,
+    "model": "testapi.menu",
+    "fields": {
+      "name": "main menu",
+      "code": "mn"
+    }
+  },
+  {
+    "pk": 1,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.5,
+      "name": "cr\u00e8me"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.3,
+      "name": "tomate"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.23,
+      "name": "olive"
+    }
+  },
+  {
+    "pk": 4,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.45,
+      "name": "lardon"
+    }
+  },
+  {
+    "pk": 5,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 0.6,
+      "name": "champignon"
+    }
+  },
+  {
+    "pk": 6,
+    "model": "testapi.topping",
+    "fields": {
+      "cost": 1.5,
+      "name": "foie gras"
+    }
+  },
+  {
+    "pk": 1,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": 1,
+      "creator": null,
+      "name": "supr\u00e8me",
+      "price": 10.0,
+      "toppings": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": null,
+      "creator": null,
+      "name": "flam",
+      "price": 11.0,
+      "toppings": [
+        1,
+        4
+      ],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "testapi.pizza",
+    "fields": {
+      "menu": null,
+      "creator": null,
+      "name": "miam d'oie",
+      "price": 15.0,
+      "toppings": [
+        1,
+        4,
+        6
+      ],
+      "from_date": "2016-11-15",
+      "to_date": "2016-11-20T08:46:02.016"
+    }
+  }
+]

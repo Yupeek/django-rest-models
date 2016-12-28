@@ -14,11 +14,11 @@ except ImportError:
 
 version = rest_models.__VERSION__
 
-if not 'DJANGO_SETTINGS_MODULE' in os.environ:
+if 'DJANGO_SETTINGS_MODULE' not in os.environ:
     os.environ['DJANGO_SETTINGS_MODULE'] = 'testsettings'
 
 if sys.argv[-1] == 'publish':
-    os.system('cd docs && make html')
+    # os.system('cd docs && make html')
     os.system('python setup.py sdist bdist_wheel upload')
     print("You probably want to also tag the version now:")
     print("  git tag -a %s -m 'version %s'" % (version, version))
@@ -29,16 +29,11 @@ if sys.argv[-1] == 'doc':
     os.system('cd docs && make html')
     sys.exit()
 
-with open('README.rst') as readme_file:
+with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme_file:
     readme = readme_file.read()
 
-
-def project_test_suite():
-
-    test_suite = unittest.defaultTestLoader.discover('testapp', top_level_dir='.')
-    test_suite.addTest(unittest.defaultTestLoader.discover('rest_models', top_level_dir='.'))
-
-    return test_suite
+with open(os.path.join(os.path.dirname(__file__), 'test_requirements.txt')) as requirements_file:
+    tests_require = requirements_file.readlines()
 
 setup(
     name='django-rest-models',
@@ -48,13 +43,16 @@ setup(
     author='Darius BERNARD',
     author_email='darius@yupeek.com',
     url='https://github.com/Yupeek/django-rest-models',
-    test_suite="__main__.project_test_suite",
+    tests_require=tests_require,
+    install_requires=[
+        'requests',
+    ],
     packages=[
         'rest_models',
+        'rest_models.backend',
+
     ],
     include_package_data=True,
-    install_requires=[
-    ],
     license="GNU GENERAL PUBLIC LICENSE",
     zip_safe=False,
     keywords='django rest models API ORM',
