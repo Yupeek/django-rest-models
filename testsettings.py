@@ -1,3 +1,5 @@
+import os
+
 import django.conf.global_settings as DEFAULT_SETTINGS
 from django.conf.global_settings import PASSWORD_HASHERS
 
@@ -14,6 +16,12 @@ DATABASES = {
         'USER': 'admin',
         'PASSWORD': 'admin',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+    },
+    'apifail': {
+        'ENGINE': 'rest_models.backend',
+        'NAME': 'http://localapi/api/v1',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
     },
     'api2': {
         'ENGINE': 'rest_models.backend',
@@ -47,8 +55,12 @@ INSTALLED_APPS = (
     'testapi',
     'rest_framework',
     'dynamic_rest',
+) + (
+    ('testapi.badapi', 'testapp.badapp')
+    if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
+    else tuple()
 )
-
+print(INSTALLED_APPS)
 DATABASE_ROUTERS = [
     'rest_models.router.RestModelRouter',
 ]

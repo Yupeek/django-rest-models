@@ -39,7 +39,10 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
                             "[%s] %s" % (res.request.url, res.status_code, res.text[:500]))
         tables = res.json().keys()
         for table in tables:
-            option = cursor.options(table).json()
+            response = cursor.options(table)
+            if response.status_code != 200:
+                raise Exception("bad response from api: %s" % response.text)
+            option = response.json()
             missing_features = self.features - set(option['features'])
             if missing_features:
                 raise Exception("the remote api does not provide all required features : %s" % missing_features)

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, absolute_import, print_function
 
-import logging
+from rest_models.checks import register_checks
 
-logger = logging.getLogger(__name__)
+register_checks()

@@ -7,6 +7,7 @@ from importlib import import_module
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connections
 
 from rest_models.backend.base import DatabaseWrapper
 
@@ -73,6 +74,15 @@ class RestModelRouter(object):
                 result = None
             self.cache[model] = result
             return result
+
+    def get_api_connexion(self, model):
+        """
+        return the connection to query the api behind this model
+        :param model:
+        :return: the api connection
+        :rtype: rest_models.backend.base.DatabaseWrapper
+        """
+        return connections[self.get_api_database(model)]
 
     def db_for_read(self, model, **hints):
         return self.get_api_database(model)
