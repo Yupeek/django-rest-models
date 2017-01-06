@@ -6,13 +6,14 @@ import logging
 from django.apps import apps
 from django.core.checks import Error, Tags, register
 
-from rest_models.backend.compiler import get_resource_path
 from rest_models.router import RestModelRouter
 
 logger = logging.getLogger(__name__)
 
 
 def api_struct_check(app_configs, **kwargs):
+    from rest_models.backend.compiler import get_resource_path  # NOQA
+
     errors = []
 
     all_models = []
