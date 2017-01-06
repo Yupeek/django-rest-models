@@ -43,10 +43,13 @@ class SystemCheckTest(TestCase):
     def test_check_all_error(self):
         with self.assertRaises(SystemCheckError) as ctx:
             call_command('check')
+
         msg = ctx.exception.args[0]
         self.assertIn('has a field "aa"', msg)
         self.assertIn('has a field "bb"', msg)
+        self.assertIn('Serializer.many value corresponding to the local model a', msg)
         self.assertIn('OPTIONS http://localapi/api/v1/c => 404', msg)
+        self.assertIn('System check identified 4 issues', msg)
 
     def test_check_one_error(self):
         with self.assertRaises(SystemCheckError) as ctx:
@@ -54,7 +57,9 @@ class SystemCheckTest(TestCase):
         msg = ctx.exception.args[0]
         self.assertIn('has a field "aa"', msg)
         self.assertIn('has a field "bb"', msg)
+        self.assertIn('Serializer.many value corresponding to the local model a', msg)
         self.assertIn('OPTIONS http://localapi/api/v1/c => 404', msg)
+        self.assertIn('System check identified 4 issues', msg)
 
     def test_check_one_ok(self):
         call_command('check', 'testapp')

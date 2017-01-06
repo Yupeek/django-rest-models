@@ -66,6 +66,22 @@ def api_struct_check(app_configs, **kwargs):
                                 id='rest_models.E003'
                             )
                         )
+                    elif (options['properties'][field.name]['type'] == 'many' and not (field.one_to_many or field.many_to_many)) or (
+                        options['properties'][field.name]['type'] == 'one' and not (field.one_to_one or field.many_to_one)
+                    ):
+
+                        errors.append(
+                            Error(
+                                'the field %s.%s many does not match the api' % (
+                                    rest_model.__name__, field.name
+                                ),
+                                obj="%s.%s" % (rest_model.__name__, field.name),
+                                hint='check if the serializer at %s/%s have a Serializer.many '
+                                     'value corresponding to the local model %s' % (db.url, url, field.name),
+                                id='rest_models.E005'
+                            )
+                        )
+
             elif field.name not in options['properties']:
                 errors.append(
                     Error(

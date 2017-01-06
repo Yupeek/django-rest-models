@@ -1,7 +1,5 @@
 import os
 
-import django.conf.global_settings as DEFAULT_SETTINGS
-from django.conf.global_settings import PASSWORD_HASHERS
 
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
 
@@ -60,6 +58,7 @@ INSTALLED_APPS = (
     if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
     else tuple()
 )
+
 DATABASE_ROUTERS = [
     'rest_models.router.RestModelRouter',
 ]
@@ -106,8 +105,11 @@ TEMPLATES = [
         },
     },
 ]
+if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true':
+    ROOT_URLCONF = 'testapi.badapi.urls'
+else:
+    ROOT_URLCONF = 'testapi.urls'
 
-ROOT_URLCONF = 'testapi.urls'
 
 DEBUG = True
 

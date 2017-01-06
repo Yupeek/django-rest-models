@@ -10,12 +10,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 
 from rest_models.backend.base import DatabaseWrapper
-from rest_models.checks import register_checks
 
 logger = logging.getLogger(__name__)
-
-
-register_checks()
 
 
 def get_default_api_database(databases):

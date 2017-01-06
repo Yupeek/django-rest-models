@@ -46,6 +46,7 @@ class AA(models.Model):
 class BB(models.Model):
     name = models.CharField(max_length=135)
     b = models.ManyToManyField(B, related_name='bb')
+    a = models.ManyToManyField(A, related_name='bb')
 
     class APIMeta:
         db_name = 'apifail'

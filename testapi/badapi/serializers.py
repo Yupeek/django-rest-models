@@ -8,10 +8,12 @@ from testapi.badapi.models import AA, BB, A, B
 
 
 class ASerializer(DynamicModelSerializer):
+    bb = DynamicRelationField('BBSerializer', many=True)
+
     class Meta:
         model = A
         name = 'a'
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'bb')
 
 
 class BSerializer(DynamicModelSerializer):
