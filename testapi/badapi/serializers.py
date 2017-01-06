@@ -32,8 +32,9 @@ class AASerializer(DynamicModelSerializer):
 
 class BBSerializer(DynamicModelSerializer):
     b = DynamicRelationField(BSerializer, many=True)
+    a = DynamicRelationField(ASerializer, many=False)
 
     class Meta:
         model = BB
         name = 'bb'
-        fields = ('id', 'name', 'b')
+        fields = ('id', 'name', 'b', 'a')

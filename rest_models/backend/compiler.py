@@ -23,11 +23,6 @@ from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 from rest_models.router import RestModelRouter
 
-from rest_models.checks import register_checks
-
-register_checks()
-
-
 logger = logging.getLogger(__name__)
 
 Alias = namedtuple('Alias', 'model,parent,field,attrname,m2m')

@@ -60,7 +60,6 @@ INSTALLED_APPS = (
     if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
     else tuple()
 )
-print(INSTALLED_APPS)
 DATABASE_ROUTERS = [
     'rest_models.router.RestModelRouter',
 ]
