@@ -144,6 +144,10 @@ each serializers must :
             name = 'pizza'
             fields = ('id', 'name', 'price', 'from_date', 'to_date', 'toppings', 'menu')
 
+Django rest models provide a way to check the consistency of the api with the local models via the django check framework.
+at each startup, it will query the api with OPTIONS to check if the local models match the remote serializers.
+
+
 limitations
 -----------
 
