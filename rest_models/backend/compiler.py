@@ -771,8 +771,9 @@ class SQLCompiler(BaseSQLCompiler):
         if response.status_code == 204:
             raise EmptyResultSet
         elif response.status_code != 200:
-            raise ProgrammingError("the query to the api has failed : GET %s \n=> %s" %
-                                   (build_url(url, params), message_from_response(response)))
+            raise ProgrammingError("the query to the api has failed : GET %s/%s \n=> %s" %
+                                   (self.connection.connection.url, build_url(url, params),
+                                    message_from_response(response)))
 
     def get_meta(self, json, response):
         """

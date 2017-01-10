@@ -262,28 +262,28 @@ class TestLocalApiHandler(TestCase):
 
 
 class TestDatabaseWrapper(TestCase):
-    fixtures = ['user.json']
+    fixtures = ['data.json']
 
     def setUp(self):
         self.ch = ConnectionHandler({
             'default': {
                 'ENGINE': 'rest_models.backend',
                 'NAME': 'http://localapi/api/v2/',
-                'USER': 'userapi',
-                'PASSWORD': 'apipassword',
+                'USER': 'user1',
+                'PASSWORD': 'user1',
                 'AUTH': 'rest_models.backend.auth.BasicAuth',
             },
             'bad': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://localapi/api/forbidden',
-                'USER': 'userapi',
+                'NAME': 'http://localapi/api/forbidden/',
+                'USER': 'user1',
                 'PASSWORD': 'badpassword',
                 'AUTH': 'rest_models.backend.auth.BasicAuth',
             },
             'unavailable': {
                 'ENGINE': 'rest_models.backend',
                 'NAME': 'http://129.0.0.1/',
-                'USER': 'userapi',
+                'USER': 'user1',
                 'PASSWORD': 'osef',
                 'AUTH': 'rest_models.backend.auth.BasicAuth',
                 'OPTIONS': {
@@ -296,7 +296,7 @@ class TestDatabaseWrapper(TestCase):
     def test_bad_password(self):
         wrapper = self.ch['bad']
         self.assertRaisesMessage(FakeDatabaseDbAPI2.ProgrammingError,
-                                 'Access to database is Forbidden for user userapi', wrapper.cursor().get, '')
+                                 'Access to database is Forbidden for user user1', wrapper.cursor().get, '')
 
     def test_database_cursor_wrapper(self):
         wrapper = self.ch['default']

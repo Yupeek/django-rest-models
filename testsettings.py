@@ -1,5 +1,5 @@
-import django.conf.global_settings as DEFAULT_SETTINGS
-from django.conf.global_settings import PASSWORD_HASHERS
+import os
+
 
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
 
@@ -10,21 +10,27 @@ DATABASES = {
     },
     'api': {
         'ENGINE': 'rest_models.backend',
-        'NAME': 'http://localapi/api/v2',
+        'NAME': 'http://localapi/api/v2/',
         'USER': 'admin',
         'PASSWORD': 'admin',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
+    'apifail': {
+        'ENGINE': 'rest_models.backend',
+        'NAME': 'http://localapi/api/v1/',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
+    },
     'api2': {
         'ENGINE': 'rest_models.backend',
-        'NAME': 'http://localhost:8080/api/v2',
+        'NAME': 'http://localhost:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
-        'NAME': 'http://localhost:8080/api/v2',
+        'NAME': 'http://localhost:8080/api/v2/',
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
@@ -47,6 +53,10 @@ INSTALLED_APPS = (
     'testapi',
     'rest_framework',
     'dynamic_rest',
+) + (
+    ('testapi.badapi', 'testapp.badapp')
+    if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
+    else tuple()
 )
 
 DATABASE_ROUTERS = [
@@ -95,8 +105,11 @@ TEMPLATES = [
         },
     },
 ]
+if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true':
+    ROOT_URLCONF = 'testapi.badapi.urls'
+else:
+    ROOT_URLCONF = 'testapi.urls'
 
-ROOT_URLCONF = 'testapi.urls'
 
 DEBUG = True
 

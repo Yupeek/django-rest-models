@@ -106,3 +106,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def cursor(self):
         # type: () -> ApiConnexion
         return super(DatabaseWrapper, self).cursor()
+
+    def check(self):
+        from rest_models.checks import api_struct_check
+
+        api_struct_check(None)

@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+
 import doctest
 import os
 import tempfile
@@ -113,5 +114,5 @@ class TestLoadFixtures(TestCase):
         finally:
             try:
                 os.remove(path)
-            except OSError:
+            except OSError:  # pragma: no cover
                 pass

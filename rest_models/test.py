@@ -133,7 +133,8 @@ class RestModelTestMixin(object):
             self._mock_data_middleware[db_name] = MockDataApiMiddleware(fixtures)
             dbwrapper = connections[db_name]
             dbwrapper.cursor().push_middleware(
-                self._mock_data_middleware[db_name]
+                self._mock_data_middleware[db_name],
+                priority=9
             )
         super(RestModelTestMixin, self).setUp()
 
@@ -151,14 +152,14 @@ class RestModelTestMixin(object):
         :param str|None url: the url in which the query was made. if None, all url will be count
         :param params: the params that must be present in the query
         :param str using: the name of connection to use
-        :param dict|None result: the temporary result to provide for the given time
+        :param dict|None|list result: the temporary result to provide for the given time
         """
         connection = connections[using or get_default_api_database(settings.DATABASES)]
         mocked = {
-            url: {
+            url: [{
                 'filter': params or {},
-                'result': result
-            }
+                'data': result
+            }]
         }
         middleware = MockDataApiMiddleware(mocked, not_found=not_found_continue)
         cursor = connection.cursor()

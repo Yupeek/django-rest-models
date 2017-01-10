@@ -36,6 +36,7 @@ class TestApiResolution(TestCase):
 
         DB = copy.deepcopy(settings.DATABASES)
         del DB['api2']
+        del DB['apifail']
         router.databases = DB
         self.assertEqual(router.api_database_name, 'api')
 
@@ -45,6 +46,7 @@ class TestApiResolution(TestCase):
         DB = copy.deepcopy(settings.DATABASES)
         del DB['api2']
         del DB['api']
+        del DB['apifail']
         router.databases = DB
         self.assertRaises(ImproperlyConfigured, getattr, router, "api_database_name")
 
