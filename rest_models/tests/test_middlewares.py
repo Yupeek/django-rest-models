@@ -71,12 +71,12 @@ class TestMiddleware(TestCase):
         self.ch = ConnectionHandler({
             'default': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://localapi/api/v2',
+                'NAME': 'http://localapi/api/v2/',
                 'MIDDLEWARES': []
             },
             'one': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://localapi/api/v2',
+                'NAME': 'http://localapi/api/v2/',
                 'MIDDLEWARES': [
                     'rest_models.tests.test_middlewares.DummyMiddleware',
                     'rest_models.tests.test_middlewares.DummyMiddleware',
@@ -87,7 +87,7 @@ class TestMiddleware(TestCase):
             },
             'return': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://nohostoops/api/v2',
+                'NAME': 'http://nohostoops/api/v2/',
                 'MIDDLEWARES': [
                     'rest_models.tests.test_middlewares.DummyMiddleware',
                     'rest_models.tests.test_middlewares.StoreMiddleware',
@@ -96,7 +96,7 @@ class TestMiddleware(TestCase):
             },
             'raise': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://localapi/api/v2',
+                'NAME': 'http://localapi/api/v2/',
                 'MIDDLEWARES': [
                     'rest_models.tests.test_middlewares.RaiseMiddleware',
                     'rest_models.tests.test_middlewares.StoreMiddleware',  # won't be called
@@ -104,7 +104,7 @@ class TestMiddleware(TestCase):
             },
             'empty': {
                 'ENGINE': 'rest_models.backend',
-                'NAME': 'http://localapi/api/v2',
+                'NAME': 'http://localapi/api/v2/',
                 'MIDDLEWARES': [
                     'rest_models.tests.test_middlewares.NoResultMiddleware',
                     'rest_models.tests.test_middlewares.StoreMiddleware',  # won't be called
@@ -125,7 +125,7 @@ class TestMiddleware(TestCase):
         self.assertEqual([1], list(StoreMiddleware.queries.keys()))
         self.assertEqual([1], list(StoreMiddleware.responses.keys()))
         self.assertIs(response, StoreMiddleware.responses[1])
-        self.assertEqual(StoreMiddleware.queries[1]['url'], 'http://localapi/api/v2')
+        self.assertEqual(StoreMiddleware.queries[1]['url'], 'http://localapi/api/v2/')
 
     def test_bypass_middleware(self):
         response = self.ch['return'].cursor().get('')

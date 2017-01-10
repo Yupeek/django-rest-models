@@ -7,7 +7,7 @@ from django.utils import six
 
 try:
     from pathlib import Path
-except ImportError:
+except ImportError:  # pragma: no cover
     class Path(object):
         """
         fake pathlib.Path for retro-compatiblitiy

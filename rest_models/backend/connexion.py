@@ -258,7 +258,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         :param ApiMiddleware middleware: the middleware to apppend
         :return:
         """
-        self._middlewares_scheduler[priority].append(middleware)
+        self._middlewares_scheduler[priority].insert(0, middleware)
 
     def pop_middleware(self, middleware):
         for middlewares in self._middlewares_scheduler.values():

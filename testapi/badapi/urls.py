@@ -7,13 +7,13 @@ from dynamic_rest.routers import DynamicRouter
 from .viewset import AAViewSet, AViewSet, BBViewSet, BViewSet
 
 router = DynamicRouter()
-router.register('/a', AViewSet)
-router.register('/aa', AAViewSet)
-router.register('/b', BViewSet)
+router.register('a', AViewSet)
+router.register('aa', AAViewSet)
+router.register('b', BViewSet)
 
-router.register('/bb', BBViewSet)
+router.register('bb', BBViewSet)
 
 urlpatterns = [
-    url(r'^api/v1', include(router.urls)),
+    url(r'^api/v1/', include(router.urls)),
     url(r'', include('testapi.urls')),
 ]

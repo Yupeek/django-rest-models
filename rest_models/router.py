@@ -31,7 +31,7 @@ def get_default_api_database(databases):
 
                 _api_database_name = db_name
             else:
-                raise ImproperlyConfigured("too many Api Database found (%s and %s). you must specify "
+                raise ImproperlyConfigured("too many Api Database found. you must specify "
                                            "the database to use in each model.APIMeta.db_name")
     if _api_database_name is None:
         raise ImproperlyConfigured("no Api Database found in settings.DATABASE. you can't use a model with "

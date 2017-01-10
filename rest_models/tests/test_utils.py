@@ -114,5 +114,5 @@ class TestLoadFixtures(TestCase):
         finally:
             try:
                 os.remove(path)
-            except OSError:
+            except OSError:  # pragma: no cover
                 pass
