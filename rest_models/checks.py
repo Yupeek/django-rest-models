@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from django.apps import apps
-from django.core.checks import Error, Tags, register, Warning
+from django.core.checks import Error, Tags, Warning, register
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,8 @@ def api_struct_check(app_configs, **kwargs):
                                         rest_model.__name__, field.name, choice_count
                                     ),
                                     obj="%s.%s" % (rest_model.__name__, field.name),
-                                    hint='check if the serializer at %s%s provide a choices with less values for %s' % (
+                                    hint='check if the serializer at %s%s provide '
+                                         'a choices with less values for %s' % (
                                         db.url, url, field.name),
                                     id='rest_models.W001'
                                 )
