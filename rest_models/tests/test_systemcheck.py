@@ -9,6 +9,7 @@ from django.core.management.base import SystemCheckError
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
 from django.test.utils import modify_settings, override_settings
+
 from rest_models.test import RestModelTestCase
 
 logger = logging.getLogger(__name__)

@@ -56,13 +56,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def get_connection_params(self):
         authpath = self.settings_dict.get('AUTH', None)
         auth = authpath and import_class(authpath)(self, self.settings_dict)
+        options = self.settings_dict.get('OPTIONS', {})
 
         params = {
             'url': self.settings_dict['NAME'],
             'auth': auth,
             'timeout': self.timeout,
             'backend': self,
-            'middlewares': [import_class(path)() for path in self.settings_dict.get('MIDDLEWARES', ())]
+            'middlewares': [import_class(path)() for path in self.settings_dict.get('MIDDLEWARES', ())],
+            'ssl_verify': options.get('SSL_VERIFY', True)
         }
         return params
 
