@@ -56,7 +56,7 @@ class LocalApiAdapter(BaseAdapter):
             method=prepared_request.method,
             path=prepared_request.url,
             data=prepared_request.body,
-            content_type=prepared_request.headers.get('Content-Type', 'application/octet-stream')
+            content_type=prepared_request.headers.get('Content-Type', 'application/x-www-form-urlencoded')
         )
         for name, val in prepared_request.headers.items():
             wsgi_request.META['HTTP_' + name.upper()] = val
@@ -222,7 +222,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
     wrapper for request.Session that in fact implement useless methods like rollback which
     is not possible with a rest API
     """
-    def __init__(self, url, auth=None, retry=3, timeout=3, backend=None, middlewares=()):
+    def __init__(self, url, auth=None, retry=3, timeout=3, backend=None, middlewares=(), ssl_verify=None):
         """
         create a persistent connection to the api
         :param str url: the base url for the api (host + port + start path)
@@ -241,6 +241,8 @@ class ApiConnexion(ApiVerbShortcutMixin):
         self.backend = backend
         self._middlewares_scheduler = collections.defaultdict(list)
         self._requestid = 0
+        if ssl_verify is not None:
+            self.session.verify = ssl_verify
         for middleware in middlewares:
             self.push_middleware(middleware, 8)
 
