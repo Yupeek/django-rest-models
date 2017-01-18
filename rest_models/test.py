@@ -61,9 +61,6 @@ class MockDataApiMiddleware(ApiMiddleware):
         self.data_for_url = data_for_url
         self.not_found = not_found
 
-    def set_data_for_url(self, url, data):
-        self.data_for_url[url] = data
-
     def process_request(self, params, requestid, connection):
         if not params['url'].startswith(connection.url):
             raise ImproperlyConfigured("strage case where the query don't go to our api")  # pragma: no cover
@@ -95,7 +92,7 @@ class MockDataApiMiddleware(ApiMiddleware):
             return self.make_response(None, status_code)
         elif isinstance(data, (dict, list)):
             # dict,list: data to return
-            return self.data_response(data)
+            return self.data_response(data, status_code)
         else:
             raise Exception("the given data don't match a proper type : %s not in (int, dict, list, None)" %
                             type(data))

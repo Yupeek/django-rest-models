@@ -42,7 +42,10 @@ class DatabaseCreation(BaseDatabaseCreation):
         database already exists. Returns the name of the test database created.
         """
         # Don't import django.core.management if it isn't needed.
-        if not self.connection.alias.startswith('TEST_'):
+        test_override = self.connection.settings_dict.get('TEST', {})
+        if any(test_override.values()):
+            self.connection.settings_dict.update(test_override)
+        elif not self.connection.alias.startswith('TEST_'):
             test_database_name = self._get_test_db_name()
             settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
             self.connection.settings_dict["NAME"] = test_database_name

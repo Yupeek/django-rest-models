@@ -17,11 +17,11 @@ from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
-
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 from rest_models.router import RestModelRouter
+from rest_models.utils import pgcd
 
 logger = logging.getLogger(__name__)
 
@@ -58,18 +58,6 @@ def extract_exact_pk_value(where):
         ):
             return exact
     return None
-
-
-def pgcd(a, b):
-    """
-    return the best page size for a given limited query
-    :param a: the start offset
-    :param b: the end offset
-    :return:
-    """
-    while a % b != 0:
-        a, b = b, a % b
-    return b
 
 
 def get_resource_path(model, pk=None):
@@ -694,36 +682,43 @@ class SQLCompiler(BaseSQLCompiler):
         }
         return res
 
+    def resolve_order_field(self, field):
+        """
+        take a field in the form of '-pizzas__name' and return the value in the form of
+         '-pizza.name'
+        :param field: the field to parse
+        :rtype: tuple[bool, unicode]
+        """
+        if self.query.standard_ordering:
+            asc, desc = ORDER_DIR['ASC']
+        else:
+            asc, desc = ORDER_DIR['DESC']
+
+        ob1 = self.find_ordering_name(field, self.query.get_meta(), default_order=asc)
+        for ob2, is_ref in ob1:
+            if isinstance(ob2.expression, Col):
+                return ob2.descending, self.query_parser.get_rest_path_for_col(ob2.expression)
+
     def build_sort_params(self):
         """
         build the sort param from the order_by provided by the query
         :return: a dict with or without the sort[]
         :rtype: dict[str, str]
         """
-        res = {}
-        if self.query.standard_ordering:
-            asc, desc = ORDER_DIR['ASC']
-        else:
-            asc, desc = ORDER_DIR['DESC']
-
-        order_by = [
-            self.find_ordering_name(field, self.query.get_meta(), default_order=asc)
-            for field in self.query.order_by
-            ]
 
         resolved_order_by = []
-        for ob1 in order_by:
-            for ob1bis in ob1:
-                ob2, boolosef = ob1bis
-                if isinstance(ob2.expression, Col):
-                    resolved_order_by.append((ob2.descending, ob2.expression))
+        for field in self.query.order_by:
+            res = self.resolve_order_field(field)
+            if res:
+                resolved_order_by.append(res)
 
-        if order_by:
-            res['sort[]'] = [
-                ("-" if desc else "") + self.query_parser.get_rest_path_for_col(col)
-                for desc, col in resolved_order_by
-                ]
-        return res
+        result = {}
+        if resolved_order_by:
+            result['sort[]'] = [
+                ("-" if desc else "") + field
+                for desc, field in resolved_order_by
+            ]
+        return result
 
     def build_limit(self):
         if self.query.high_mark is not None:
