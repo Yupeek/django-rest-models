@@ -37,6 +37,8 @@ def dict_contains(subdict, maindict):
     >>> dict_contains(dict(a=dict(aa=1)), dict(a=[]))
     False
 
+    >>> dict_contains(dict(a=1), dict())
+    False
 
     :param subdict: the smaller dict that should be present in the big one
     :param maindict: the dict
@@ -148,3 +150,23 @@ class JsonFixtures(object):
                     # the resolving of url can use a %(name)s that is not in the dict
                     pass
             raise ke
+
+
+def pgcd(a, b):
+    """
+    return the best page size for a given limited query
+
+    :param a: the start offset
+    :param b: the end offset
+    :return:
+
+    >>> pgcd(30, 40)
+    10
+
+    >>> pgcd(7, 13)
+    1
+
+    """
+    while a % b != 0:
+        a, b = b, a % b
+    return b

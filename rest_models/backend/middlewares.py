@@ -76,11 +76,11 @@ class ApiMiddleware(object):
         """
         return self.make_response(data=None, status_code=204)
 
-    def data_response(self, data):
+    def data_response(self, data, status_code=None):
         """
         shortcut to return a response with 200 and data
 
         :param data: the data to insert in the response
         :return: a FakeApiResponse with the given data
         """
-        return self.make_response(data=data, status_code=200)
+        return self.make_response(data=data, status_code=status_code or 200)

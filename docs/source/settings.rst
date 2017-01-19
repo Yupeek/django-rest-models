@@ -161,7 +161,7 @@ resource_name
 
 the value for the serializer.Meta.name
 
-.. code-black:: python
+.. code-block:: python
 
 
     class PizzaSerializer(DynamicModelSerializer):
@@ -177,7 +177,7 @@ resource_name_plural
 this is the plural variant of resource_name. if the resource_name is customized, you will need to customize this too.
 in many cases, it will resource_name + 's'
 
-.. code-black:: python
+.. code-block:: python
 
 
     class PizzaSerializer(DynamicModelSerializer):

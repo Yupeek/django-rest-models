@@ -14,6 +14,9 @@ DATABASES = {
         'USER': 'admin',
         'PASSWORD': 'admin',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'TEST': {
+            'NAME': 'http://localapi/api/v2/',
+        }
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',
