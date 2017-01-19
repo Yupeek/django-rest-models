@@ -608,7 +608,6 @@ class SQLCompiler(BaseSQLCompiler):
                         raise ProgrammingError("unknown type for compiling the query : %s."
                                                " expeced a Lookup or WhereNode" % child.__class__)
             else:
-
                 reason = "NOT (.. AND ..)" if is_negated else "OR"
                 raise FakeDatabaseDbAPI2.NotSupportedError(
                     "%s in queryset is not supported yet" % reason
