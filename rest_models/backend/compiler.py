@@ -762,8 +762,10 @@ class SQLCompiler(BaseSQLCompiler):
         :param response:
         :return:
         """
+        if response.status_code == 404:
+            raise EmptyResultSet()
         if response.status_code == 204:
-            raise EmptyResultSet
+            raise EmptyResultSet()
         elif response.status_code != 200:
             raise ProgrammingError("the query to the api has failed : GET %s/%s \n=> %s" %
                                    (self.connection.connection.url, build_url(url, params),

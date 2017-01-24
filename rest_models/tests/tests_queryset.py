@@ -157,6 +157,10 @@ class TestQueryGet(TestCase):
         for k, v in data.items():
             self.assertEqual(getattr(obj, k), v)
 
+    def test_does_not_exists(self):
+        with self.assertRaises(client_models.Pizza.DoesNotExist):
+            client_models.Pizza.objects.get(pk=12345)
+
     def test_get(self):
         with self.assertNumQueries(1, using='api'):
             p = client_models.Pizza.objects.get(pk=1)
