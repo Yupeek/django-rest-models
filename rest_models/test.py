@@ -73,17 +73,25 @@ class MockDataApiMiddleware(ApiMiddleware):
         # we have many results for this url.
         # the mocked result can add a special «filter» value along with «data»
         # that all items must match the one in the params to be ok.
+        result_found = None
         for mocked_result in results_for_url:
-            if dict_contains(mocked_result.get('filter', {}), params):
-                # all item in the for is ok.
-                # we break and so won't pass into the «else» of the first for
+            filters = mocked_result.get('filter', [{}])
+            if not isinstance(filters, list):
+                filters = [filters]
+            for filter in filters:
+                if dict_contains(filter, params):
+                    # all item in the for is ok.
+                    # we break and so won't pass into the «else» of the first for
+                    result_found = mocked_result
+                    break
+            if result_found:
                 break
-        else:
+        if not result_found:
             # no mocked data have matched
             return self.not_found(url, self)
 
-        data = mocked_result.get('data')
-        status_code = mocked_result.get('status_code')
+        data = result_found.get('data')
+        status_code = result_found.get('status_code')
         if data is None and not status_code:
             # None return 204
             return self.empty_response()
