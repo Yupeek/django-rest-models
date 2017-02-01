@@ -206,8 +206,9 @@ the fowoing is extracted from the rest api interface and is a valid ``data`` val
 filter
 ------
 
-the filter is a dict that can be empty, in that case it will match all query.
+the filter is a dict or a list of dict that can be empty, in that case it will match all query.
 it can contains one of the folowing revelent value. any other will make this dataset unmatching all query.
+if it's a list, any dict inside that match the query will validate this fixtures.
 
 
 - params: the main filter helper. it must contains a dict with the query parameters in the get for the api
@@ -289,11 +290,11 @@ the folowing test case is a full example taken from the test suit. it's a good p
                     }
                 },
                 {
-                    'filter': {
+                    'filter': [{
                         'params': {
                             'filter{name}': ['lolilol'],  # just the filter, no sorting
                         }
-                    },
+                    }],
                     'data': {
                         "menus": [
                             {

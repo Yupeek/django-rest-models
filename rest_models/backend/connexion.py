@@ -19,7 +19,7 @@ from requests.utils import get_encoding_from_headers
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("django.db.backends")
 
 
 def build_url(url, params):
@@ -212,8 +212,8 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
                 'sql': "%s %s ||| %s" % (method, sql, kwargs),
                 'time': "%.3f" % duration,
             })
-            logger.debug('(%.3f) %s; args=%s' % (duration, sql, kwargs),
-                         extra={'duration': duration, 'sql': sql, 'params': kwargs}
+            logger.debug('(%.3f) %s %s; args=%s' % (duration, method, sql, kwargs),
+                         extra={'duration': duration, 'sql': sql, 'params': kwargs, 'method': method}
                          )
 
 

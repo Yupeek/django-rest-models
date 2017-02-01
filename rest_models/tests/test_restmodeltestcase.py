@@ -79,11 +79,11 @@ class TestMockDataSample(RestModelTestCase):
                 }
             },
             {
-                'filter': {
+                'filter': [{
                     'params': {
                         'filter{name}': ['lolilol'],  # just the filter, no sorting
                     }
-                },
+                }],
                 'data': {
                     "menus": [
                         {
