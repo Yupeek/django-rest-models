@@ -164,3 +164,5 @@ LOGGING = {
         },
     }
 }
+
+TEST_RUNNER = "teamcity.django.TeamcityDjangoRunner"

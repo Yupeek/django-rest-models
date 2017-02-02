@@ -39,7 +39,7 @@ class ApiMiddleware(object):
                         - verb: the verb to execut the request (post, get, put)
                         - url: the url in which the query will be executed
                         - data: the data given to the query to post,put, etc
-                    }
+
         :param int requestid: the id of the current request done by this connection
         :param connection: the connection used for this query
         :return: the response if there is no need to pursue the query.

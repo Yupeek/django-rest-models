@@ -309,10 +309,21 @@ class QueryParser(object):
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
         if isinstance(col, RawSQL):
+            # special case with prefetch_related which get the id from the sql query.
+            # this request can work on the dynamic rest backend, but the performance
+            # will be degraded since the remote backend will return all id instead of the
+            # one in the current filter.
+            # to prevent this, a small snipet can be added to override the
+            # dynamic_rest.filters.DynamicFilterBackend._build_requested_prefetches to filter the
+            # remote request with the actual id.
+
+            # see «special cases» in documentation
+
             matches = self.quote_rexep.findall(col.sql)
             if len(matches) == 2:
                 table, field = matches
                 current = self.aliases[table]
+                self.query.is_prefetch_related = True
             else:
                 raise NotSupportedError("Only Col in sql select is supported")
         elif isinstance(col, Col):
@@ -733,12 +744,20 @@ class SQLCompiler(BaseSQLCompiler):
                 }
         return {}
 
+    def build_extra(self):
+        # is_prefetch_related is added by the QueryParser.resolve_path if it seem it's a
+        # prefetch related
+        if getattr(self.query, 'is_prefetch_related', False):
+            return {'filter_to_prefetch': 'true'}
+        return {}
+
     def build_params(self):
         params = {}
         params.update(self.build_filter_params())
         params.update(self.build_include_exclude_params())
         params.update(self.build_sort_params())
         params.update(self.build_limit())
+        params.update(self.build_extra())
         return params
 
     def build_params_and_pk(self):

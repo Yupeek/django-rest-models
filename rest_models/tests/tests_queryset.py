@@ -319,12 +319,15 @@ class TestQueryGet(TestCase):
     def test_prefetch_related_sample(self):
         with self.assertNumQueries(2):
             p = api_models.Pizza.objects.prefetch_related('toppings').get(pk=1)
+
         with self.assertNumQueries(0):
             self.assertEqual(len(list(p.toppings.all())), 5)
 
     def test_prefetch_related(self):
-        with self.assertNumQueries(2, using='api'):
+        with self.assertNumQueries(2, using='api') as queries:
             p = client_models.Pizza.objects.prefetch_related('toppings').get(pk=1)
+            self.assertNotIn('filter_to_prefetch=true', queries[0]['sql'])
+            self.assertIn('filter_to_prefetch=true', queries[1]['sql'])
         with self.assertNumQueries(0, using='api'):
             self.assertEqual(len(list(p.toppings.all())), 5)
 

@@ -190,6 +190,17 @@ dynamic-rest filtering system too.
         Pizza.objects.exclude(..., ...).exclude(...)
         Pizza.objects.filter(Q(..) & Q(..))
 
+.. note::
+
+    prefetch_related work as expected, but the performances is bad. in fact, a ``Pizza.objects.prefetch_related('toppings')``
+    will query the toppings for all pizzas as expeced, but the query to recover the pizza will contains the linked pizza in the response.
+    if the database contains a great lot of pizza for the given toppings, the response will contains them all, even if it's
+    useless at first glance, the linked pizza for each topping is mandotary to django to glue topping <=> pizza relationship.
+
+    so, be carefull whene using prefetch_related.
+
+
+
 specific comportments
 ---------------------
 
