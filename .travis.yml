@@ -8,36 +8,26 @@ python:
   - "3.4"
   - "3.5"
 
-# Django versions for matrix
-env:
-  - DJANGO_VERSION='>=1.8,<1.9'
-  - DJANGO_VERSION='>=1.9,<1.10'
-  - DJANGO_VERSION='>=1.10,<1.11'
-  - DREST_VERSION='<1.6'
-  - DREST_VERSION='<1.7'
-  - DRE_VERSION='<3.5'
-  - DRE_VERSION='<3.6'
-
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-  - pip install -q Django$DJANGO_VERSION djangorestframework$DRE_VERSION dynamic-rest$DREST_VERSION
-  - pip install  python-coveralls
+  - pip install tox-travis
+  - pip install python-coveralls
   # virtualenv>=14.0.0 has dropped Python 3.2 support
   - travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.2' ]]; then travis_retry pip install 'coverage<4.0'; fi
   - pip install -r requirements.txt
-
 
 # Command to run tests, e.g. python setup.py test
 script:
-  - coverage run --source=testapp,rest_models manage.py test
+  - coverage run --source=testapp,rest_models tox
 
 
 # Report to coveralls
 after_success:
   - coveralls
 
-#matrix:
-#  exclude:
-#    - python: "3.5"
-#      env: DJANGO_VERSION='>=1.8,<1.9'
+matrix:
+  exclude:
+    - env: DRE_VERSION='<3.6'
+      env: DREST_VERSION='<1.6'
+    - env: DRE_VERSION='<3.5'
+      env: DREST_VERSION='<1.7'
