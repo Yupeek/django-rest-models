@@ -165,4 +165,9 @@ LOGGING = {
     }
 }
 
-TEST_RUNNER = "teamcity.django.TeamcityDjangoRunner"
+try:  # pragma: nocover
+    import teamcity
+    if teamcity.is_running_under_teamcity():  # pragma: nocover
+        TEST_RUNNER = "teamcity.django.TeamcityDjangoRunner"
+except ImportError:  # pragma: nocover
+    pass
