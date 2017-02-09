@@ -12,8 +12,11 @@ python:
 env:
   - DJANGO_VERSION='>=1.8,<1.9'
   - DJANGO_VERSION='>=1.9,<1.10'
-  - DREST_VERSION='==1.5.0'
-  - DRE_VERSION='==3.4.0'
+  - DJANGO_VERSION='>=1.10,<1.11'
+  - DREST_VERSION='<1.6'
+  - DREST_VERSION='<1.7'
+  - DRE_VERSION='<3.5'
+  - DRE_VERSION='<3.6'
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
@@ -34,7 +37,7 @@ script:
 after_success:
   - coveralls
 
-matrix:
-  exclude:
-    - python: "3.5"
-      env: DJANGO_VERSION='>=1.8,<1.9'
+#matrix:
+#  exclude:
+#    - python: "3.5"
+#      env: DJANGO_VERSION='>=1.8,<1.9'
