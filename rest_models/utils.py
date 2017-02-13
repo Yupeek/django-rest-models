@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 
-from django.utils import six
+import six
 
 try:
     from pathlib import Path

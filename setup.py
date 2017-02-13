@@ -46,6 +46,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'requests',
+        'six',
     ],
     packages=[
         'rest_models',
