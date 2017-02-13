@@ -7,13 +7,14 @@ from django.http.response import HttpResponseForbidden
 from django.views.generic.base import RedirectView
 from dynamic_rest.routers import DynamicRouter
 
-from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaViewSet, ToppingViewSet, fake_oauth, fake_view,
-                             wait)
+from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaGroupViewSet, PizzaViewSet, ToppingViewSet,
+                             fake_oauth, fake_view, wait)
 
 router = DynamicRouter()
 router.register('pizza', PizzaViewSet)
 router.register('topping', ToppingViewSet)
 router.register('menulol', MenuViewSet)
+router.register('pizzagroup', PizzaGroupViewSet)
 
 router.register('authpizza', AuthorizedPizzaViewSet)
 

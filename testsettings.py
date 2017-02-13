@@ -160,9 +160,22 @@ LOGGING = {
         'django.request': {
             'handlers': ['console'],
             'level': 'ERROR',
-            'propagate': True,
+            'propagate': False,
         },
+        'rest_models': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        }
     }
 }
 
-TEST_RUNNER = "teamcity.django.TeamcityDjangoRunner"
+if os.environ.get('QUIET', False):
+    LOGGING['handlers']['console']['level'] = 70
+
+try:  # pragma: nocover
+    import teamcity
+    if teamcity.is_running_under_teamcity():  # pragma: nocover
+        TEST_RUNNER = "teamcity.django.TeamcityDjangoRunner"
+except ImportError:  # pragma: nocover
+    pass

@@ -15,8 +15,10 @@ from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
+from django.db.models.sql.datastructures import BaseTable
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
+
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
@@ -381,6 +383,11 @@ class QueryParser(object):
         """
         ids = None
         first_connector = None
+        try:
+            main_alias = [a for a, v in self.query.alias_map.items() if isinstance(v, BaseTable)][0]
+        except IndexError:
+            main_alias = None
+
         # we check if this is a OR all along, or if it's mixed with AND.
         # if there is only one AND, it's ok
         # if there is all OR, it's ok
@@ -390,7 +397,8 @@ class QueryParser(object):
                 first_connector = is_and
             if negated or not lookup.rhs_is_direct_value() or first_connector != is_and:
                 return None
-            if lookup.lhs.field != self.query.get_meta().pk:
+            # check this lookup is only for main model's primary key
+            if lookup.lhs.alias != main_alias or lookup.lhs.target != self.query.get_meta().pk:
                 return None
             if isinstance(lookup, Exact):
                 to_add = {lookup.rhs}

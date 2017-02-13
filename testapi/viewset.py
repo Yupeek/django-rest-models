@@ -8,8 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from dynamic_rest.viewsets import DynamicModelViewSet
 from rest_framework.permissions import DjangoModelPermissions
 
-from testapi.models import Menu, Pizza, Topping
-from testapi.serializers import MenuSerializer, PizzaSerializer, ToppingSerializer
+from testapi.models import Menu, Pizza, PizzaGroup, Topping
+from testapi.serializers import MenuSerializer, PizzaGroupSerializer, PizzaSerializer, ToppingSerializer
 
 
 class PizzaViewSet(DynamicModelViewSet):
@@ -31,6 +31,11 @@ class AuthorizedPizzaViewSet(DynamicModelViewSet):
 class MenuViewSet(DynamicModelViewSet):
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
+
+
+class PizzaGroupViewSet(DynamicModelViewSet):
+    serializer_class = PizzaGroupSerializer
+    queryset = PizzaGroup.objects.all()
 
 
 def wait(request):
