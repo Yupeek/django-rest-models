@@ -49,3 +49,16 @@ class Bookmark(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     pizza = models.ForeignKey(Pizza)
     date = models.DateTimeField(auto_now_add=True)
+
+
+class PizzaGroup(models.Model):
+
+    parent = models.ForeignKey("self", related_name='children')
+    name = models.CharField(max_length=125)
+    pizzas = models.ManyToManyField(Pizza, related_name='groups')
+
+    def __str__(self):
+        return self.name
+
+    class APIMeta:
+        db_name = 'api'

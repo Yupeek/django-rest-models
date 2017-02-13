@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import unittest.util
+
 from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
@@ -8,7 +10,9 @@ from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
 
 from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field, get_resource_path
-from testapp.models import Menu, Pizza, Topping
+from testapp.models import Menu, Pizza, PizzaGroup, Topping
+
+unittest.util._MAX_LENGTH = 12000
 
 
 def dict_of_set(expected):
@@ -71,9 +75,9 @@ class CompilerTestCase(TestCase):
         compiler = SQLCompiler(queryset.query, connections['api'], 'api')
         compiler.setup_query()
         pk, params = compiler.build_params_and_pk()
-        self.assertEqual(dict_of_set(params), dict_of_set(expected))
         if url:
             self.assertEqual(url, get_resource_path(queryset.model, pk=pk))
+        self.assertEqual(dict_of_set(params), dict_of_set(expected))
 
 
 class QueryParserPathResolutionTest(TestCase):
@@ -681,6 +685,95 @@ class TestFullCompiler(CompilerTestCase):
                 'include[]': ['menu.code', 'toppings.name', 'cost', 'menu.id', 'id', 'toppings.id'],
             },
             url='pizza/1/'
+        )
+
+    def test_build_or_pk_link(self):
+        self.assertQsParams(
+            Pizza.objects.all().filter(menu__pk__in=[1]).values('pk'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{menu.in}': [1]
+            },
+            url='pizza'
+        )
+        self.assertQsParams(
+            Pizza.objects.all().filter(menu__pk=1).values('pk'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{menu}': 1
+            },
+            url='pizza'
+        )
+
+    def test_build_recursive_models_pk(self):
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(pk__in=[1]).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': {'id'},
+            },
+            url='pizzagroup/1/'
+        )
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(pk__in=[1, 2]).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': {'id'},
+                'filter{id.in}': {1, 2}
+            },
+            url='pizzagroup'
+        )
+
+    def test_build_recursive_models_children_pk(self):
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(children__pk__in=[1]).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{children.id.in}': {1}
+            },
+            url='pizzagroup'
+        )
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(children__pk=1).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{children.id}': 1
+            },
+            url='pizzagroup'
+        )
+
+    def test_build_recursive_models_parent_pk(self):
+
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(parent__pk__in=[1]).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{parent.in}': {1}
+            },
+            url='pizzagroup'
+        )
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(parent__pk__in=[1, 2]).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{parent.in}': {1, 2}
+            },
+            url='pizzagroup'
+        )
+        self.assertQsParams(
+            PizzaGroup.objects.all().filter(parent__pk=1).values('id'),
+            {
+                'exclude[]': ['*'],
+                'include[]': ['id'],
+                'filter{parent}': 1
+            },
+            url='pizzagroup'
         )
 
     def test_build_or_pk_ko(self):

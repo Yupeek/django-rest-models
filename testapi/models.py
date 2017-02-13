@@ -44,3 +44,13 @@ class Pizza(models.Model):
 
     def __str__(self):
         return self.name  # pragma: no cover
+
+
+class PizzaGroup(models.Model):
+
+    parent = models.ForeignKey("self", related_name='children')
+    name = models.CharField(max_length=125)
+    pizzas = models.ManyToManyField(Pizza, related_name='groups')
+
+    def __str__(self):
+        return self.name

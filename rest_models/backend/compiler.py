@@ -15,8 +15,10 @@ from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
+from django.db.models.sql.datastructures import BaseTable
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
 from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
+
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
@@ -309,10 +311,21 @@ class QueryParser(object):
         """
         # current = Alias = NamedTuple(model,parent,field,attrname,m2m)
         if isinstance(col, RawSQL):
+            # special case with prefetch_related which get the id from the sql query.
+            # this request can work on the dynamic rest backend, but the performance
+            # will be degraded since the remote backend will return all id instead of the
+            # one in the current filter.
+            # to prevent this, a small snipet can be added to override the
+            # dynamic_rest.filters.DynamicFilterBackend._build_requested_prefetches to filter the
+            # remote request with the actual id.
+
+            # see «special cases» in documentation
+
             matches = self.quote_rexep.findall(col.sql)
             if len(matches) == 2:
                 table, field = matches
                 current = self.aliases[table]
+                self.query.is_prefetch_related = True
             else:
                 raise NotSupportedError("Only Col in sql select is supported")
         elif isinstance(col, Col):
@@ -370,6 +383,11 @@ class QueryParser(object):
         """
         ids = None
         first_connector = None
+        try:
+            main_alias = [a for a, v in self.query.alias_map.items() if isinstance(v, BaseTable)][0]
+        except IndexError:
+            main_alias = None
+
         # we check if this is a OR all along, or if it's mixed with AND.
         # if there is only one AND, it's ok
         # if there is all OR, it's ok
@@ -379,7 +397,8 @@ class QueryParser(object):
                 first_connector = is_and
             if negated or not lookup.rhs_is_direct_value() or first_connector != is_and:
                 return None
-            if lookup.lhs.field != self.query.get_meta().pk:
+            # check this lookup is only for main model's primary key
+            if lookup.lhs.alias != main_alias or lookup.lhs.target != self.query.get_meta().pk:
                 return None
             if isinstance(lookup, Exact):
                 to_add = {lookup.rhs}
@@ -733,12 +752,20 @@ class SQLCompiler(BaseSQLCompiler):
                 }
         return {}
 
+    def build_extra(self):
+        # is_prefetch_related is added by the QueryParser.resolve_path if it seem it's a
+        # prefetch related
+        if getattr(self.query, 'is_prefetch_related', False):
+            return {'filter_to_prefetch': 'true'}
+        return {}
+
     def build_params(self):
         params = {}
         params.update(self.build_filter_params())
         params.update(self.build_include_exclude_params())
         params.update(self.build_sort_params())
         params.update(self.build_limit())
+        params.update(self.build_extra())
         return params
 
     def build_params_and_pk(self):

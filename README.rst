@@ -59,12 +59,12 @@ requirements
 this database wrapper work with
 
 - python 2.7, 3.4, 3.5
-- django 1.8 and 1.9
+- django 1.8 , 1.9, 1.10
 
 on the api, this is tested against
 
-- django-rest-framework 3.4.0
-- dynamic-rest 1.5.0
+- django-rest-framework 3.4, 3.5
+- dynamic-rest 1.5, 1.6
 
 
 exemples
@@ -189,6 +189,17 @@ dynamic-rest filtering system too.
         Pizza.objects.filter(...).filter(...).exclude(...)
         Pizza.objects.exclude(..., ...).exclude(...)
         Pizza.objects.filter(Q(..) & Q(..))
+
+.. note::
+
+    prefetch_related work as expected, but the performances is bad. in fact, a ``Pizza.objects.prefetch_related('toppings')``
+    will query the toppings for all pizzas as expeced, but the query to recover the pizza will contains the linked pizza in the response.
+    if the database contains a great lot of pizza for the given toppings, the response will contains them all, even if it's
+    useless at first glance, the linked pizza for each topping is mandotary to django to glue topping <=> pizza relationship.
+
+    so, be carefull whene using prefetch_related.
+
+
 
 specific comportments
 ---------------------

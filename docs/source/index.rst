@@ -20,6 +20,7 @@ Contents:
    settings
    testing
    middlewares
+   special_case
 
 Indices and tables
 ==================
