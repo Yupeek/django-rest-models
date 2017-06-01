@@ -33,7 +33,7 @@ class ClientTest(TestCase):
         called = []
 
         def tmp_exec(self_dc, args, env):
-            self.assertEqual(env['_resty_host'], 'http://localhost:8080/api/v2*')
+            self.assertRegexpMatches(env['_resty_host'], 'http://localhost:[0-9]*/api/v2\*')
             called.append(args)
 
         DatabaseClient.execute_subprocess = tmp_exec
