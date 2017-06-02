@@ -53,9 +53,22 @@ class TestLoadFixtureTest(RestModelTestCase):
         with self.mock_api('me/17', [1, 2, 3], using='api'):
             self.assertEqual(self.client.get('me/17').json(), [1, 2, 3])
 
+    def test_mock_api_statuscode(self):
+        with self.mock_api('me/17', [1, 2, 3], using='api', status_code=201):
+            self.assertEqual(self.client.get('me/17').status_code, 201)
+            self.assertEqual(self.client.get('me/17').json(), [1, 2, 3])
+
     def test_mock_api_pass(self):
         with self.mock_api('lol', [1, 2, 3], using='api'):
             self.assertEqual(self.client.get('b').status_code, 503)
+
+    def test_track_queries(self):
+        with self.track_query('api') as tracker:
+            self.assertEqual(self.client.get('c').json(), {'C': 'c'})
+            self.assertEqual(self.client.get('d').json(), {'A': 'a', 'B': 'b'})
+        self.assertEqual(len(tracker.get_for_url('c')), 1)
+        self.assertEqual(len(tracker.get_for_url('d')), 1)
+        self.assertEqual(len(tracker.get_for_url('b')), 0)
 
 
 class TestMockDataSample(RestModelTestCase):

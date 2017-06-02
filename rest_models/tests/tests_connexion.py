@@ -107,6 +107,33 @@ class TestApiConnexion(LiveServerTestCase):
         c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('user1', 'badpasswd'))
         self.assertRaises(ProgrammingError, c.patch, 'authpizza/1', json={'pizza': {'price': 0}})
 
+    def test_url_resolving(self):
+        c = ApiConnexion(self.live_server_url + "/api/v2/", auth=('admin', 'admin'))
+        r = c.get('/other/view/', json={'result': 'ok'})
+        self.assertEqual(r.status_code, 200)
+
+
+class TestApiConnexionUrlReslving(TestCase):
+
+    def setUp(self):
+        self.c = ApiConnexion("http://localhost/api/v2/", auth=('user1', 'badpasswd'))
+
+    def test_auto_fix_url(self):
+        c = ApiConnexion("http://localhost/api/v2", auth=('user1', 'badpasswd'))
+        self.assertEqual(c.url, "http://localhost/api/v2/")  # plus final /
+
+    def test_url_relative(self):
+        self.assertEqual(self.c.get_final_url('pizza'), "http://localhost/api/v2/pizza")
+
+    def test_url_relative_end_slash(self):
+        self.assertEqual(self.c.get_final_url('pizza/'), "http://localhost/api/v2/pizza/")
+
+    def test_url_absolute(self):
+        self.assertEqual(self.c.get_final_url('/pizza'), "http://localhost/pizza")
+
+    def test_url_absolute_end_slash(self):
+        self.assertEqual(self.c.get_final_url('/pizza/'), "http://localhost/pizza/")
+
 
 class TestOauth(TestCase):
     def setUp(self):
