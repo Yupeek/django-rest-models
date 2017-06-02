@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from django.conf.urls import include, url
 from django.contrib import admin
-from django.http.response import HttpResponseForbidden, HttpResponse
+from django.http.response import HttpResponse, HttpResponseForbidden
 from django.views.generic.base import RedirectView
 from dynamic_rest.routers import DynamicRouter
 

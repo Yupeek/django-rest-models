@@ -361,7 +361,6 @@ class ApiConnexion(ApiVerbShortcutMixin):
         kwargs.setdefault('stream', False)
         real_url = self.get_final_url(url)
 
-
         error = 0
         last_exception = None
 
