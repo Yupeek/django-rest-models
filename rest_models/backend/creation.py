@@ -34,7 +34,6 @@ class DatabaseCreation(BaseDatabaseCreation):
     sql_for_pending_references = do_nothing
     sql_indexes_for_model = do_nothing
     sql_create_model = do_nothing
-    destroy_test_db = do_nothing
 
     def create_test_db(self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
         """
@@ -42,10 +41,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         database already exists. Returns the name of the test database created.
         """
         # Don't import django.core.management if it isn't needed.
-        test_override = self.connection.settings_dict.get('TEST', {})
-        if any(test_override.values()):
-            self.connection.settings_dict.update(test_override)
-        elif not self.connection.alias.startswith('TEST_'):
+        if not self.connection.alias.startswith('TEST_'):
             test_database_name = self._get_test_db_name()
             settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
             self.connection.settings_dict["NAME"] = test_database_name
@@ -58,8 +54,22 @@ class DatabaseCreation(BaseDatabaseCreation):
         _create_test_db() and when no external munging is done with the 'NAME'
         settings.
         """
+
         test_alias = 'TEST_'+self.connection.alias
+        if self.connection.settings_dict['TEST']['NAME']:
+            return self.connection.settings_dict['TEST']['NAME']
         if settings.DATABASES.get(test_alias):
             return settings.DATABASES[test_alias]['NAME']
         name = self.connection.settings_dict['NAME']
         return re.sub('https?://[^/]+/', LocalApiAdapter.SPECIAL_URL + "/", name, count=1)
+
+    def destroy_test_db(self, old_database_name=None, *args, **kwargs):
+        """
+        Destroy a test database, prompting the user for confirmation if the
+        database already exists.
+        """
+
+        # Restore the original database name
+        if old_database_name is not None:
+            settings.DATABASES[self.connection.alias]["NAME"] = old_database_name
+            self.connection.settings_dict["NAME"] = old_database_name
