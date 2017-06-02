@@ -19,6 +19,11 @@ from requests.utils import get_encoding_from_headers
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 
+try:
+    from urllib.parse import urlparse, urlunparse
+except ImportError:  # pragma: no cover
+    from urlparse import urlparse, urlunparse
+
 logger = logging.getLogger("django.db.backends")
 
 
@@ -232,6 +237,9 @@ class ApiConnexion(ApiVerbShortcutMixin):
         :param DatabaseWrapper backend: the backend
         :param list[Middleware]|tuple[Middleware] middlewares:the list of middleware to execute for each query.
         """
+        if not url.endswith('/'):
+            # fix the miss configured url in the api (must end with a /)
+            url = url + '/'
         self.session = requests.Session()
         self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
         self.session.auth = self.auth = auth
@@ -351,16 +359,13 @@ class ApiConnexion(ApiVerbShortcutMixin):
         kwargs.setdefault("allow_redirects", False)
         kwargs.setdefault("timeout", self.get_timeout())
         kwargs.setdefault('stream', False)
+        real_url = self.get_final_url(url)
 
-        assert not url.startswith("/"), "the url should not start with a «/»"
-        if url != '' and not self.url.endswith('/'):
-            url = '/' + url
         error = 0
         last_exception = None
 
         while error <= self.retry:
             try:
-                real_url = self.url + url
                 # to stay compatible with django_debug_toolbar, we must
                 # call execute on the cursor return by the backend, since this one is replaced
                 # by django-debug-toolbar to state the query.
@@ -391,3 +396,11 @@ class ApiConnexion(ApiVerbShortcutMixin):
         raise FakeDatabaseDbAPI2.OperationalError(
             "cound not connect to server: %s\nIs the API running on %s ? tried %d times" %
             (last_exception, self.url, error))
+
+    def get_final_url(self, url):
+        if url.startswith("/"):
+            parsed_url = urlparse(url)
+            api_url = urlparse(self.url)
+            return urlunparse(api_url[:2] + parsed_url[2:])
+
+        return self.url + url
