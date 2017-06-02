@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 
+import six
 from django.core.management import call_command
 from django.core.management.base import SystemCheckError
 from django.db.utils import ProgrammingError
@@ -64,7 +65,9 @@ class SystemCheckTest(TestCase):
         self.assertIn('System check identified 4 issues', msg)
 
     def test_check_one_ok(self):
-        call_command('check', 'testapp')
+        res = six.StringIO()
+        call_command('check', 'testapp', stdout=res)
+        self.assertEqual(res.getvalue(), 'System check identified no issues (0 silenced).\n')
 
 
 @override_settings(ROOT_URLCONF='testapi.badapi.urls')

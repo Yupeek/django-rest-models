@@ -106,6 +106,22 @@ class MockDataApiMiddleware(ApiMiddleware):
                             type(data))
 
 
+class TrackRequestMiddleware(ApiMiddleware):
+    def __init__(self):
+        self.queries = {}
+
+    def process_request(self, params, requestid, connection):
+        self.queries[requestid] = {
+            'params': params,
+        }
+
+    def process_response(self, params, response, requestid):
+        self.queries[requestid]['response'] = response
+
+    def get_for_url(self, url):
+        return [q for q in self.queries.values() if q['params']['url'].endswith(url)]
+
+
 class RestModelTestMixin(object):
     """
     a test case mixin that add the feathure to mock the response from an api
@@ -149,7 +165,23 @@ class RestModelTestMixin(object):
             connections[db_name].connection.pop_middleware(middleware)
 
     @contextmanager
-    def mock_api(self, url, result, params=None, using=None):
+    def track_query(self, using=None):
+        """
+        :return: the middleware that tracked the queeries
+        :rtype: TrackRequestMiddleware
+        """
+        connection = connections[using or get_default_api_database(settings.DATABASES)]
+        middleware = TrackRequestMiddleware()
+        cursor = connection.cursor()
+        try:
+
+            cursor.push_middleware(middleware, priority=6)
+            yield middleware
+        finally:
+            cursor.pop_middleware(middleware)
+
+    @contextmanager
+    def mock_api(self, url, result, params=None, using=None, status_code=200):
         """
         assert that the eather one of the api have executed a query, with optionnaly the given params,
         the query was made `count` times and by the given API
@@ -163,7 +195,8 @@ class RestModelTestMixin(object):
         mocked = {
             url: [{
                 'filter': params or {},
-                'data': result
+                'data': result,
+                'status_code': status_code
             }]
         }
         middleware = MockDataApiMiddleware(mocked, not_found=not_found_continue)
