@@ -62,8 +62,6 @@ class MockDataApiMiddleware(ApiMiddleware):
         self.not_found = not_found
 
     def process_request(self, params, requestid, connection):
-        if not params['url'].startswith(connection.url):
-            raise ImproperlyConfigured("strage case where the query don't go to our api")  # pragma: no cover
         url = params['url'][len(connection.url):]
 
         try:
