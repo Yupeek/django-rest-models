@@ -151,6 +151,16 @@ class JsonFixtures(object):
                     pass
             raise ke
 
+    def items(self):
+        if not hasattr(self, "_loaded"):
+            self._loaded = self._load()
+        for url, data in self._loaded.items():
+            try:
+                yield url % self.variable, data
+            except KeyError:
+                # the resolving of url can use a %(name)s that is not in the dict
+                pass
+
 
 def pgcd(a, b):
     """
