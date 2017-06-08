@@ -184,7 +184,7 @@ class TestMockDataSample(RestModelTestCase):
                 }
 
             }
-        ]
+        ],
     }}
 
     def test_multi_results_filter(self):
@@ -214,3 +214,38 @@ class TestMockDataSample(RestModelTestCase):
         self.assertEqual(m.pk, 2)
         self.assertEqual(m.name, 'hello')
         self.assertEqual(m.code, 'ho')
+
+
+class TestMockUrlResolving(RestModelTestCase):
+    database_rest_fixtures = {'api': {
+        '/root/': [  # url menulol
+            {
+                'filter': {
+                },
+                'data': {
+                    "root": "root",
+
+                }
+            }
+        ],
+        'root/': [  # url menulol
+            {
+                'filter': {
+                },
+                'data': {
+                    "root": "notroot",
+
+                }
+            }
+        ]
+    }}
+
+    def test_fake_data_from_root(self):
+        db = connections['api'].cursor()
+        response = db.get('/root/')
+        self.assertEqual(response.data, {'root': 'root'})
+
+    def test_fake_data_from_not_root(self):
+        db = connections['api'].cursor()
+        response = db.get('root/')
+        self.assertEqual(response.data, {'root': 'notroot'})

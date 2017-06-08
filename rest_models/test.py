@@ -4,13 +4,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import contextmanager
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.test.testcases import TestCase
 
 from rest_models.backend.middlewares import ApiMiddleware
 from rest_models.router import get_default_api_database
 from rest_models.utils import JsonFixtures, dict_contains
+
+try:
+    from urllib.parse import urlparse
+except ImportError:  # pragma: no cover
+    from urlparse import urlparse
 
 
 def not_found_raise(url, middleware):
@@ -62,14 +66,17 @@ class MockDataApiMiddleware(ApiMiddleware):
         self.not_found = not_found
 
     def process_request(self, params, requestid, connection):
-        if not params['url'].startswith(connection.url):
-            raise ImproperlyConfigured("strage case where the query don't go to our api")  # pragma: no cover
-        url = params['url'][len(connection.url):]
 
-        try:
-            results_for_url = self.data_for_url[url]
-        except KeyError:
-            return self.not_found(url, self)
+        for url, results_for_url in self.data_for_url.items():
+            if url.startswith('/'):
+                parsed_query = urlparse(params['url'])
+                if parsed_query.path == url:
+                    break
+            elif connection.url + url == params['url']:
+                break
+        else:
+
+            return self.not_found(params["url"].lstrip(connection.url), self)
         # we have many results for this url.
         # the mocked result can add a special «filter» value along with «data»
         # that all items must match the one in the params to be ok.

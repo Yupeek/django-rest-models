@@ -3,7 +3,6 @@
 
 import os
 import sys
-import unittest
 
 import rest_models
 
@@ -51,7 +50,6 @@ setup(
     packages=[
         'rest_models',
         'rest_models.backend',
-
     ],
     include_package_data=True,
     license="GNU GENERAL PUBLIC LICENSE",
