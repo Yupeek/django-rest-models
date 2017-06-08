@@ -159,12 +159,12 @@ LOGGING = {
         },
         'django.request': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'CRITICAL',
             'propagate': False,
         },
         'rest_models': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'CRITICAL',
             'propagate': False,
         }
     }

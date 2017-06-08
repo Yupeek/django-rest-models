@@ -12,11 +12,9 @@ from rest_models.router import get_default_api_database
 from rest_models.utils import JsonFixtures, dict_contains
 
 try:
-    from urllib.parse import urlparse, urlunparse
+    from urllib.parse import urlparse
 except ImportError:  # pragma: no cover
-    from urlparse import urlparse, urlunparse
-
-
+    from urlparse import urlparse
 
 
 def not_found_raise(url, middleware):
@@ -77,7 +75,8 @@ class MockDataApiMiddleware(ApiMiddleware):
             elif connection.url + url == params['url']:
                 break
         else:
-            return self.not_found(url, self)
+
+            return self.not_found(params["url"].lstrip(connection.url), self)
         # we have many results for this url.
         # the mocked result can add a special «filter» value along with «data»
         # that all items must match the one in the params to be ok.
