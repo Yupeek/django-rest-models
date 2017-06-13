@@ -108,6 +108,22 @@ models.py:
         class APIMeta:
             pass
 
+
+    class MyOtherModel(models.Model):
+        other_field = models.IntegerField()
+        first_model = models.ForeignKey(MyModel, db_column='mymodel')
+        ...
+
+        class Meta:
+            # basic django meta Stuff
+            verbose_name = 'my other model'
+
+        # the only customisation that make this model special
+        class APIMeta:
+            pass
+            
+   
+
 constraints
 -----------
 
@@ -230,7 +246,12 @@ this database api support :
 - create
 - bulk create (with retrive of pk)
 - ManyToManyField
-- ForeignKey
+- ForeignKey*
+
+.. note::
+
+    ForeignKey must have db_colum fixed to the name of the field in the api. or all update/create won't use
+    the value if this field
 
 Documentation
 -------------
