@@ -4,7 +4,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.db.utils import ConnectionHandler
 from django.test.testcases import TestCase
 
+from rest_models.backend.connexion import ApiConnexion
 from rest_models.backend.middlewares import ApiMiddleware, FakeApiResponse
+from rest_models.test import MockDataApiMiddleware
 
 
 class StoreMiddleware(ApiMiddleware):
@@ -148,3 +150,38 @@ class TestFakeApiResponse(TestCase):
     def test_text_fail(self):
         r = FakeApiResponse(object(), 204)
         self.assertTrue(r.text.startswith('<object object at'))
+
+
+class TestMockDataError(TestCase):
+
+    def setUp(self):
+        super(TestMockDataError, self).setUp()
+        self.mdlwr = MockDataApiMiddleware({
+            'a': {'data': {'result': 'a'}},
+            'b': {'data': {'result': 'b'}},
+            'c': {'filter': {'method': 'post'}, 'data': {'result': 'b'}},
+        })
+        self.cnx = ApiConnexion(url='http://localapi/v2/')
+        self.cnx.push_middleware(self.mdlwr, 3)
+
+    def test_not_found(self):
+        with self.assertRaises(Exception) as e:
+            self.cnx.get('dada')
+        self.assertEqual(e.exception.args, ("the query 'dada' was not provided as mocked data: "
+                                            "urls was ['a', 'b', 'c']", ))
+
+    def test_not_found_abs(self):
+        with self.assertRaises(Exception) as e:
+            self.cnx.get('/dada')
+        self.assertEqual(e.exception.args, ("the query 'http://localapi/dada' was not provided as mocked data: "
+                                            "urls was ['a', 'b', 'c']",))
+
+    def test_found_bad_filters(self):
+        with self.assertRaises(Exception) as e:
+            self.cnx.get('c')
+        self.assertEqual(e.exception.args, ("the query 'c' was not provided as mocked data: "
+                                            "1 fixture for this url, but filter did not match",))
+
+    def test_ok(self):
+        self.cnx.post('c', data={})
+        self.cnx.get('a')

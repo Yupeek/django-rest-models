@@ -25,22 +25,24 @@ except ImportError:  # pragma: no cover
 
 
 # noinspection PyUnusedLocal
-def not_found_raise(url, middleware):
+def not_found_raise(url, middleware, extra=''):
     """
     raise an exception if the query is not found
     :param str url: the asked url
     :param MockDataApiMiddleware middleware: the middleware
+    :param str extra: extra data to display
     :return:
     """
-    raise Exception("the query %r was not provided as mocked data" % url)
+    raise Exception("the query %r was not provided as mocked data: %s" % (url, extra))
 
 
 # noinspection PyUnusedLocal
-def not_found_continue(url, middleware):
+def not_found_continue(url, middleware, extra=''):
     """
     do not do anything
     :param str url: the asked url
     :param MockDataApiMiddleware middleware: the middleware
+    :param str extra: extra data to display
     :return:
     """
     return None  # returning None in a process_request mean continue
@@ -84,8 +86,12 @@ class MockDataApiMiddleware(ApiMiddleware):
             elif connection.url + url == params['url']:
                 break
         else:
-
-            return self.not_found(params["url"].lstrip(connection.url), self)
+            missing_url = params["url"]
+            if missing_url.startswith(connection.url):
+                missing_url = missing_url[len(connection.url):]
+            return self.not_found(missing_url, self, extra='urls was %r' % sorted([item[0]
+                                                                                  for item
+                                                                                  in self.data_for_url.items()]))
         # we have many results for this url.
         # the mocked result can add a special «filter» value along with «data»
         # that all items must match the one in the params to be ok.
@@ -106,7 +112,10 @@ class MockDataApiMiddleware(ApiMiddleware):
                 break
         if not result_found:
             # no mocked data have matched
-            return self.not_found(url, self)
+            return self.not_found(url,
+                                  self,
+                                  extra='%s fixture for this url, but filter did not match' % len(results_for_url)
+                                  )
 
         data = result_found.get('data')
         status_code = result_found.get('status_code')
