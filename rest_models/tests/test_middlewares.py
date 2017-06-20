@@ -119,11 +119,12 @@ class TestMiddleware(TestCase):
         StoreMiddleware.responses.clear()
 
     def test_no_middleware(self):
-        self.assertEqual(self.ch['default'].cursor().get('').status_code, 200)
+        response = self.ch['default'].cursor().get('')
+        self.assertEqual(response.status_code, 200, response.text)
 
     def test_middleware_execute(self):
         response = self.ch['one'].cursor().get('')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual([1], list(StoreMiddleware.queries.keys()))
         self.assertEqual([1], list(StoreMiddleware.responses.keys()))
         self.assertIs(response, StoreMiddleware.responses[1])
