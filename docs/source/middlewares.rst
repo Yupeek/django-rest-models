@@ -7,3 +7,10 @@ a result.
 
 .. autoclass:: rest_models.backend.middlewares.ApiMiddleware
     :members:
+
+
+helper Middleware
+*****************
+
+
+.. autoclass:: rest_models.test.PrintQueryMiddleware

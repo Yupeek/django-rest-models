@@ -4,9 +4,12 @@ import doctest
 import os
 import tempfile
 
+import six
 from django.test.testcases import TestCase
 
 import rest_models.utils
+from rest_models.backend.connexion import ApiConnexion
+from rest_models.test import MockDataApiMiddleware, PrintQueryMiddleware
 from rest_models.utils import JsonFixtures
 
 
@@ -116,3 +119,120 @@ class TestLoadFixtures(TestCase):
                 os.remove(path)
             except OSError:  # pragma: no cover
                 pass
+
+
+class TestPrintQueryMiddleware(TestCase):
+    def setUp(self):
+        self.s = six.StringIO()
+        self.mdlw = PrintQueryMiddleware(self.s)
+        self.mdlw.colors = {
+            'reset': "",
+            'yellow': "",
+            'red': "",
+            'green': "",
+            'purple': "",
+            'white': "",
+        }
+
+        self.cnx = ApiConnexion(url='http://localapi/v2/')
+        self.cnx.push_middleware(self.mdlw, 3)
+        self.cnx.push_middleware(MockDataApiMiddleware({'/a': [{'data': {'res': 'a'}}],
+                                                        'b': {'data': {'res': 'b'}},
+                                                       'c': {'data': {'res': object()}}
+                                                        }))
+
+    def test_print_null_settings_missings(self):
+        res = self.cnx.get('b', params={'name': 'rest'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.s.getvalue(), """## BEGIN GET b =>
+<truncated by missing settings.REST_API_OUTPUT_FORMAT>
+## END GET b <=
+""")
+
+    def test_print_null_settings_null(self):
+        with self.settings(REST_API_OUTPUT_FORMAT='null'):
+            res = self.cnx.get('b', params={'name': 'rest'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.s.getvalue(), """## BEGIN GET b =>
+<truncated by settings.REST_API_OUTPUT_FORMAT="null">
+## END GET b <=
+""")
+
+    def test_keep_call_middleware(self):
+        for i in range(50):
+            self.mdlw.process_request({}, i+700, self.cnx)
+        self.assertEqual(len(self.mdlw.reqid_to_url), 50)
+        self.cnx.get('b')
+        self.assertEqual(len(self.mdlw.reqid_to_url), 50)
+
+    def test_bug_call_middleware(self):
+        for i in range(550):
+            self.mdlw.process_request({}, i+700, self.cnx)
+        self.assertEqual(len(self.mdlw.reqid_to_url), 49)
+        self.cnx.get('b')
+        self.assertEqual(len(self.mdlw.reqid_to_url), 49)
+
+    def test_print_pprint(self):
+        self.mdlw.format = 'pprint'
+        res = self.cnx.get('b', params={'name': 'rest', 'l': list(range(15))})
+        self.assertEqual(res.status_code, 200)
+        output = self.s.getvalue()
+        split_output = output.split('\n')
+        self.assertEqual(split_output[0], "## BEGIN GET b =>")
+        if six.PY2:
+            expected = "              " \
+                       "u'params': {u'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], u'name': u'rest'}},"
+        else:
+            expected = "             " \
+                       "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
+        self.assertIn(expected,
+                      split_output)
+
+        self.assertEqual(len(split_output), 8)
+
+    def test_print_pprint_long(self):
+        self.mdlw.format = 'pprint'
+        res = self.cnx.get('b', params={'name': 'rest', 'l': list(range(255))})  # generate many lines
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.s.getvalue().count('\n'), 3)
+
+    def test_print_pprint_long2(self):
+        self.mdlw.format = 'pprint'
+        res = self.cnx.get('/a', params={'name': 'rest', 'l': list(range(255))})  # generate many lines
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.s.getvalue().count('\n'), 3)
+
+    def test_print_json(self):
+        self.maxDiff = None
+        self.mdlw.format = 'json'
+        res = self.cnx.get('b', params={'name': 'rest', 'l': list(range(15))})
+        self.assertEqual(res.status_code, 200)
+        output = self.s.getvalue()
+        split_output = output.split('\n')
+        self.assertEqual(split_output[0], "## BEGIN GET b =>")
+        self.assertEqual(split_output[1], "{")
+        self.assertEqual(split_output[2], '    "filters": {')
+        self.assertEqual(len(split_output), 33)
+
+    def test_print_json_long(self):
+        self.mdlw.format = 'json'
+        res = self.cnx.get('b', params={'name': 'rest', 'l': list(range(255))})  # generate many lines
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.s.getvalue().count('\n'), 3)
+
+    def test_unserializable(self):
+        self.mdlw.format = 'json'
+        res = self.cnx.get('c')  # generate many lines
+        self.assertEqual(res.status_code, 200)
+        getvalue = self.s.getvalue()
+        if six.PY2:
+
+            self.assertIn("u'exception': TypeError('<object object at ",
+                          getvalue)
+            self.assertIn("u'text': \"{u'res': <object object at ",
+                          getvalue)
+        else:
+            self.assertIn("'exception': TypeError('<object object at ",
+                          getvalue)
+            self.assertIn("'text': \"{'res': <object object at ",
+                          getvalue)

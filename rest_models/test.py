@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import json
+import pprint
+import sys
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connections
 from django.test.testcases import TestCase
 
@@ -12,11 +17,14 @@ from rest_models.router import get_default_api_database
 from rest_models.utils import JsonFixtures, dict_contains
 
 try:
+    # noinspection PyCompatibility
     from urllib.parse import urlparse
 except ImportError:  # pragma: no cover
+    # noinspection PyCompatibility,PyUnresolvedReferences
     from urlparse import urlparse
 
 
+# noinspection PyUnusedLocal
 def not_found_raise(url, middleware):
     """
     raise an exception if the query is not found
@@ -27,6 +35,7 @@ def not_found_raise(url, middleware):
     raise Exception("the query %r was not provided as mocked data" % url)
 
 
+# noinspection PyUnusedLocal
 def not_found_continue(url, middleware):
     """
     do not do anything
@@ -81,12 +90,14 @@ class MockDataApiMiddleware(ApiMiddleware):
         # the mocked result can add a special «filter» value along with «data»
         # that all items must match the one in the params to be ok.
         result_found = None
+        if not isinstance(results_for_url, list):
+            results_for_url = [results_for_url]
         for mocked_result in results_for_url:
             filters = mocked_result.get('filter', [{}])
             if not isinstance(filters, list):
                 filters = [filters]
-            for filter in filters:
-                if dict_contains(filter, params):
+            for filter_ in filters:
+                if dict_contains(filter_, params):
                     # all item in the for is ok.
                     # we break and so won't pass into the «else» of the first for
                     result_found = mocked_result
@@ -129,6 +140,142 @@ class TrackRequestMiddleware(ApiMiddleware):
         return [q for q in self.queries.values() if q['params']['url'].endswith(url)]
 
 
+class MyJSONEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (set, frozenset)):
+            return list(sorted(obj))
+        return super(MyJSONEncoder, self).default(obj)
+
+
+class PrintQueryMiddleware(ApiMiddleware):
+    """
+    a middleware that print all intercepted query in a format usable for tests fixtures.
+
+    in settings::
+
+        DATABASES['api']['MIDDLEWARES'].append(
+            'yupeeposting.libs.utils.middlewares.PrintQueryMiddleware',
+        )
+        REST_API_OUTPUT_FORMAT = 'json' # or 'pprint' or 'null'
+
+    this will print all query in the json format. this print can be copy/posted into a json fixtures in
+    the url list.
+
+    ie output::
+
+        ## BEGIN GET http://localapi:8001/api/v2/user/3238/ =>
+        {'data': {'user': {'email': 'admin@exemple.com',
+                           'first_name': '',
+                           'id': 3238,
+                           'last_name': '',
+                           'links': {'poster': 'poster/'}}},
+         'filters': {'json': None,
+                     'method': 'get',
+                     'params': {'exclude[]': {'*'}, 'include[]': {'id', 'first_name', 'email', 'last_name'}}},
+         'status_code': 200}
+        ## END GET http://localapi:8001/api/v2/user/3238/ <=
+
+    ie fixture::
+
+        {
+            "user/3238/": [
+                {'data': {'user': {'email': 'admin@exemple.com',
+                'first_name': '',
+                'id': 3238,
+                'last_name': '',
+                'links': {'poster': 'poster/'}}},
+                'filters': {'json': None,
+                'method': 'get',
+                'params': {'exclude[]': {'*'}, 'include[]': {'id', 'first_name', 'email', 'last_name'}}},
+                'status_code': 200}
+            ]
+        }
+
+    the recipe is ::
+
+        {
+            "url_part_after_database_name": [
+                <past from output>
+            ]
+        }
+
+    """
+    colors = {
+        'reset': "\033[0m",
+        'yellow': "\033[1;33m",
+        'red': "\033[1;31m",
+        'green': "\033[1;32m",
+        'purple': "\033[1;35m",
+        'white': "\033[1;37m",
+    }
+
+    def __init__(self, stream=sys.stdout, format_=None):
+        self.reqid_to_url = {}
+        self.stream = stream
+        self.format = format_ or getattr(settings, 'REST_API_OUTPUT_FORMAT', 'null')
+
+    def process_request(self, params, requestid, connection):
+        if len(self.reqid_to_url) > 500:
+            # prevent memory leak. this should not be a problem in dev prod
+            self.reqid_to_url.clear()
+        self.reqid_to_url[requestid] = connection.url
+
+    def format_result(self, result, max_lines=255):
+        return getattr(self, 'format_result_%s' % self.format)(result, max_lines)
+
+    def format_result_pprint(self, result, max_lines):
+        result = pprint.pformat(dict(result.items()), width=120)
+        if result.count('\n') > max_lines:
+            return repr(result)
+        else:
+            return result
+
+    # noinspection PyUnusedLocal
+    def format_result_null(self, result, max_lines):
+        if hasattr(settings, 'REST_API_OUTPUT_FORMAT'):
+            return '<truncated by settings.REST_API_OUTPUT_FORMAT="null">'
+        else:
+            return '<truncated by missing settings.REST_API_OUTPUT_FORMAT>'
+
+    def format_result_json(self, result, max_lines):
+        result = json.dumps(result, indent=4, cls=MyJSONEncoder)
+        if result.count('\n') > max_lines:
+            return json.dumps(result, cls=MyJSONEncoder)
+        else:
+            return result
+
+    def process_response(self, params, response, requestid):
+        url = params['url']
+        url_from_api = self.reqid_to_url.pop(requestid, '')
+        if url.startswith(url_from_api):
+            url = url[len(url_from_api):]
+        try:
+            response_data = response.json() if response.text != '' else {}
+            result_sample = OrderedDict([
+                ("filters", {
+                    "params": params['params'],
+                    "method": params['method'],
+                    "json": params['json']
+                }),
+                ("data", response_data),
+                ("status_code", response.status_code),
+            ])
+            result = self.format_result(result_sample)
+
+        except (ValueError, TypeError) as e:
+            result = {
+                "text": response.text,
+                "exception": e
+            }
+
+        print("{white}##{reset} {green}BEGIN{reset} {white}{method}{reset} {purple}{url}{reset} =>".format(
+            url=url, method=params['method'].upper(), **self.colors), file=self.stream)
+        print(result, file=self.stream)
+        print("{white}##{reset} {red}END{reset} {white}{method}{reset} {purple}{url}{reset} <=".format(
+            url=url, method=params['method'].upper(), **self.colors), file=self.stream)
+
+
+# noinspection PyUnresolvedReferences,PyAttributeOutsideInit,PyPep8Naming
 class RestModelTestMixin(object):
     """
     a test case mixin that add the feathure to mock the response from an api
@@ -196,6 +343,7 @@ class RestModelTestMixin(object):
         :param str|None url: the url in which the query was made. if None, all url will be count
         :param params: the params that must be present in the query
         :param str using: the name of connection to use
+        :param int status_code: the status code to return for this query
         :param dict|None|list result: the temporary result to provide for the given time
         """
         connection = connections[using or get_default_api_database(settings.DATABASES)]

@@ -125,6 +125,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("get", url, params=params, json=json, **kwargs)
 
@@ -135,6 +136,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("head", url, params=params, json=json, **kwargs)
 
@@ -145,6 +147,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("post", url, params=params, json=json, **kwargs)
 
@@ -155,6 +158,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("put", url, params=params, json=json, **kwargs)
 
@@ -165,6 +169,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("patch", url, params=params, json=json, **kwargs)
 
@@ -175,6 +180,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("options", url, params=params, json=json, **kwargs)
 
@@ -185,6 +191,7 @@ class ApiVerbShortcutMixin(object):
         :param dict[str, any]|bytes json: (optional) Dictionary, bytes, or file-like object to send
             in the body
         :return:
+        :rtype: requests.Response
         """
         return self.request("delete", url, params=params, json=json, **kwargs)
 

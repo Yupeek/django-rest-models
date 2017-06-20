@@ -40,6 +40,18 @@ def dict_contains(subdict, maindict):
     >>> dict_contains(dict(a=1), dict())
     False
 
+    >>> dict_contains(dict(a=[1, 2, 3]), dict(a=[1, 2, 3]))
+    True
+
+    >>> dict_contains(dict(a=[1, 3, 2]), dict(a=[1, 2, 3]))
+    False
+
+    >>> dict_contains(dict(a=[1, 3]), dict(a=[1, 2, 3]))
+    False
+
+    >>> dict_contains(dict(a=[1, 3, 2]), dict(a={1, 2, 3}))
+    True
+
     :param subdict: the smaller dict that should be present in the big one
     :param maindict: the dict
     :return: True if subdict is included in maindict
@@ -51,6 +63,8 @@ def dict_contains(subdict, maindict):
             if isinstance(mainv, dict) and isinstance(v, dict):
                 if not dict_contains(v, mainv):
                     return False
+            elif isinstance(mainv, (set, frozenset)):
+                return set(v) == mainv
             elif mainv != v:
                 return False
     except KeyError:
