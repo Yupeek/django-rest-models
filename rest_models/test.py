@@ -33,7 +33,7 @@ def not_found_raise(url, middleware, extra=''):
     :param str extra: extra data to display
     :return:
     """
-    raise Exception("the query %r was not provided as mocked data: %s" % (url, extra))
+    raise Exception("the query '%s' was not provided as mocked data: %s" % (url, extra))
 
 
 # noinspection PyUnusedLocal
@@ -89,7 +89,7 @@ class MockDataApiMiddleware(ApiMiddleware):
             missing_url = params["url"]
             if missing_url.startswith(connection.url):
                 missing_url = missing_url[len(connection.url):]
-            return self.not_found(missing_url, self, extra='urls was %r' % sorted([item[0]
+            return self.not_found(missing_url, self, extra='urls was %s' % sorted([item[0]
                                                                                   for item
                                                                                   in self.data_for_url.items()]))
         # we have many results for this url.

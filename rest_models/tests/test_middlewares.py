@@ -168,13 +168,13 @@ class TestMockDataError(TestCase):
         with self.assertRaises(Exception) as e:
             self.cnx.get('dada')
         self.assertEqual(e.exception.args, ("the query 'dada' was not provided as mocked data: "
-                                            "urls was ['a', 'b', 'c']", ))
+                                            "urls was %s" % ['a', 'b', 'c'], ))
 
     def test_not_found_abs(self):
         with self.assertRaises(Exception) as e:
             self.cnx.get('/dada')
         self.assertEqual(e.exception.args, ("the query 'http://localapi/dada' was not provided as mocked data: "
-                                            "urls was ['a', 'b', 'c']",))
+                                            "urls was %s" % ['a', 'b', 'c'],))
 
     def test_found_bad_filters(self):
         with self.assertRaises(Exception) as e:
