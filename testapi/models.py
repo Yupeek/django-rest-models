@@ -39,7 +39,7 @@ class Pizza(models.Model):
     to_date = models.DateTimeField(default=auto_now_plus_5d)
 
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
-    toppings = models.ManyToManyField(Topping, related_name='pizzas')
+    toppings = models.ManyToManyField(Topping, related_name='pizzas', blank=True)
     menu = models.ForeignKey(Menu, null=True, related_name='pizzas')
 
     def __str__(self):

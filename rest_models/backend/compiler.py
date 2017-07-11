@@ -973,7 +973,7 @@ class SQLInsertCompiler(SQLCompiler):
             if response.status_code != 201:
                 raise FakeDatabaseDbAPI2.ProgrammingError(
                     "error while creating %d %s.\n%s" %
-                    (len(query_objs), opts.verbose_name, response.json()['errors'])
+                    (len(query_objs), opts.verbose_name, response.text)
                 )
             result_json = response.json()
             for old, new in zip(query_objs, result_json[get_resource_name(query.model, many=True)]):
@@ -998,8 +998,8 @@ class SQLInsertCompiler(SQLCompiler):
                     json=json
                 )
                 if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s.\n%s" % (
-                        obj, message_from_response(response)))
+                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with %s.\n%s" % (
+                        obj, json, message_from_response(response)))
                 result_json = response.json()
                 new = result_json[get_resource_name(query.model, many=False)]
                 for field in opts.concrete_fields:

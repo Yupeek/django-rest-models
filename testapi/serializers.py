@@ -13,11 +13,13 @@ class ToppingSerializer(DynamicModelSerializer):
     class Meta:
         model = Topping
         name = 'topping'
-        fields = ('id', 'name', 'cost', 'pizzas')
+        fields = ('id', 'name', 'cost', 'pizzas',)
+        defered_fields = ('pizzas',)
+    pizzas = DynamicRelationField('PizzaSerializer', many=True, required=False)
 
 
 class MenuSerializer(DynamicModelSerializer):
-    pizzas = DynamicRelationField('PizzaSerializer', many=True)
+    pizzas = DynamicRelationField('PizzaSerializer', many=True, required=False)
 
     class Meta:
         model = Menu
@@ -29,14 +31,15 @@ class MenuSerializer(DynamicModelSerializer):
 class PizzaSerializer(DynamicModelSerializer):
     cost = SerializerMethodField()
 
-    toppings = DynamicRelationField(ToppingSerializer, many=True)
-    groups = DynamicRelationField('PizzaGroupSerializer', many=True)
-    menu = DynamicRelationField(MenuSerializer)
+    toppings = DynamicRelationField(ToppingSerializer, many=True, required=False)
+    groups = DynamicRelationField('PizzaGroupSerializer', many=True, required=False)
+    menu = DynamicRelationField(MenuSerializer, many=False, required=False)
 
     class Meta:
         model = Pizza
         name = 'pizza'
-        fields = ('id', 'name', 'price', 'from_date', 'to_date', 'cost', 'toppings', 'menu', 'groups')
+        fields = ('id', 'name', 'price', 'from_date', 'to_date', 'cost', 'toppings', 'menu', 'groups',)
+        defered_fields = ('toppings', 'groups', 'menu',)
 
     def get_cost(self, obj):
         return obj.toppings.aggregate(cost=Sum('cost'))['cost']
@@ -53,3 +56,14 @@ class PizzaGroupSerializer(DynamicModelSerializer):
         model = PizzaGroup
         name = 'pizzagroup'
         fields = ('id', 'name', 'pizzas', 'children', 'parent')
+
+
+# many2many through serializer
+class PizzaToppingsSerializer(DynamicModelSerializer):
+    class Meta:
+        model = Pizza._meta.get_field('toppings').rel.through
+        name = 'Pizza_topping'
+        fields = ('id', 'pizza', 'topping',)
+
+    topping = DynamicRelationField('ToppingSerializer', many=False, required=False)
+    pizza = DynamicRelationField('PizzaSerializer', many=False, required=False)
