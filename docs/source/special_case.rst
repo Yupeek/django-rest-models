@@ -102,11 +102,8 @@ and the client should use it as any othe model, without declaring it as a throug
 
 		class APIMeta:
 			db_name = 'api'
-
 			resource_name = 'Pizza_topping'
 			resource_name_plural = 'Pizza_toppings'
 
 		class Meta:
 			auto_created = True
-
-
