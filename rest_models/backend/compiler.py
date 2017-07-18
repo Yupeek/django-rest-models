@@ -330,7 +330,7 @@ class QueryParser(object):
                 raise NotSupportedError("Only Col in sql select is supported")
         elif isinstance(col, Col):
             current = self.aliases[col.alias]  # type: Alias
-            field = col.target.name
+            field = col.target.column
         else:
             raise NotSupportedError("Only Col in sql select is supported")
         if current.m2m is not None:
@@ -372,7 +372,13 @@ class QueryParser(object):
 
         return (
             set(r[0] for r in resolved),  # set of tuple of Alias successives
-            set(tuple(a.attrname for a in ancestors(r[0]) if a.attrname is not None) + (r[1],) for r in resolved)
+            set(
+                tuple(
+                    a.field.concrete and a.field.db_column or a.attrname
+                    for a in ancestors(r[0])
+                    if a.attrname is not None
+                ) + (r[1],)
+                for r in resolved)
         )
 
     def resolve_ids(self):
@@ -474,7 +480,7 @@ def join_aliases(aliases, responsereader, existing_aliases):
         # resolve the values of next jump
         val_for_model = responsereader[alias.model]
         current_data = existing_aliases[alias.parent]
-        val = current_data[alias.attrname]
+        val = current_data[alias.field.concrete and alias.field.db_column or alias.attrname]
         if not isinstance(val, list):
             val = [val]
         for pk in val:
@@ -501,15 +507,22 @@ def join_results(row, resolved):
     resolved = list(resolved)
     res = []
     while resolved:
-        alias, attrname = resolved.pop(0)
+        alias, db_column = resolved.pop(0)
 
         try:
-            raw_val = row[alias][attrname]
+            raw_val = row[alias][db_column]
         except KeyError:
             res.append(None)
             continue
+        # get the field of this model by either the column or the field name if this
+        # is a reverse related field
+        for field in alias.model._meta.concrete_fields:
+            if field.column == db_column:
+                break
 
-        field = alias.model._meta.get_field(attrname)
+        else:
+            field = alias.model._meta.get_field(db_column)
+
         if hasattr(field, "to_python"):
             python_val = field.to_python(raw_val)
             res.append(python_val)
@@ -521,7 +534,7 @@ def join_results(row, resolved):
             return
         else:
             raise NotSupportedError("the result from the api for %s.%s is not supported : %s" %
-                                    (alias.model, attrname, raw_val))
+                                    (alias.model, db_column, raw_val))
 
     yield res
 
@@ -978,7 +991,7 @@ class SQLInsertCompiler(SQLCompiler):
             result_json = response.json()
             for old, new in zip(query_objs, result_json[get_resource_name(query.model, many=True)]):
                 for field in opts.concrete_fields:
-                    setattr(old, field.attname, field.to_python(new[field.name]))
+                    setattr(old, field.attname, field.to_python(new[field.concrete and field.db_column or field.name]))
         else:
             result_json = None
             for obj in query_objs:
@@ -1003,7 +1016,7 @@ class SQLInsertCompiler(SQLCompiler):
                 result_json = response.json()
                 new = result_json[get_resource_name(query.model, many=False)]
                 for field in opts.concrete_fields:
-                    setattr(obj, field.attname, field.to_python(new[field.name]))
+                    setattr(obj, field.attname, field.to_python(new[field.concrete and field.db_column or field.name]))
 
             if return_id and result_json:
                 return result_json[get_resource_name(query.model, many=False)][opts.pk.column]
@@ -1034,7 +1047,9 @@ class SQLUpdateCompiler(SQLCompiler):
         """
         return {
             get_resource_name(self.query.model, many=False): {
-                field.name: field.get_db_prep_save(val, connection=self.connection)
+                field.concrete and field.db_column or field.name: field.get_db_prep_save(
+                    val, connection=self.connection
+                )
                 for field, _, val in self.query.values
                 }
         }

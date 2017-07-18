@@ -477,7 +477,7 @@ class TestCompilerFilterParams(CompilerTestCase):
     def test_related_filter_3_models(self):
         self.assertQsToFilter(
             Menu.objects.filter(pizzas__toppings__cost__gt=2),
-            {'filter{pizzas.toppings.cost.gt}': 2.0}
+            {'filter{pizzas.toppings.taxed_cost.gt}': 2.0}
         )
 
     def test_related_filter_id_shortcut(self):

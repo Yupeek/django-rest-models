@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.db.models.aggregates import Sum
 from dynamic_rest.fields.fields import DynamicRelationField
 from dynamic_rest.serializers import DynamicModelSerializer
-from rest_framework.fields import SerializerMethodField
+from rest_framework.fields import IntegerField, SerializerMethodField
 
 from testapi.models import Menu, Pizza, PizzaGroup, Topping
 
@@ -13,9 +13,11 @@ class ToppingSerializer(DynamicModelSerializer):
     class Meta:
         model = Topping
         name = 'topping'
-        fields = ('id', 'name', 'cost', 'pizzas',)
+        fields = ('id', 'name', 'taxed_cost', 'pizzas',)
         defered_fields = ('pizzas',)
     pizzas = DynamicRelationField('PizzaSerializer', many=True, required=False)
+
+    taxed_cost = IntegerField(source='cost')
 
 
 class MenuSerializer(DynamicModelSerializer):
