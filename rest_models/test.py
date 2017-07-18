@@ -163,7 +163,7 @@ class PrintQueryMiddleware(ApiMiddleware):
     in settings::
 
         DATABASES['api']['MIDDLEWARES'].append(
-            'yupeeposting.libs.utils.middlewares.PrintQueryMiddleware',
+            'rest_models.test.PrintQueryMiddleware',
         )
         REST_API_OUTPUT_FORMAT = 'json' # or 'pprint' or 'null'
 
