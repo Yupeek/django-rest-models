@@ -53,58 +53,59 @@ def api_struct_check(app_configs, **kwargs):
             )
             continue
         for field in rest_model._meta.get_fields():
+            field_name = field.concrete and field.db_column or field.name
             if field.is_relation:
                 if router.is_api_model(field.related_model):
-                    if field.name not in options['properties']:
+                    if field_name not in options['properties']:
                         errors.append(
                             Error(
                                 'the field %s.%s in not present on the remote serializer' % (
-                                    rest_model.__name__, field.name
+                                    rest_model.__name__, field_name
                                 ),
-                                obj="%s.%s" % (rest_model.__name__, field.name),
-                                hint='check if the serializer on %s/%s has a field "%s"' % (db.url, url, field.name),
+                                obj="%s.%s" % (rest_model.__name__, field_name),
+                                hint='check if the serializer on %s/%s has a field "%s"' % (db.url, url, field_name),
                                 id='rest_models.E003'
                             )
                         )
                     else:
-                        type_is_many = options['properties'][field.name]['type'] == 'many'
-                        type_is_one = options['properties'][field.name]['type'] == 'one'
+                        type_is_many = options['properties'][field_name]['type'] == 'many'
+                        type_is_one = options['properties'][field_name]['type'] == 'one'
                         if (type_is_many and not (field.one_to_many or field.many_to_many) or
                                 type_is_one and not (field.one_to_one or field.many_to_one)):
 
                             errors.append(
                                 Error(
                                     'the field %s.%s many does not match the api' % (
-                                        rest_model.__name__, field.name
+                                        rest_model.__name__, field_name
                                     ),
-                                    obj="%s.%s" % (rest_model.__name__, field.name),
+                                    obj="%s.%s" % (rest_model.__name__, field_name),
                                     hint='check if the serializer at %s%s have a Serializer.many '
-                                         'value corresponding to the local model %s' % (db.url, url, field.name),
+                                         'value corresponding to the local model %s' % (db.url, url, field_name),
                                     id='rest_models.E005'
                                 )
                             )
 
-                        choice_count = len(options['properties'][field.name].get('choices', []))
+                        choice_count = len(options['properties'][field_name].get('choices', []))
                         if choice_count > 100:
                             errors.append(
                                 Warning(
                                     'the field %s.%s has many choices values (%s) in OPTIONS '
                                     'and it slow down the check' % (
-                                        rest_model.__name__, field.name, choice_count
+                                        rest_model.__name__, field_name, choice_count
                                     ),
-                                    obj="%s.%s" % (rest_model.__name__, field.name),
+                                    obj="%s.%s" % (rest_model.__name__, field_name),
                                     hint='check if the serializer at %s%s provide '
                                          'a choices with less values for %s' % (
-                                        db.url, url, field.name),
+                                             db.url, url, field_name),
                                     id='rest_models.W001'
                                 )
                             )
 
-            elif field.name not in options['properties']:
+            elif field_name not in options['properties']:
                 errors.append(
                     Error(
-                        'the field %s.%s in not present on the remote serializer' % (rest_model.__name__, field.name),
-                        hint='check if the serializer on %s%s has a field "%s"' % (db.url, url, field.name),
+                        'the field %s.%s in not present on the remote serializer' % (rest_model.__name__, field_name),
+                        hint='check if the serializer on %s%s has a field "%s"' % (db.url, url, field_name),
                         id='rest_models.E006'
                     )
                 )
