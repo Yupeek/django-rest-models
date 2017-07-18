@@ -149,6 +149,23 @@ class TestQueryInsert(TestCase):
         for p in pizzas:
             self.assertIsNone(p.pk)
 
+    def test_many2many_insert(self):
+        p = client_models.Pizza.objects.create(
+            name='savoyarde',
+            price=13.3,
+            from_date=datetime.datetime.today(),
+            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+        )
+        client_models.Topping.objects.create(
+            cost=1,
+            name='tomate',
+        )
+        topping = client_models.Topping.objects.get(name='tomate')
+        client_models.Pizza_topping.objects.create(topping=topping, pizza=p)
+        self.assertEqual(list(p.toppings.all()), [topping])
+
+        self.assertEqual(list(topping.pizzas.all()), [p])
+
 
 class TestQueryGet(TestCase):
     fixtures = ['data.json']

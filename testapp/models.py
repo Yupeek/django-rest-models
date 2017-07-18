@@ -19,7 +19,7 @@ class Menu(models.Model):
 
 class Topping(models.Model):
     name = models.CharField(max_length=125)
-    cost = models.FloatField()
+    cost = models.FloatField(db_column='taxed_cost')
 
     class APIMeta:
         db_name = 'api'
@@ -36,13 +36,27 @@ class Pizza(models.Model):
 
     # creator = models.ForeignKey(settings.AUTH_USER_MODEL)
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
-    menu = models.ForeignKey(Menu, null=True, related_name='pizzas')
+    menu = models.ForeignKey(Menu, null=True, related_name='pizzas', db_column='menu')
 
     # extra field from serializers
     cost = models.FloatField()
 
     class APIMeta:
         db_name = 'api'
+
+
+class Pizza_topping(models.Model):
+    pizza = models.ForeignKey(Pizza, on_delete=models.CASCADE, db_column='pizza', related_name='+')
+    topping = models.ForeignKey(Topping, on_delete=models.CASCADE, db_column='topping', related_name='+')
+
+    class APIMeta:
+        db_name = 'api'
+
+        resource_name = 'Pizza_topping'
+        resource_name_plural = 'Pizza_toppings'
+
+    class Meta:
+        auto_created = True
 
 
 class Bookmark(models.Model):
@@ -53,7 +67,7 @@ class Bookmark(models.Model):
 
 class PizzaGroup(models.Model):
 
-    parent = models.ForeignKey("self", related_name='children')
+    parent = models.ForeignKey("self", related_name='children', db_column='parent')
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')
 
