@@ -609,7 +609,7 @@ class SQLCompiler(BaseSQLCompiler):
         query = self.query
         if query.group_by is not None:
             raise FakeDatabaseDbAPI2.NotSupportedError('group by is not supported')
-        if query.distinct:
+        if query.distinct and self.connection.settings_dict.get('PREVENT_DISTINCT', True):
             raise FakeDatabaseDbAPI2.NotSupportedError('distinct is not supported')
         # check where
         where_nodes = [query.where]

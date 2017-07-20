@@ -2,6 +2,7 @@
 
 import unittest.util
 
+from copy import deepcopy
 from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
@@ -509,6 +510,28 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
         self.assertBadQs(
             Pizza.objects.all().distinct('name')
         )
+
+    def test_distinct2(self):
+
+        cnx_backup = deepcopy(connections['api'].settings_dict)
+        connections['api'].settings_dict['PREVENT_DISTINCT'] = True
+        try:
+            self.assertBadQs(
+                Pizza.objects.all().distinct('name')
+            )
+        finally:
+            connections['api'].settings_dict = cnx_backup
+
+    def test_distinct_ok(self):
+
+        cnx_backup = deepcopy(connections['api'].settings_dict)
+        connections['api'].settings_dict['PREVENT_DISTINCT'] = False
+        try:
+            self.assertGoodQs(
+                Pizza.objects.all().distinct('name')
+            )
+        finally:
+            connections['api'].settings_dict = cnx_backup
 
     def test_annotate(self):
         self.assertBadQs(
