@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest.util
-
 from copy import deepcopy
+
 from django.db import connections
 from django.db.models.aggregates import Sum
 from django.db.models.expressions import F
