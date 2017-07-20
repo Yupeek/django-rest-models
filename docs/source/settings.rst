@@ -31,7 +31,8 @@ exemple of many settings::
             'OPTIONS': {
                 'OAUTH_URL': '/oauth2/token/',
                 'TIMEOUT': 10,
-            }
+            },
+            'PREVENT_DISTINCT': False,
         },
         'TEST_api2': {
             'ENGINE': 'rest_models.backend',
@@ -115,6 +116,12 @@ token provider. by default this url is ``/oauth2/token/``.
 provide the time for triggering a new query on the api. if a query take longer than this, it will retry 3 more times,
 and eventialy raise an OperationalError.
 
+``PREVENT_DISTINCT``
+====================
+
+this settings allow to accept request with a distinct without raising an Exception.
+note that the distinct stuff will be trashed and the final query may repeate his lines.
+enable it if you know what you do
 
 
 APIMeta
