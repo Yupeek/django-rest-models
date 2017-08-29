@@ -2,11 +2,11 @@
 django-rest-models
 ==================
 
-allow to query an RestAPI (django-rest-framework + dynamic-rest) with same same interface as the django ORM.
-if fact, it work like any other database engin. you add the rest_models engin in an alternate database, the router, and
-add a APIMeta class to your models, and let's go.
+Allow to query a **django** RestAPI with same same interface as the django ORM. **(the targeted API must use django-rest-framework + dynamic-rest libraries)**
+In fact, it works like any other database engine. You add the rest_models engine in an alternate database and the rest_models databe router.
+Then add APIMeta class to the models querying the API, voilà !
 
-stable branche
+Stable branch
 
 .. image:: https://img.shields.io/travis/Yupeek/django-rest-models/master.svg
     :target: https://travis-ci.org/Yupeek/django-rest-models
@@ -29,7 +29,7 @@ stable branche
      :target: https://requires.io/github/Yupeek/django-rest-models/requirements/?branch=master
      :alt: Requirements Status
 
-development status
+Development status
 
 .. image:: https://img.shields.io/travis/Yupeek/django-rest-models/develop.svg
     :target: https://travis-ci.org/Yupeek/django-rest-models
@@ -49,25 +49,25 @@ Installation
 
    ``pip install django-rest-models``
 
-2. Alternatively, you can install download or clone this repo and call
+2. Alternatively, you can download or clone this repo and install with :
 
     ``pip install -e .``.
 
-requirements
+Requirements
 ------------
 
-this database wrapper work with
+This database wrapper work with
 
 - python 2.7, 3.4, 3.5
 - django 1.8 , 1.9, 1.10
 
-on the api, this is tested against
+On the api, this is tested against
 
 - django-rest-framework 3.4, 3.5
 - dynamic-rest 1.5, 1.6
 
 
-exemples
+Examples
 --------
 
 settings.py:
@@ -121,27 +121,27 @@ models.py:
         # the only customisation that make this model special
         class APIMeta:
             pass
-            
-   
 
-constraints
------------
 
-to allow this database adaptater to work like a relational one, the API targeted must respect some requirments
 
-- dynamic-rest installed and all the serializers must provide it's functionnality (hinerit from DynamicModelSerializer)
+Targeted API requirements
+-------------------------
 
-each serializers must :
+To allow this database adapter to work like a relational one, the targeted API must respect some requirements :
 
-- provide the id fields
-- provide the related field (ManyToMany and ForeignKey on Models) as DynamicRelationField
-- provide the reverse related field (each ForeignKey and manyToMany add a relation on the other models.
-  the serializer from the other model must provide the DynamicRelationField for these relation
+- dynamic-rest installed and all serializers/views must respectively inherit from Dynamic* (DynamicModelSerializer, etc...)
+
+Each API serializer must :
+
+- Provide the id field
+- Provide the related field (ManyToMany and ForeignKey on Models) as DynamicRelationField
+- Provide the reverse related field. We must, for each ForeignKey and ManyToMany, add a field on the related model's
+serializer.
 
 .. code-block:: python
 
     class MenuSerializer(DynamicModelSerializer):
-        pizzas = DynamicRelationField('PizzaSerializer', many=True)
+        pizzas = DynamicRelationField('PizzaSerializer', many=True)     # Menu.pizza = ManyToMany
 
         class Meta:
             model = Menu
@@ -153,30 +153,30 @@ each serializers must :
     class PizzaSerializer(DynamicModelSerializer):
 
         toppings = DynamicRelationField(ToppingSerializer, many=True)
-        menu = DynamicRelationField(MenuSerializer)
+        menu = DynamicRelationField(MenuSerializer)                     # Add this because Menu.pizza = ManyToMany
 
         class Meta:
             model = Pizza
             name = 'pizza'
             fields = ('id', 'name', 'price', 'from_date', 'to_date', 'toppings', 'menu')
 
-Django rest models provide a way to check the consistency of the api with the local models via the django check framework.
-at each startup, it will query the api with OPTIONS to check if the local models match the remote serializers.
+django-rest-models provide a way to check the consistency of the api with the local models via the django check framework.
+At each startup, it will query the api with OPTIONS to check if the local models match the remote serializers.
 
 
-limitations
------------
+Caveats
+-------
 
-since this is not a real relational database, all feathure cannot be implemented. some limitations are inherited by
+Since this is not a real relational database, all feature cannot be implemented. Some limitations are inherited by
 dynamic-rest filtering system too.
 
-- aggregations : is not implemented on the api endpoint. maybe in future release
-- complexe filtering using OR : all filter passed to dynamic-rest is ANDed together, so no OR is possible
-- negated AND in filtering: a negated AND give a OR, so previous limitation apply
-- negated OR in filtering: since the compitation of nested filter is complexe and error prone, we disable all OR. in
+- Aggregations : is not implemented on the api endpoint, maybe in future releases
+- Complex filtering using OR : all filter passed to dynamic-rest is ANDed together, so no OR is possible
+- Negated AND in filtering: a negated AND give a OR, so previous limitation apply
+- Negated OR in filtering: since the compitation of nested filter is complexe and error prone, we disable all OR. in
   fact, only some nested of AND is accepted. only the final value of the Q() object can be negated
 
-    for short, you can't :
+    for short, you **CANNOT** :
 
 .. code-block:: python
 
@@ -208,32 +208,32 @@ dynamic-rest filtering system too.
 
 .. note::
 
-    prefetch_related work as expected, but the performances is bad. in fact, a ``Pizza.objects.prefetch_related('toppings')``
-    will query the toppings for all pizzas as expeced, but the query to recover the pizza will contains the linked pizza in the response.
-    if the database contains a great lot of pizza for the given toppings, the response will contains them all, even if it's
-    useless at first glance, the linked pizza for each topping is mandotary to django to glue topping <=> pizza relationship.
+    prefetch_related work as expected, but the performance is readly bad. As a matter of fact, a ``Pizza.objects.prefetch_related('toppings')``
+    will query the toppings for all pizzas as expected, but the query to recover the pizza will contains the linked pizza in the response.
+    If the database contains a great number of pizzas for the given toppings, the response will contains them all, even if it's
+    useless at first glance, the linked pizza for each topping is mandotary to django to glue topping <=> pizza relationships.
 
-    so, be carefull whene using prefetch_related.
+    So, be careful when using prefetch_related.
 
 
 
-specific comportments
+Specific behaviour
 ---------------------
 
-some specific behaviour has been implemented to use the extra functionnality of a Rest API :
+Some specific behaviour has been implemented to use the extra feature of a Rest API :
 
-- whene inserting, the resulting model is returned by the API. the inserted model is updated with the resulting values.
-  this imply 2 behavior:
+- When inserting, the resulting model is returned by the API. the inserted model is updated with the resulting values.
+  This imply 2 things:
 
-  * if you provided a default data in the api, this data will be populated into your created instance if it was missed
-  * if the serializer have some cumputed data, its data will always be used as a replacment of the one you gave to your
-    models. (see exemple Pizza.cost which is the sum of the cost of the toppling. after each save, its value will be updated)
+  * If you provided default values for fields in the api, these data will be populated into your created instance if it was ommited.
+  * If the serializer have some computed data, its data will always be used as a replacement of the one you gave to your
+    models. (cf example: Pizza.cost which is the sum of the cost of the toppling. after each save, its value will be updated)
 
 
-support
+Support
 -------
 
-this database api support :
+This database api support :
 
 - select_related
 - order_by
@@ -250,7 +250,7 @@ this database api support :
 
 .. note::
 
-    ForeignKey must have db_colum fixed to the name of the field in the api. or all update/create won't use
+    ForeignKey must have db_column fixed to the name of the reflected field in the api. or all update/create won't use
     the value if this field
 
 Documentation
@@ -265,13 +265,13 @@ Requirements
 - Python 2.7, 3.4, 3.5
 - Django >= 1.8
 
-Contributions and pull requests for other Django and Python versions are welcome.
+Contributions and pull requests are welcome.
 
 
 Bugs and requests
 -----------------
 
-If you have found a bug or if you have a request for additional functionality, please use the issue tracker on GitHub.
+If you found a bug or if you have a request for additional feature, please use the issue tracker on GitHub.
 
 https://github.com/Yupeek/django-rest-models/issues
 
