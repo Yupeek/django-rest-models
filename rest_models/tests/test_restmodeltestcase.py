@@ -77,7 +77,7 @@ class TestMockDataSample(RestModelTestCase):
     database_rest_fixtures = {'api': {  # api => response mocker for databasen named «api»
         'menulol': [  # url menulol
             {
-                'filter': {  # set of filters to match
+                'filter': {  # set of filter to match
                     'params': {  # params => requests parameters to sort[],exclude[],filter{...},include[]
                         'filter{name}': ['lolilol'],  # with filter(name='lolilol')
                         'sort[]': ['-name']  # with order_by('-name')

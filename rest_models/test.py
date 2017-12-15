@@ -178,7 +178,7 @@ class PrintQueryMiddleware(ApiMiddleware):
                            'id': 3238,
                            'last_name': '',
                            'links': {'poster': 'poster/'}}},
-         'filters': {'json': None,
+         'filter': {'json': None,
                      'method': 'get',
                      'params': {'exclude[]': {'*'}, 'include[]': {'id', 'first_name', 'email', 'last_name'}}},
          'status_code': 200}
@@ -193,7 +193,7 @@ class PrintQueryMiddleware(ApiMiddleware):
                 'id': 3238,
                 'last_name': '',
                 'links': {'poster': 'poster/'}}},
-                'filters': {'json': None,
+                'filter': {'json': None,
                 'method': 'get',
                 'params': {'exclude[]': {'*'}, 'include[]': {'id', 'first_name', 'email', 'last_name'}}},
                 'status_code': 200}
@@ -261,7 +261,7 @@ class PrintQueryMiddleware(ApiMiddleware):
         try:
             response_data = response.json() if response.text != '' else {}
             result_sample = OrderedDict([
-                ("filters", {
+                ("filter", {
                     "params": params['params'],
                     "method": params['method'],
                     "json": params['json']
