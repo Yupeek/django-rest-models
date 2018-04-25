@@ -895,7 +895,7 @@ class SQLCompiler(BaseSQLCompiler):
                 return True, result
         return False, None
 
-    def execute_sql(self, result_type=MULTI):
+    def execute_sql(self, result_type=MULTI, chunked_fetch=False):
         self.setup_query()
         if not result_type:
             result_type = NO_RESULTS

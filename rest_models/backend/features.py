@@ -28,6 +28,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     can_rollback_ddl = False
     supports_paramstyle_pyformat = False
     supports_sequence_reset = False
+    has_select_for_update_skip_locked = False
 
     uses_savepoints = False
 
