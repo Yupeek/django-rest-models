@@ -171,7 +171,7 @@ LOGGING = {
 }
 
 if os.environ.get('QUIET', False):
-    LOGGING['handlers']['console']['level'] = "70"
+    LOGGING['handlers']['console']['level'] = 70
 
 try:  # pragma: nocover
     import teamcity
