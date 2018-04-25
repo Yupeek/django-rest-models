@@ -41,17 +41,17 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'rest_api'
     SchemaEditorClass = DatabaseSchemaEditor
 
+    # Classes instantiated in __init__().
+    client_class = DatabaseClient
+    creation_class = DatabaseCreation
+    features_class = DatabaseFeatures
+    introspection_class = DatabaseIntrospection
+    ops_class = DatabaseOperations
+    validation_class = BaseDatabaseValidation
+
     def __init__(self, *args, **kwargs):
         self.connection = None  # type: ApiConnexion
-
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
-
-        self.features = DatabaseFeatures(self)
-        self.ops = DatabaseOperations(self)
-        self.client = DatabaseClient(self)
-        self.creation = DatabaseCreation(self)
-        self.introspection = DatabaseIntrospection(self)
-        self.validation = BaseDatabaseValidation(self)
 
     def get_connection_params(self):
         authpath = self.settings_dict.get('AUTH', None)
@@ -78,7 +78,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def init_connection_state(self):
         self.autocommit = True
 
-    def create_cursor(self):
+    def create_cursor(self, name=None):
         return self.connection
 
     def make_cursor(self, cursor):

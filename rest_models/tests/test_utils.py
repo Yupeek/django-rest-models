@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import doctest
 import os
+import sys
 import tempfile
 
 import six
@@ -180,13 +181,15 @@ class TestPrintQueryMiddleware(TestCase):
         split_output = output.split('\n')
         self.assertEqual(split_output[0], "## BEGIN GET b =>")
         if six.PY2:
-            expected = "              " \
-                       "u'params': {u'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], u'name': u'rest'}},"
+            expected = "u'params': {u'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], u'name': u'rest'}},"
         else:
-            expected = "             " \
-                       "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
-        self.assertIn(expected,
-                      split_output)
+            expected = "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
+
+        for l in split_output:
+            if expected in l:
+                break
+        else:
+            self.fail("%s not found in %s" % (expected, split_output))
 
         self.assertEqual(len(split_output), 8)
 
@@ -211,7 +214,7 @@ class TestPrintQueryMiddleware(TestCase):
         split_output = output.split('\n')
         self.assertEqual(split_output[0], "## BEGIN GET b =>")
         self.assertEqual(split_output[1], "{")
-        self.assertEqual(split_output[2], '    "filters": {')
+        self.assertEqual(split_output[2], '    "filter": {')
         self.assertEqual(len(split_output), 33)
 
     def test_print_json_long(self):
@@ -226,10 +229,14 @@ class TestPrintQueryMiddleware(TestCase):
         self.assertEqual(res.status_code, 200)
         getvalue = self.s.getvalue()
         if six.PY2:
-
             self.assertIn("u'exception': TypeError('<object object at ",
                           getvalue)
             self.assertIn("u'text': \"{u'res': <object object at ",
+                          getvalue)
+        elif sys.version_info[:2] >= (3, 6):
+            self.assertIn("'exception': TypeError(\"Object of type 'object' is not JSON serializable\"",
+                          getvalue)
+            self.assertIn("'text': \"{'res': <object object at ",
                           getvalue)
         else:
             self.assertIn("'exception': TypeError('<object object at ",
