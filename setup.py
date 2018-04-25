@@ -53,7 +53,7 @@ setup(
         'rest_models.backend',
     ],
     include_package_data=True,
-    license="GNU GENERAL PUBLIC LICENSE",
+    license="BSD",
     zip_safe=False,
     keywords='django rest models API ORM',
     classifiers=[
