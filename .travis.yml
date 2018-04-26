@@ -1,25 +1,24 @@
-# We do not use sudo
 sudo: false
-
-# Python versions for matrix
 language: python
 python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+- '2.7'
+- '3.4'
+- '3.5'
+- '3.6'
 install:
-  - pip install tox-travis
-  - pip install python-coveralls
-  - travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
-
-# Command to run tests, e.g. python setup.py test
+- pip install tox-travis
+- pip install python-coveralls
+- travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
 script:
-  - COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
-
-
-# Report to coveralls
+- COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
+deploy:
+  provider: pypi
+  user: yupeek
+  password:
+    secure: A0tMVeJxHs/ympJMLyLVG3j00EPyKc9Bf5Lgl3pOes08ojURrJi+k068wG8N+VRP16zqY6Ru/L0qjB8WFqlAHNTrbWW/UR0xVPxoiz2N7NzwKVrrHpLJ41MR7wvIM3zh1BwLwQX2PTRCZ0JSqkqWvafD7ZMODTZcUurH3psbEwqFCzgMHrbt+yp/r+3s/+BnAyDF8Ag4dxLKanBEuK80F5Dv4I4Zfv914l/kegW0k/7FBL19H+31lmbMeRGnrf3PkI8u62waqgKgBH5qv0Emon2WmdXH5AKt5s64D5HdoHBLk/KfEgk8J46QLs043hqZ1KM40FoqTId/153s03uqeGMFUjXdhSVL3uAaGo3c8MB1I3OJrTfvFDd5UZVUb/9ie+xPKdKFunPiAANCKqY1W1F6mTVFAeq9rFsENVodZwJMFVesVZhHyXqy1DqGWE2k6r0YghYGYqfHS6YvA8VdwU+0GV2PwcfRi8DArkW5xiXkEsDt++YmNpgTNI47UR9pfiH0l+xjvAPx7ILOIZV2uwlIdYHYj6cbCilpU6ZmnCvCaWp+K8rtSu+A4QqLJYVPHob6t8wX64y4Tp6HXwptfxgIuNg3QQXAHC8Vo3P/Bq10b/tKuj5Ku9P0i0uZyUkBkP1pFJSRHW9C8wI2vCw5vM2oF+oy9wi3f4w7980dfKQ=
+  on:
+    tags: true
+    repo: Yupeek/django-rest-models
+  distributions: sdist bdist_wheel
 after_success:
-  - coveralls
+- coveralls
