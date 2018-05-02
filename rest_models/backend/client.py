@@ -12,7 +12,7 @@ class DatabaseClient(BaseDatabaseClient):
     port_range = (8097, 9015)
 
     def start_server_thread(self):
-        self.server_thread = LiveServerThread('localhost', range(*self.port_range),
+        self.server_thread = LiveServerThread('localhost',
                                               _StaticFilesHandler)
         self.server_thread.daemon = True
         self.server_thread.start()

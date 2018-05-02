@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import doctest
 import os
+import sys
 import tempfile
 
 import six
@@ -228,10 +229,14 @@ class TestPrintQueryMiddleware(TestCase):
         self.assertEqual(res.status_code, 200)
         getvalue = self.s.getvalue()
         if six.PY2:
-
             self.assertIn("u'exception': TypeError('<object object at ",
                           getvalue)
             self.assertIn("u'text': \"{u'res': <object object at ",
+                          getvalue)
+        elif sys.version_info[:2] >= (3, 6):
+            self.assertIn("'exception': TypeError(\"Object of type 'object' is not JSON serializable\"",
+                          getvalue)
+            self.assertIn("'text': \"{'res': <object object at ",
                           getvalue)
         else:
             self.assertIn("'exception': TypeError('<object object at ",

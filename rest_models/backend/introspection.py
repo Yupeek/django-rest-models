@@ -82,6 +82,6 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         fields = options['properties']
 
         return [
-            FieldInfo(name, descr['type'], None, None, None, None, descr['nullable'])
+            FieldInfo(name, descr['type'], None, None, None, None, descr['nullable'], descr['default'])
             for name, descr in fields.items()
         ]

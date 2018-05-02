@@ -46,6 +46,7 @@ setup(
     install_requires=[
         'requests',
         'six',
+        'Django>=1.11',
     ],
     packages=[
         'rest_models',

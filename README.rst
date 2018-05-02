@@ -2,7 +2,7 @@
 django-rest-models
 ==================
 
-Allow to query a **django** RestAPI with same same interface as the django ORM. **(the targeted API must use django-rest-framework + dynamic-rest libraries)**
+Allow to query a **django** RestAPI with same interface as the django ORM. **(the targeted API must use django-rest-framework + dynamic-rest libraries)**
 In fact, it works like any other database engine. You add the rest_models engine in an alternate database and the rest_models databe router.
 Then add APIMeta class to the models querying the API, voilà !
 
@@ -20,10 +20,6 @@ Stable branch
 .. image:: https://img.shields.io/pypi/v/django-rest-models.svg
     :target: https://pypi.python.org/pypi/django-rest-models
     :alt: Latest PyPI version
-
-.. image:: https://img.shields.io/pypi/dm/django-rest-models.svg
-    :target: https://pypi.python.org/pypi/django-rest-models
-    :alt: Number of PyPI downloads per month
 
 .. image:: https://requires.io/github/Yupeek/django-rest-models/requirements.svg?branch=master
      :target: https://requires.io/github/Yupeek/django-rest-models/requirements/?branch=master
