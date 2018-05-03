@@ -8,3 +8,4 @@ requests
 djangorestframework==3.5
 dynamic-rest==1.6
 -r test_requirements.txt
+twine

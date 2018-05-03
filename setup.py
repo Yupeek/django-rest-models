@@ -18,7 +18,8 @@ if 'DJANGO_SETTINGS_MODULE' not in os.environ:
 
 if sys.argv[-1] == 'publish':
     # os.system('cd docs && make html')
-    os.system('python setup.py sdist bdist_wheel upload')
+    os.system('python setup.py sdist bdist_wheel')
+    os.system('twine upload -r pypi dist/*')
     print("You probably want to also tag the version now:")
     print("  git tag -a %s -m 'version %s'" % (version, version))
     print("  git push --tags")
@@ -39,6 +40,7 @@ setup(
     version=version,
     description="""django Fake ORM model that query an RestAPI instead of a database — """,
     long_description=readme,
+    long_description_content_type='text/markdown',
     author='Darius BERNARD',
     author_email='darius@yupeek.com',
     url='https://github.com/Yupeek/django-rest-models',

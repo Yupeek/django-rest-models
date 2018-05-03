@@ -132,7 +132,7 @@ Each API serializer must :
 - Provide the id field
 - Provide the related field (ManyToMany and ForeignKey on Models) as DynamicRelationField
 - Provide the reverse related field. We must, for each ForeignKey and ManyToMany, add a field on the related model's
-serializer.
+  serializer.
 
 .. code-block:: python
 
