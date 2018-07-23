@@ -895,7 +895,7 @@ class SQLCompiler(BaseSQLCompiler):
                 return True, result
         return False, None
 
-    def execute_sql(self, result_type=MULTI, chunked_fetch=False):
+    def execute_sql(self, result_type=MULTI, chunked_fetch=False, chunk_size=None):
         self.setup_query()
         if not result_type:
             result_type = NO_RESULTS
@@ -956,7 +956,7 @@ class SQLCompiler(BaseSQLCompiler):
 
 
 class SQLInsertCompiler(SQLCompiler):
-    def execute_sql(self, return_id=False):
+    def execute_sql(self, return_id=False, chunk_size=None):
         query = self.query
         """:type: django.db.models.sql.subqueries.InsertQuery"""
         opts = query.get_meta()
@@ -1023,7 +1023,7 @@ class SQLInsertCompiler(SQLCompiler):
 
 
 class SQLDeleteCompiler(SQLCompiler):
-    def execute_sql(self, result_type=MULTI):
+    def execute_sql(self, result_type=MULTI, chunk_size=None):
         if self.is_api_model():
 
             q = self.query
@@ -1054,7 +1054,7 @@ class SQLUpdateCompiler(SQLCompiler):
                 }
         }
 
-    def execute_sql(self, result_type=MULTI):
+    def execute_sql(self, result_type=MULTI, chunk_size=None):
         updated = 0
         if self.is_api_model():
             q = self.query
@@ -1072,6 +1072,6 @@ class SQLUpdateCompiler(SQLCompiler):
 
 class SQLAggregateCompiler(SQLCompiler):
 
-    def execute_sql(self, result_type=MULTI):
+    def execute_sql(self, result_type=MULTI, chunk_size=None):
         raise NotSupportedError("the aggregation for the database %s is not supported : %s" % (
                                 self.connection.alias, self.query))  # pragma: no cover
