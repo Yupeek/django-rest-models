@@ -56,7 +56,7 @@ overview
 you can mock the api with some custom response for given url. it won't trigger any api query, but return the
 predefined data from each request matching the patterns.
 
-your test cases must inherite from either ``rest_models.test.RestModelTestMixin`` or
+your test cases must inherit from either ``rest_models.test.RestModelTestMixin`` or
 ``rest_models.test.RestModelTestCase``
 
 with this, you have 2 more functionnality.

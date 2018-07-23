@@ -81,7 +81,7 @@ API site
 
 on the API side, you don't need to install this lib. But the serializers must follow these constraint :
 
-- inherite the ``DynamicModelSerializer`` from ``dynamic-rest``
+- inherit the ``DynamicModelSerializer`` from ``dynamic-rest``
 - provide all related serializers using ``DynamicRelationField`` from ``dynamic-rest``
 - provide all backward relation in both serializers.
 
@@ -130,7 +130,7 @@ with the folowing models
 inheritance
 ===========
 
-* inherite the ``DynamicModelSerializer`` from ``dynamic-rest``
+* inherit the ``DynamicModelSerializer`` from ``dynamic-rest``
 
 bad::
 
