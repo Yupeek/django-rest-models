@@ -31,6 +31,7 @@ exemple of many settings::
             'OPTIONS': {
                 'OAUTH_URL': '/oauth2/token/',
                 'TIMEOUT': 10,
+                'SKIP_CHECK': True,
             },
             'PREVENT_DISTINCT': False,
         },
@@ -115,6 +116,14 @@ token provider. by default this url is ``/oauth2/token/``.
 
 provide the time for triggering a new query on the api. if a query take longer than this, it will retry 3 more times,
 and eventialy raise an OperationalError.
+
+``OPTIONS['SKIP_CHECK']``
+======================
+
+will skip checking the api if this settings is set to true. by default, the django check command
+(executed during tests and migration) will query the api to check if our models match the structure of the api.
+settings this to True will prevent any query to be made to the api. usefull on testing environment where
+all query si faked and there is no api at all.
 
 ``PREVENT_DISTINCT``
 ====================

@@ -42,6 +42,9 @@ named ``TEST_{name}``. this database will be used for all query on the api datab
             'USER': 'userapi',
             'PASSWORD': 'passwordapi',
             'AUTH': 'rest_models.backend.auth.BasicAuth',
+            'OPTIONS': {
+                'SKIP_CHECK': True,
+            },
         },
     }
 
