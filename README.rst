@@ -54,8 +54,8 @@ Requirements
 
 This database wrapper work with
 
-- python 2.7, 3.4, 3.5
-- django 1.8 , 1.9, 1.10
+- python 2.7, 3.4, 3.5, 3.6
+- django 1.11
 
 On the api, this is tested against
 
