@@ -21,7 +21,7 @@ jobs:
   include:
   # deploy if master and tag
   - stage: deploy
-    if: type = push AND branch = master AND tag = true # or whenever you want to deploy
+    if: type = push AND branch = master AND tag IS present # or whenever you want to deploy
     script: skip # to not run Travis' default script
     python: '3.5'
     install: skip
