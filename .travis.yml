@@ -1,10 +1,12 @@
 sudo: false
 language: python
 
+script:
+- COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
 
 stages:
-  - test
-  - deploy
+- test
+- deploy
 
 jobs:
   include:
@@ -15,18 +17,16 @@ jobs:
     - pip install tox-travis
     - pip install python-coveralls
     - travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
-    script:
-    - COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
   - python: '3.4'
   - python: '3.5'
   - python: '3.6'
 
   # deploy if master and tag
   - stage: deploy
-    if: type = push AND branch = master # or whenever you want to deploy
+    if: type = push AND branch = master AND tag = true # or whenever you want to deploy
     script: skip # to not run Travis' default script
     python: '3.5'
-
+    install: skip
     deploy:
       provider: pypi
       user: yupeek
