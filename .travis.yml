@@ -19,9 +19,6 @@ stages:
 
 jobs:
   include:
-  # tests on python 2.7, 3.4, 3.5, 3.6
-  - stage: test
-
   # deploy if master and tag
   - stage: deploy
     if: type = push AND branch = master AND tag = true # or whenever you want to deploy
