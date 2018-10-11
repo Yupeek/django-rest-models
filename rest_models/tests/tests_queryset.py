@@ -194,6 +194,12 @@ class TestQueryGet(TestCase):
                 }
             )
 
+    def test_none(self):
+        with self.assertNumQueries(0, using='api'):
+            p = client_models.Pizza.objects.none()
+        with self.assertNumQueries(0, using='api'):
+            self.assertEqual(list(p), [])
+
     def test_get_related(self):
         with self.assertNumQueries(1, using='api'):
             p = client_models.Pizza.objects.get(pk=1)

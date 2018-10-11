@@ -16,7 +16,7 @@ from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
 from django.db.models.sql.datastructures import BaseTable
-from django.db.models.sql.where import SubqueryConstraint, WhereNode
+from django.db.models.sql.where import NothingNode, SubqueryConstraint, WhereNode
 from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
 
 from rest_models.backend.connexion import build_url
@@ -636,6 +636,8 @@ class SQLCompiler(BaseSQLCompiler):
                         raise FakeDatabaseDbAPI2.NotSupportedError(
                             "nested queryset is not supported"
                         )
+                    elif isinstance(child, NothingNode):
+                        raise EmptyResultSet
                     else:  # pragma: no cover
                         raise ProgrammingError("unknown type for compiling the query : %s."
                                                " expeced a Lookup or WhereNode" % child.__class__)
@@ -896,10 +898,10 @@ class SQLCompiler(BaseSQLCompiler):
         return False, None
 
     def execute_sql(self, result_type=MULTI, chunked_fetch=False, chunk_size=None):
-        self.setup_query()
-        if not result_type:
-            result_type = NO_RESULTS
         try:
+            self.setup_query()
+            if not result_type:
+                result_type = NO_RESULTS
             is_special, result = self.special_cases(result_type)
             if is_special:
                 return result
