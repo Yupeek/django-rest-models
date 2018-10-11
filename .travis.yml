@@ -8,19 +8,20 @@ stages:
 
 jobs:
   include:
+  # tests on python 2.7, 3.4, 3.5, 3.6
   - stage: test
-    python:
-    - '2.7'
-    - '3.4'
-    - '3.5'
-    - '3.6'
+    python: '2.7'
     install:
     - pip install tox-travis
     - pip install python-coveralls
     - travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
     script:
     - COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
+  - python: '3.4'
+  - python: '3.5'
+  - python: '3.6'
 
+  # deploy if master and tag
   - stage: deploy
     if: type = push AND branch = master # or whenever you want to deploy
     script: skip # to not run Travis' default script
