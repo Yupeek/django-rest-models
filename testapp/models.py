@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.conf import settings
 from django.db import models
 
+from rest_models.utils import DrmJSONField
+
 
 class Menu(models.Model):
     name = models.CharField(max_length=135)
@@ -20,6 +22,7 @@ class Menu(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField(db_column='taxed_cost')
+    metadata = DrmJSONField(null=True)
 
     class APIMeta:
         db_name = 'api'

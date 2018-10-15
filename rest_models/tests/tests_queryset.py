@@ -166,6 +166,13 @@ class TestQueryInsert(TestCase):
 
         self.assertEqual(list(topping.pizzas.all()), [p])
 
+    def test_jsonfield(self):
+        t = client_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': '2018'}
+        )
+
 
 class TestQueryGet(TestCase):
     fixtures = ['data.json']

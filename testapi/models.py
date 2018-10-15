@@ -5,6 +5,7 @@ import datetime
 import logging
 
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.utils import timezone
 
@@ -26,6 +27,7 @@ class Menu(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField()
+    metadata = JSONField(null=True)
 
     def __str__(self):
         return self.name  # pragma: no cover
