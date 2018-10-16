@@ -4,6 +4,9 @@ language: python
 services:
 - postgresql
 
+addons:
+  postgresql: "9.4"
+
 python:
 - '2.7'
 - '3.4'
