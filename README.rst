@@ -250,6 +250,11 @@ This database api support :
     ForeignKey must have db_column fixed to the name of the reflected field in the api. or all update/create won't use
     the value if this field
 
+.. note::
+
+		Support for ForeignKey is only available with models on the same database (api<->api) or (default<->default).
+		It's not possible to add a ForeignKey/ManyToMany field on a local model related to a remote model (with ApiMeta)
+
 Documentation
 -------------
 

@@ -223,7 +223,7 @@ class TestQueryGet(TestCase):
     def test_get_many2many(self):
         p = client_models.Pizza.objects.get(pk=1)
         with self.assertNumQueries(1, using='api'):
-            toppings = list(p.toppings.all())
+            toppings = list(p.toppings.all().order_by('pk'))
 
         self.assertEqual(len(toppings), 5)
         self.assertEqual([t.id for t in toppings], [1, 2, 3, 4, 5])
@@ -263,14 +263,15 @@ class TestQueryGet(TestCase):
 
     def test_chunked_read_not_enouth_data(self):
         with self.assertNumQueries(1, using='api'):
-            res = list(client_models.Pizza.objects.all().values_list('id', 'toppings__id'))
+            res = list(client_models.Pizza.objects.all().
+                       order_by('id').values_list('id', 'toppings__id'))
 
         self.assertEqual(
-            res,
+            [(i, set(j)) for i, j in res],
             [
-                (1, [1, 2, 3, 4, 5]),
-                (2, [1, 4]),
-                (3, [1, 4, 6])
+                (1, {1, 2, 3, 4, 5}),
+                (2, {1, 4}),
+                (3, {1, 4, 6})
             ]
         )
 
@@ -297,9 +298,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(res, [(1, )] * 5)
 
     def test_query_backward_values_sample2(self):
-        res = list(api_models.Topping.objects.values_list('pizzas'))
+        res = list(api_models.Topping.objects.order_by('pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
-        self.assertEqual(res, [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,), (3,)])
+        self.assertEqual(res, [(3,), (2,), (1,), (1,), (1,), (3,), (2,), (1,), (1,), (3,)])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -315,20 +316,10 @@ class TestQueryGet(TestCase):
         res = list(
             client_models.Topping.objects.filter(
                 pizzas=client_models.Pizza.objects.get(pk=1)
-            ).values_list('pizzas')
+            ).order_by('cost').values_list('pizzas')
         )
         self.assertEqual(len(res), 9)
-        self.assertEqual(res, [
-            (1, ),
-            (2, ),
-            (3, ),
-            (1, ),
-            (1, ),
-            (1, ),
-            (2, ),
-            (3, ),
-            (1,)
-        ])
+        self.assertEqual(res, [(1,), (1,), (3,), (1,), (2,), (1,), (3,), (2,), (1,)])
 
     def test_without_get_select_related_sample(self):
         with self.assertNumQueries(1, using='api'):

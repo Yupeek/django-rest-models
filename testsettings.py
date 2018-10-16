@@ -3,10 +3,27 @@ import os
 
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
 
+class LazyBool:
+    def __init__(self, val):
+        self.val = val
+
+    def __bool__(self):
+        return self.val
+
+    def set(self, val):
+        self.val = val
+
+
+skip_check = LazyBool(os.environ.get('SKIP_CHECK', '').upper() in ('TRUE', 'Y'))
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sq3',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'django-rest-models',
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PWD', ''),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': '5432',
     },
     'api': {
         'ENGINE': 'rest_models.backend',
@@ -16,13 +33,15 @@ DATABASES = {
         'AUTH': 'rest_models.backend.auth.BasicAuth',
         'TEST': {
             'NAME': 'http://localapi/api/v2/',
-        }
+        },
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v1/',
         'USER': 'admin',
         'PASSWORD': 'admin',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'api2': {
         'ENGINE': 'rest_models.backend',
@@ -30,6 +49,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
@@ -37,6 +57,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
 }
 
