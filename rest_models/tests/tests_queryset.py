@@ -173,13 +173,34 @@ class TestQueryInsert(TestCase):
 class TestJsonField(TestCase):
     fixtures = ['data.json']
 
-    def test_jsonfield(self):
+    def test_jsonfield_create(self):
         t = client_models.Topping.objects.create(
             name='lardons lux',
             cost=2,
             metadata={'origine': 'france', 'abattage': '2018'}
         )
         self.assertIsNotNone(t)
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': '2018'})
+        self.assertEqual(t.cost, 2)
+        self.assertEqual(t.name, 'lardons lux')
+
+        t2 = api_models.Topping.objects.get(pk=t.pk)
+        self.assertEqual(
+            {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
+            {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
+        )
+
+    def test_jsonfield_lookup(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': '2018'}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')), (1,))
+        self.assertEqual(client_models.Topping.objects.filter(metadata__abattage=2018).count(), 0)
 
 
 class TestQueryGet(TestCase):
