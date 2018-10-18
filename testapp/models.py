@@ -7,7 +7,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.conf import settings
 from django.db import models
 
-from rest_models.utils import DrmJSONField
+try:
+    from django.contrib.postgres.fields import JSONField
+except ImportError:
+    class JSONField:
+        def __init__(self, *args, **kwargs):
+            pass
 
 
 class Menu(models.Model):
@@ -22,7 +27,7 @@ class Menu(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField(db_column='taxed_cost')
-    metadata = DrmJSONField(null=True)
+    metadata = JSONField(null=True)
 
     class APIMeta:
         db_name = 'api'

@@ -2,7 +2,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+from unittest import skipIf
 
+from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
@@ -166,12 +168,18 @@ class TestQueryInsert(TestCase):
 
         self.assertEqual(list(topping.pizzas.all()), [p])
 
+
+@skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
+class TestJsonField(TestCase):
+    fixtures = ['data.json']
+
     def test_jsonfield(self):
         t = client_models.Topping.objects.create(
             name='lardons lux',
             cost=2,
             metadata={'origine': 'france', 'abattage': '2018'}
         )
+        self.assertIsNotNone(t)
 
 
 class TestQueryGet(TestCase):
@@ -298,9 +306,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(res, [(1, )] * 5)
 
     def test_query_backward_values_sample2(self):
-        res = list(api_models.Topping.objects.order_by('pk').values_list('pizzas'))
+        res = list(api_models.Topping.objects.order_by('pizzas__pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
-        self.assertEqual(res, [(3,), (2,), (1,), (1,), (1,), (3,), (2,), (1,), (1,), (3,)])
+        self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -316,10 +324,17 @@ class TestQueryGet(TestCase):
         res = list(
             client_models.Topping.objects.filter(
                 pizzas=client_models.Pizza.objects.get(pk=1)
-            ).order_by('cost').values_list('pizzas')
+            ).order_by('pk', 'pizzas__pk').values_list('pizzas')
         )
         self.assertEqual(len(res), 9)
-        self.assertEqual(res, [(1,), (1,), (3,), (1,), (2,), (1,), (3,), (2,), (1,)])
+        # this order is matchin topping1: pizza1,2,3; topping2: pizza1, topping3:pizza1, etc
+        if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+            # sqlite compiler take into account the orderby in pizzas__pk.
+            self.assertEqual(res,  [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,)])
+        else:
+            # postgresql compiler loos the orderby in the process
+            self.assertEqual(len(res), 9)
+            self.assertEqual(set(res), {(1,), (2,), (3,)})
 
     def test_without_get_select_related_sample(self):
         with self.assertNumQueries(1, using='api'):

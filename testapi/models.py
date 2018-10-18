@@ -5,9 +5,15 @@ import datetime
 import logging
 
 from django.conf import settings
-from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.utils import timezone
+
+try:
+    from django.contrib.postgres.fields import JSONField
+except ImportError:
+    class JSONField:
+        def __init__(self, *args, **kwargs):
+            pass
 
 logger = logging.getLogger(__name__)
 

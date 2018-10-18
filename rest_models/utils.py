@@ -4,7 +4,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import json
 
 import six
-from django.core.exceptions import ImproperlyConfigured
 
 try:
     from pathlib import Path
@@ -195,14 +194,3 @@ def pgcd(a, b):
     while a % b != 0:
         a, b = b, a % b
     return b
-try:
-    from django.contrib.postgres.fields import JSONField
-except ImportError as e:
-
-    class DrmJSONField(object):
-        def __init__(self, *args, **kwargs):
-            raise e
-else:
-    class DrmJSONField(JSONField):
-        def get_prep_value(self, value):
-            return value

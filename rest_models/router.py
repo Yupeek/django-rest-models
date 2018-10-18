@@ -90,7 +90,7 @@ class RestModelRouter(object):
     def db_for_write(self, model, **hints):
         return self.get_api_database(model)
 
-    def allow_relation (self, obj1, obj2, **hints):
+    def allow_relation(self, obj1, obj2, **hints):
         if self.is_api_model(obj1) ^ self.is_api_model(obj2):
             return False
         return None

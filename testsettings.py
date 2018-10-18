@@ -3,27 +3,13 @@ import os
 
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
 
-class LazyBool:
-    def __init__(self, val):
-        self.val = val
 
-    def __bool__(self):
-        return self.val
-
-    def set(self, val):
-        self.val = val
-
-
-skip_check = LazyBool(os.environ.get('SKIP_CHECK', '').upper() in ('TRUE', 'Y'))
+skip_check = os.environ.get('SKIP_CHECK', '').upper() in ('TRUE', 'Y')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'django-rest-models',
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PWD', ''),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'db.sq3',
     },
     'api': {
         'ENGINE': 'rest_models.backend',

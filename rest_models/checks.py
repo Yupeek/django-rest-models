@@ -25,7 +25,7 @@ def api_struct_check(app_configs, **kwargs):
     models = ((router.get_api_connexion(model).cursor(), model)
               for model in all_models
               if router.is_api_model(model) and
-              not router.get_api_connexion(model).settings_dict['OPTIONS'].get('SKIP_CHECK', False))
+              not bool(router.get_api_connexion(model).settings_dict['OPTIONS'].get('SKIP_CHECK', False)))
 
     for db, rest_model in models:
         url = get_resource_path(rest_model)

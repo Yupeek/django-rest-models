@@ -23,11 +23,15 @@ script:
 
 stages:
 - test
+- test_postgres
 - deploy
 
 jobs:
   include:
   # deploy if master and tag
+  - stage: test_postgres
+    python: '3.5'
+    script: COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox -e postgresql
   - stage: deploy
     if: branch = master AND tag IS present # or whenever you want to deploy
     script: skip # to not run Travis' default script
