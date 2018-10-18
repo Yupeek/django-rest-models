@@ -8,6 +8,7 @@ import re
 from collections import namedtuple
 
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
@@ -331,6 +332,15 @@ class QueryParser(object):
         elif isinstance(col, Col):
             current = self.aliases[col.alias]  # type: Alias
             field = col.target.column
+        elif isinstance(col, Transform):
+            current = self.aliases[col.lhs.alias]
+            # KeyTransforms for JSON key lookups have a 'key_name' field,
+            # which is the key in the JSON structure to return.  This probably
+            # needs more work :-)  Otherwise, just use the LHS as a column.
+            if hasattr(col, 'key_name'):
+                field = col.lhs.target.column + '.' + col.key_name
+            else:
+                field = col.lhs.target.column
         else:
             raise NotSupportedError("Only Col in sql select is supported")
         if current.m2m is not None:

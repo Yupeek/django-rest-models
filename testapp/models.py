@@ -7,12 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.conf import settings
 from django.db import models
 
-try:
-    from django.contrib.postgres.fields import JSONField
-except ImportError:
-    class JSONField:
-        def __init__(self, *args, **kwargs):
-            pass
+from rest_models.backend.utils import JSONField
 
 
 class Menu(models.Model):
