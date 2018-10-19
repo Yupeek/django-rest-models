@@ -11,9 +11,9 @@ from django.utils import timezone
 try:
     from django.contrib.postgres.fields import JSONField
 except ImportError:
-    class JSONField:
-        def __init__(self, *args, **kwargs):
-            pass
+    # fake useless jsonfield
+    def JSONField(*args, **kwargs):
+        return None
 
 logger = logging.getLogger(__name__)
 

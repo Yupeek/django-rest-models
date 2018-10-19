@@ -1,6 +1,14 @@
 import os
 
 
+
+try:
+    from django.core.paginator import UnorderedObjectListWarning
+    import warnings
+    warnings.simplefilter('ignore', UnorderedObjectListWarning)
+except ImportError:
+    pass
+
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
 
 
