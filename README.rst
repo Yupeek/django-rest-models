@@ -277,6 +277,13 @@ If you found a bug or if you have a request for additional feature, please use t
 
 https://github.com/Yupeek/django-rest-models/issues
 
+known limitations
+-----------------
+
+JSONField from postgresql and mysql is supported by django-rest-models, but not by the current dynamic-rest (1.8.1)
+so you can do `MyModel.objects.filter(myjson__mydata__contains='aaa')` but it will work if drest support it
+
+same for DateField's year,month,day lookup.
 
 License
 -------
@@ -287,6 +294,7 @@ Author
 ------
 
 Original author: `Darius BERNARD <https://github.com/ornoone>`_.
+Contributor: `PaulWay <https://github.com/PaulWay>`_.
 
 
 Thanks
