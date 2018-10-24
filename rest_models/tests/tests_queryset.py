@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
+from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
 from testapi import models as api_models
@@ -177,10 +178,10 @@ class TestJsonField(TestCase):
         t = client_models.Topping.objects.create(
             name='lardons lux',
             cost=2,
-            metadata={'origine': 'france', 'abattage': '2018'}
+            metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': '2018'})
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -190,6 +191,7 @@ class TestJsonField(TestCase):
             {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
         )
 
+    @skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
     def test_jsonfield_lookup(self):
         t = api_models.Topping.objects.create(
             name='lardons lux',
@@ -199,8 +201,49 @@ class TestJsonField(TestCase):
         self.assertIsNotNone(t)
 
         self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
-        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')), (1,))
-        self.assertEqual(client_models.Topping.objects.filter(metadata__abattage=2018).count(), 0)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage=2018).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage__lt='2019').values_list('pk')),
+                         [(t.pk,)])
+
+    @skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+    def test_jsonfield_lookup_deeper(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': {'pays': 'DE', 'annee': '2018'}}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__annee='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(
+            client_models.Topping.objects.filter(metadata__abattage__annee='2018').values_list('pk')
+        ), [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage__annee=2018).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(
+            client_models.Topping.objects.filter(metadata__abattage__annee__lt='2019').values_list('pk')
+        ), [(t.pk,)])
+
+
+@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+class TestQueryLookupTransform(TestCase):
+    fixtures = ['data.json']
+
+    def test_get_transform_date(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year__exact=2016))), 2)
+
+    def test_get_transform_date_gt(self):
+
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year__lt=2016))), 1)
 
 
 class TestQueryGet(TestCase):
@@ -229,6 +272,10 @@ class TestQueryGet(TestCase):
                     "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000),
                 }
             )
+
+    def test_simple_transform(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year=2016))), 2)
 
     def test_none(self):
         with self.assertNumQueries(0, using='api'):
