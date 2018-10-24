@@ -14,6 +14,9 @@ except ImportError:
     # fake useless jsonfield
     def JSONField(*args, **kwargs):
         return None
+    has_jsonfield = False
+else:
+    has_jsonfield = True
 
 logger = logging.getLogger(__name__)
 
