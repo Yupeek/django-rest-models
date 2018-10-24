@@ -171,6 +171,7 @@ class TestQueryInsert(TestCase):
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
+@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestJsonField(TestCase):
     fixtures = ['data.json']
 
@@ -191,7 +192,41 @@ class TestJsonField(TestCase):
             {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
         )
 
-    @skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+    def test_jsonfield_update(self):
+        t = client_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': 2018}
+        )
+        self.assertIsNotNone(t)
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(t.cost, 2)
+        self.assertEqual(t.name, 'lardons lux')
+
+        t2 = api_models.Topping.objects.get(pk=t.pk)
+        t2.metadata = {'origine': 'france'}
+        t2.save()
+        t.refresh_from_db()
+        self.assertEqual(t.metadata,  {'origine': 'france'})
+        self.assertEqual(
+            {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
+            {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
+        )
+
+    def test_jsonfield_lookup_isnull(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': None}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=False).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=True).values_list('pk')),
+                         [(1,), (2,), (3,), (4,), (5,), (6,)])
+
     def test_jsonfield_lookup(self):
         t = api_models.Topping.objects.create(
             name='lardons lux',
@@ -210,7 +245,6 @@ class TestJsonField(TestCase):
         self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage__lt='2019').values_list('pk')),
                          [(t.pk,)])
 
-    @skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
     def test_jsonfield_lookup_deeper(self):
         t = api_models.Topping.objects.create(
             name='lardons lux',
