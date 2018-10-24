@@ -55,6 +55,10 @@ def extract_exact_pk_value(where):
     if len(where.children) == 2:
         exact, isnull = where.children
 
+        if isinstance(exact.lhs, Transform):
+            exact = exact.lhs.output_field
+        if isinstance(isnull.lhs, Transform):
+            isnull = isnull.lhs.output_field
         if (
             isinstance(exact, Exact) and isinstance(isnull, IsNull) and
             exact.lhs.target == isnull.lhs.target
