@@ -1,19 +1,22 @@
-specials cases
-##############
+Special cases
+#############
 
 
 prefetch_related
 ****************
 
 
-the prefetch related is a django optimisation for queryset that query the database for all given manytomany relation
-to cache it in the model. this feature work in django-rest-models backend, but the remote api will return far more
-data than the SQL equivalent should.
+The `prefetch_related` method is a Django optimisation for querysets that
+causes the database to cache the related fields for all given manytomany
+relation in the model. This feature works in django-rest-models
+backend, but the remote api will return far more data than the SQL equivalent
+should.
 
-to prevent a performance issues in the api, django-rest-models will add a special get parameter in his query «filter_to_prefetch» which
-can be interpreted by the backend to filter all sub-query with the actual id.
+To prevent performance issues in the api, django-rest-models will add a special
+get parameter «filter_to_prefetch» in the query which can be interpreted by the
+backend to filter all sub-query with the actual id.
 
-a small tricks in the api side is to override the DynamicFilterBackend with the folowing class, and use it in your views.
+A small trick in the api side is to override the DynamicFilterBackend with the following class, and use it in your views.
 
 .. code-block:: python
 
@@ -44,7 +47,7 @@ a small tricks in the api side is to override the DynamicFilterBackend with the 
             return prefetch
 
 
-to use this new FilterBackend, you can write your view like this
+To use this new FilterBackend, you can write your view like this
 
 .. code-block:: python
 
@@ -60,14 +63,14 @@ Many2Many creation/update
 *************************
 
 
-the special cases of the many2many is that this use a table that is not serialized by default in the api.
-the query system can pass through it without this requirement, but the modification of a M2M require the update of the
-through table. to do so, the best way is to serialize this table in the api and manipulate it as a standalone relation
+The special case of many2many fields is that they use a table that is not serialized by default in the api.
+The query system can pass through it without this requirement, but the modification of a M2M require the update of the
+through table. To do so, the best way is to serialize this table in the api and manipulate it as a standalone relation
 in the application, without the ``myobject.myrelation.add()`` call.
 
-for exemples, the link pizza <-> topping use the auto created relation Pizza_toppings
+For example, the link pizza <-> topping use the auto created relation Pizza_toppings
 
-this require to create the serializer and viewset for this auto created model in the api:
+This requires the creation of the serializer and viewset for this auto created model in the api:
 
 .. code:: python
 
@@ -91,7 +94,7 @@ this require to create the serializer and viewset for this auto created model in
 	# urls.py
 	router.register('Pizza_topping', Pizza_toppingsViewSet)
 
-and the client should use it as any othe model, without declaring it as a through model of Pizza and Topping
+and the client should use it as any other model, without declaring it as a through model of Pizza and Topping
 
 .. code:: python
 

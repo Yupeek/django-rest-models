@@ -1,14 +1,13 @@
+Quick start
+###########
 
-quickstart
-##########
 
-
-client
+Client
 ******
 
 
 
-settings
+Settings
 ========
 
 - add the router ``'rest_models.router.RestModelRouter'`` to the setting ``DATABASE_ROUTERS``
@@ -40,15 +39,13 @@ settings
 
 
 
-models
+Models
 ======
 
-create your models that will match your serilizers on the api.
-the only customisation to make it a non database model is the addition of the class ``APIMeta``.
-thanks to the RestModelRouter, this addition will choose the database with the rest_models backend
+Create your models that will match your serializers on the api.
+The only customisation to make it a non database model is the addition of the class ``APIMeta``.
+Thanks to the RestModelRouter, this addition will choose the database with the rest_models backend
 as the backend to use.
-
-
 
 .. code-block:: python
 
@@ -60,33 +57,33 @@ as the backend to use.
             # basic django meta Stuff
             verbose_name = 'my model'
 
-        # the only customisation that make this model special
+        # the only customisation that makes this model special
         class APIMeta:
             pass
 
-usage
+Usage
 =====
 
-use it as any normal django Model. just keep in mind that the backend is not a SGDB and it may not be
+Use it as any normal Django Model. Just keep in mind that the backend is not a SGDB and it may not be
 performant on all queryset, and that some query is not possible.
 
-you can not:
+You can not:
 
 - aggregate
 - annotate
 - make complex filters with NOT and OR
 
-API site
+API side
 ********
 
-on the API side, you don't need to install this lib. But the serializers must follow these constraint :
+On the API side, you don't need to install this lib. But the serializers must follow these constraint :
 
 - inherit the ``DynamicModelSerializer`` from ``dynamic-rest``
 - provide all related serializers using ``DynamicRelationField`` from ``dynamic-rest``
 - provide all backward relation in both serializers.
 
 
-examples
+Examples
 ========
 
 with the folowing models
@@ -127,12 +124,12 @@ with the folowing models
 
 
 
-inheritance
+Inheritance
 ===========
 
 * inherit the ``DynamicModelSerializer`` from ``dynamic-rest``
 
-bad::
+Bad::
 
     from rest_framework import serializers
 
@@ -140,35 +137,35 @@ bad::
         ...
 
 
-good::
+Good::
 
     from dynamic_rest.serializers import DynamicModelSerializer
 
     class MenuSerializer(DynamicModelSerializer):
         ...
 
-related serializers fields
+Related serializers fields
 ==========================
 
-* provide all related serializers using ``DynamicRelationField`` from ``dynamic-rest``
+* Provide all related serializers using ``DynamicRelationField`` from ``dynamic-rest``
 
-bad::
+Bad::
 
 
     class PizzaSerializer(DynamicModelSerializer):
         toppings = ToppingSerializer(many=True)
 
-good::
+Good::
 
     from dynamic_rest.fields.fields import DynamicRelationField
 
     class PizzaSerializer(DynamicModelSerializer):
         toppings = DynamicRelationField(ToppingSerializer, many=True)
 
-backward relationship
+Backward relationship
 =====================
 
-* provide all backward relation in both serializers.
+* Provide all backward relation in both serializers.
 
 bad::
 
@@ -192,7 +189,7 @@ bad::
             fields = ('id', 'name', 'price', 'from_date', 'to_date', 'menu')
 
 
-good::
+Good::
 
     class MenuSerializer(DynamicModelSerializer):
         pizzas = DynamicRelationField('PizzaSerializer', many=True)  # good backward link. respecting menu.related_name
