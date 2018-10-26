@@ -6,20 +6,21 @@ Testing
 localapi
 ********
 
-to write tests using the api database, Rest Model allow you to bypass the usage of a remote API to loopback into the
-local process for the api query. if the host of the api is ``localapi``, Rest Model will not go to the network seeking
-an host named ``localapi`` but will query the local url engine to fetch the serializers.
-if you have your API application installed as local dependecies for testing, and an url running with it, you can
-write tests painelessly.
+To write tests using the api database, Rest Model allow you to bypass the usage of a remote API to loopback into the
+local process for the api query. If the host of the api is ``localapi``, Rest Model will not go to the network seeking
+a host named ``localapi`` but will query the local url engine to fetch the serializers.
 
-this allow:
+If you have your API application installed as local dependecies for testing, and an url running with it, you can
+write tests painlessly.
 
-- database transaction on all request made to the api
+This allows:
+
+- database transactions on all requests made to the api
 - faster testing since no network stack is used
 - easier testing setup, since no api should be started before the tests
 
-by default, the test database for api will use the ``localapi`` system. to bypass this, provide a ``DATABASES`` config
-named ``TEST_{name}``. this database will be used for all query on the api database *{name}*
+By default, the test database for api will use the ``localapi`` system. to bypass this, provide a ``DATABASES`` config
+named ``TEST_{name}``. This database will be used for all queries on the api database *{name}*
 
 .. code-block:: python
 
@@ -52,23 +53,24 @@ Mock API
 ********
 
 
-overview
+Overview
 ========
 
 
-you can mock the api with some custom response for given url. it won't trigger any api query, but return the
-predefined data from each request matching the patterns.
+You can mock the api with a custom response for each given url. It won't
+trigger any api query, but will instead return the predefined data from each
+request matching the patterns.
 
-your test cases must inherit from either ``rest_models.test.RestModelTestMixin`` or
+Your test cases must inherit from either ``rest_models.test.RestModelTestMixin`` or
 ``rest_models.test.RestModelTestCase``
 
-with this, you have 2 more functionnality.
+With this, you have 2 more functionalities.
 
-you can provide the matching «url» => «response» by giving the ``rest_fixtures`` like this:
+You can provide the matching «url» => «response» by giving the ``rest_fixtures`` like this:
 
 .. code-block:: python
 
-    class TestAnnonymousVisit(RestModelTestMixin, TestCase):
+    class TestAnonymousVisit(RestModelTestMixin, TestCase):
 
         rest_fixtures = {
             '/oauth2/token/': [
@@ -110,21 +112,20 @@ with the file in ``path/to/fixtures.json`` :
     ]
 
 
-providing data
+Providing data
 ==============
 
-global to the tests
+Global to the tests
 -------------------
 
 
-if you have 2 or more api databases, you must provide a mapping `database` => `fixtures` in the static attribute
-``database_rest_fixtures``. if you have only one api database, the ``database_rest_fixtures`` is automaticaly mapped
+If you have 2 or more api databases, you must provide a mapping `database` => `fixtures` in the static attribute
+``database_rest_fixtures``. If you have only one api database, the ``database_rest_fixtures`` is automatically mapped
 to the default one:
 
 .. code-block:: python
 
-    class TestAnnonymousVisit(RestModelTestMixin, TestCase):
-
+    class TestAnonymousVisit(RestModelTestMixin, TestCase):
 
         database_rest_fixtures = {'api': {  # api is our first database
             '/oauth2/token/': [
@@ -134,14 +135,14 @@ to the default one:
         }}
 
 
-local to a function
+Local to a function
 -------------------
 
-you can temporary mock the data from the api by using ``RestModelTestMixin.mock_api`` context manager
+You can temporary mock the data from the api by using ``RestModelTestMixin.mock_api`` context manager:
 
 .. code-block:: python
 
-    class TestAnnonymousVisit(RestModelTestMixin, TestCase):
+    class TestAnonymousVisit(RestModelTestMixin, TestCase):
 
         def test_remote_name_mismatch(self):
 
@@ -149,29 +150,29 @@ you can temporary mock the data from the api by using ``RestModelTestMixin.mock_
                 self.assertEqual(len(list(Pizza.objects.all())), 0)
 
 
-it take 3 arguments :
+It takes 3 arguments :
 
 - url: the url to mock
 - result : the result to return for the given url
-- params: the params that will be used to filter the usage of this mock
-- using: optionnaly the api to mock, if there is more than one
+- params: the parameters that will be used to filter the usage of this mock
+- using: optionally the api to mock, if there is more than one
 
 
-data structure
+Data structure
 ==============
 
-the structure of the mocked data is a list of possible results, represented by a dict with 2 keys :
+The structure of the mocked data is a list of possible results, represented by a dict with two keys :
 
 - data: the actual data returned by the api if it was queried (``{"pizzas": [...], "menus": [...]}``)
 - filter: for the given data to be used, the query must match this dict of data
 - statuscode: the status code to simulate
 
-data
+Data
 ----
 
-the data is a copy past of the real result expeced in the api.
+The data is a copy of the real result expected in the api.
 
-the fowoing is extracted from the rest api interface and is a valid ``data`` value
+The following is extracted from the rest api interface and is a valid ``data`` value
 
 .. code-block:: json
 
@@ -206,26 +207,25 @@ the fowoing is extracted from the rest api interface and is a valid ``data`` val
         }
     }
 
-filter
+Filter
 ------
 
-the filter is a dict or a list of dict that can be empty, in that case it will match all query.
-it can contains one of the folowing revelent value. any other will make this dataset unmatching all query.
-if it's a list, any dict inside that match the query will validate this fixtures.
-
+The filter is a dict or a list of dict that can be empty, in that case it will match all queries.
+It can contain one of the following relevant values - any other will make this dataset not match any query.
+If it's a list, any dict inside that matches the query will validate this fixture.
 
 - params: the main filter helper. it must contains a dict with the query parameters in the get for the api
 - method: the method used (get, post, put, ...)
 - json: the posted data
 
 
-params
+Params
 ^^^^^^
 
-the params filters is a dict with each item the part of the final query GET to the api.
+The params filter is a dict with each item the part of the final query GET to the api.
 
 
-for exemples :
+For example:
 
 ``?filter{name}=lolilol&filter{pizza.name}=pipi`` =>
 
@@ -235,11 +235,10 @@ for exemples :
 
 
 
-json
+JSON
 ^^^^
 
-the json must match the posted/puted data if given.
-if you created a Menu with name='hey' :
+The json must match the POSTed/PUT data if given.  If you created a Menu with name='hey' :
 
 .. code-block:: python
 
@@ -264,16 +263,16 @@ if you created a Menu with name='hey' :
         },
 
 
-full example
+Full example
 ============
 
-the folowing test case is a full example taken from the test suit. it's a good point for start.
+The following test case is a full example taken from the test suit. It's a good point for start.
 
 .. code-block:: python
 
 
     class TestMockDataSample(RestModelTestCase):
-        database_rest_fixtures = {'api': {  # api => response mocker for databasen named «api»
+        database_rest_fixtures = {'api': {  # api => response mocker for database named «api»
             'menulol': [  # url menulol
                 {
                     'filter': {  # set of filters to match
@@ -325,7 +324,7 @@ the folowing test case is a full example taken from the test suit. it's a good p
                         'method': 'post',
                         'json': {'menu': {'name': 'hey'}}  # posted data must match this
                     },
-                    'data': {  # this will return a fake models created response
+                    'data': {  # this will return the fake models created response
                         "menu": {
                             "id": 1,
                             "pizzas": [],
@@ -333,7 +332,7 @@ the folowing test case is a full example taken from the test suit. it's a good p
                             "code": "hy"
                         }
                     },
-                    'status_code': 201  # the mandatory statuscode to return for a post success
+                    'status_code': 201  # the mandatory status code to return for a post success
                 },
                 {  # response for post
                     'filter': {
