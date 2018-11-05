@@ -31,6 +31,7 @@ class SystemCheckTest(TestCase):
             verbosity=0,
             interactive=False,
             test_flush=True)
+#           settings.skip_check.set(False)
 
     def setUp(self):
         from testapp.badapp import models

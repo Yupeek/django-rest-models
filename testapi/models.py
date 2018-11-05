@@ -8,6 +8,16 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+try:
+    from django.contrib.postgres.fields import JSONField
+except ImportError:
+    # fake useless jsonfield
+    def JSONField(*args, **kwargs):
+        return None
+    has_jsonfield = False
+else:
+    has_jsonfield = True
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +36,7 @@ class Menu(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField()
+    metadata = JSONField(null=True)
 
     def __str__(self):
         return self.name  # pragma: no cover

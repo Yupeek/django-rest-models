@@ -8,6 +8,7 @@ import re
 from collections import namedtuple
 
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
@@ -331,6 +332,11 @@ class QueryParser(object):
         elif isinstance(col, Col):
             current = self.aliases[col.alias]  # type: Alias
             field = col.target.column
+        elif isinstance(col, Transform):
+            # transform should be passed as is to rest-framework
+            current, transforms = self.resolve_path(col.lhs)
+            transform_name = getattr(col, 'key_name', None) or getattr(col, 'lookup_name')
+            field = '%s.%s' % (transforms, transform_name)
         else:
             raise NotSupportedError("Only Col in sql select is supported")
         if current.m2m is not None:
@@ -404,7 +410,11 @@ class QueryParser(object):
             if negated or not lookup.rhs_is_direct_value() or first_connector != is_and:
                 return None
             # check this lookup is only for main model's primary key
-            if lookup.lhs.alias != main_alias or lookup.lhs.target != self.query.get_meta().pk:
+            try:
+                if lookup.lhs.alias != main_alias or lookup.lhs.target != self.query.get_meta().pk:
+                    return None
+            except AttributeError:
+                # lookup.lhs is not exact or don't have alias. it may be a Transform or something similar.
                 return None
             if isinstance(lookup, Exact):
                 to_add = {lookup.rhs}

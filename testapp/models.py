@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.conf import settings
 from django.db import models
 
+from rest_models.backend.utils import JSONField
+
 
 class Menu(models.Model):
     name = models.CharField(max_length=135)
@@ -20,6 +22,7 @@ class Menu(models.Model):
 class Topping(models.Model):
     name = models.CharField(max_length=125)
     cost = models.FloatField(db_column='taxed_cost')
+    metadata = JSONField(null=True)
 
     class APIMeta:
         db_name = 'api'
@@ -61,8 +64,16 @@ class Pizza_topping(models.Model):
 
 class Bookmark(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    pizza = models.ForeignKey(Pizza)
+    pizza_id = models.IntegerField(null=False)
     date = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def pizza(self):
+        return Pizza.objects.get(pk=self.pizza_id)
+
+    @pizza.setter
+    def pizza(self, pizza):
+        self.pizza_id = pizza.pk
 
 
 class PizzaGroup(models.Model):

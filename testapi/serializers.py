@@ -13,8 +13,9 @@ class ToppingSerializer(DynamicModelSerializer):
     class Meta:
         model = Topping
         name = 'topping'
-        fields = ('id', 'name', 'taxed_cost', 'pizzas',)
+        fields = ('id', 'name', 'taxed_cost', 'pizzas',) + (('metadata', ) if Topping.metadata else ())
         defered_fields = ('pizzas',)
+
     pizzas = DynamicRelationField('PizzaSerializer', many=True, required=False)
 
     taxed_cost = IntegerField(source='cost')

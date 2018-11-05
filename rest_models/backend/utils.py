@@ -11,3 +11,14 @@ def message_from_response(response):
         response.status_code,
         response.text if '<!DOCTYPE html>' not in response.text[:30] else response.reason
     )
+
+
+try:
+    from django.contrib.postgres.fields import JSONField as JSONFieldLegacy
+except ImportError as e:
+    def JSONField(*args, **kwargs):
+        return None
+else:
+    class JSONField(JSONFieldLegacy):
+        def get_prep_value(self, value):
+            return value

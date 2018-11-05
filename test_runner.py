@@ -15,4 +15,3 @@ class NoCheckDiscoverRunner(DiscoverRunner):
 class NoCheckTeamcityDjangoRunner(TeamcityDjangoRunner):
     def run_checks(self):
         pass
-

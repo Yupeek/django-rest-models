@@ -1,7 +1,18 @@
 import os
 
 
+
+try:
+    from django.core.paginator import UnorderedObjectListWarning
+    import warnings
+    warnings.simplefilter('ignore', UnorderedObjectListWarning)
+except ImportError:
+    pass
+
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
+
+
+skip_check = os.environ.get('SKIP_CHECK', '').upper() in ('TRUE', 'Y')
 
 DATABASES = {
     'default': {
@@ -16,13 +27,15 @@ DATABASES = {
         'AUTH': 'rest_models.backend.auth.BasicAuth',
         'TEST': {
             'NAME': 'http://localapi/api/v2/',
-        }
+        },
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v1/',
         'USER': 'admin',
         'PASSWORD': 'admin',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'api2': {
         'ENGINE': 'rest_models.backend',
@@ -30,6 +43,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
@@ -37,6 +51,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'OPTIONS': {'SKIP_CHECK': skip_check}
     },
 }
 
@@ -140,11 +155,6 @@ LOGGING = {
         }
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',

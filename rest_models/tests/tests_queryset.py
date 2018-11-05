@@ -2,10 +2,13 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+from unittest import skipIf
 
+from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
+from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
 from testapi import models as api_models
@@ -167,6 +170,116 @@ class TestQueryInsert(TestCase):
         self.assertEqual(list(topping.pizzas.all()), [p])
 
 
+@skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
+@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+class TestJsonField(TestCase):
+    fixtures = ['data.json']
+
+    def test_jsonfield_create(self):
+        t = client_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': 2018}
+        )
+        self.assertIsNotNone(t)
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(t.cost, 2)
+        self.assertEqual(t.name, 'lardons lux')
+
+        t2 = api_models.Topping.objects.get(pk=t.pk)
+        self.assertEqual(
+            {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
+            {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
+        )
+
+    def test_jsonfield_update(self):
+        t = client_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': 2018}
+        )
+        self.assertIsNotNone(t)
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(t.cost, 2)
+        self.assertEqual(t.name, 'lardons lux')
+
+        t2 = api_models.Topping.objects.get(pk=t.pk)
+        t2.metadata = {'origine': 'france'}
+        t2.save()
+        t.refresh_from_db()
+        self.assertEqual(t.metadata,  {'origine': 'france'})
+        self.assertEqual(
+            {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
+            {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
+        )
+
+    def test_jsonfield_lookup_isnull(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': None}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=False).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=True).values_list('pk')),
+                         [(1,), (2,), (3,), (4,), (5,), (6,)])
+
+    def test_jsonfield_lookup(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': '2018'}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage=2018).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage__lt='2019').values_list('pk')),
+                         [(t.pk,)])
+
+    def test_jsonfield_lookup_deeper(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': {'pays': 'DE', 'annee': '2018'}}
+        )
+        self.assertIsNotNone(t)
+
+        self.assertEqual(client_models.Topping.objects.filter(pk=t.pk).count(), 1)
+        self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__annee='2018').values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(
+            client_models.Topping.objects.filter(metadata__abattage__annee='2018').values_list('pk')
+        ), [(t.pk,)])
+        self.assertEqual(list(client_models.Topping.objects.filter(metadata__abattage__annee=2018).values_list('pk')),
+                         [(t.pk,)])
+        self.assertEqual(list(
+            client_models.Topping.objects.filter(metadata__abattage__annee__lt='2019').values_list('pk')
+        ), [(t.pk,)])
+
+
+@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+class TestQueryLookupTransform(TestCase):
+    fixtures = ['data.json']
+
+    def test_get_transform_date(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year__exact=2016))), 2)
+
+    def test_get_transform_date_gt(self):
+
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year__lt=2016))), 1)
+
+
 class TestQueryGet(TestCase):
     fixtures = ['data.json']
 
@@ -194,6 +307,10 @@ class TestQueryGet(TestCase):
                 }
             )
 
+    def test_simple_transform(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year=2016))), 2)
+
     def test_none(self):
         with self.assertNumQueries(0, using='api'):
             p = client_models.Pizza.objects.none()
@@ -216,7 +333,7 @@ class TestQueryGet(TestCase):
     def test_get_many2many(self):
         p = client_models.Pizza.objects.get(pk=1)
         with self.assertNumQueries(1, using='api'):
-            toppings = list(p.toppings.all())
+            toppings = list(p.toppings.all().order_by('pk'))
 
         self.assertEqual(len(toppings), 5)
         self.assertEqual([t.id for t in toppings], [1, 2, 3, 4, 5])
@@ -256,14 +373,15 @@ class TestQueryGet(TestCase):
 
     def test_chunked_read_not_enouth_data(self):
         with self.assertNumQueries(1, using='api'):
-            res = list(client_models.Pizza.objects.all().values_list('id', 'toppings__id'))
+            res = list(client_models.Pizza.objects.all().
+                       order_by('id').values_list('id', 'toppings__id'))
 
         self.assertEqual(
-            res,
+            [(i, set(j)) for i, j in res],
             [
-                (1, [1, 2, 3, 4, 5]),
-                (2, [1, 4]),
-                (3, [1, 4, 6])
+                (1, {1, 2, 3, 4, 5}),
+                (2, {1, 4}),
+                (3, {1, 4, 6})
             ]
         )
 
@@ -290,9 +408,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(res, [(1, )] * 5)
 
     def test_query_backward_values_sample2(self):
-        res = list(api_models.Topping.objects.values_list('pizzas'))
+        res = list(api_models.Topping.objects.order_by('pizzas__pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
-        self.assertEqual(res, [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,), (3,)])
+        self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -308,20 +426,17 @@ class TestQueryGet(TestCase):
         res = list(
             client_models.Topping.objects.filter(
                 pizzas=client_models.Pizza.objects.get(pk=1)
-            ).values_list('pizzas')
+            ).order_by('pk', 'pizzas__pk').values_list('pizzas')
         )
         self.assertEqual(len(res), 9)
-        self.assertEqual(res, [
-            (1, ),
-            (2, ),
-            (3, ),
-            (1, ),
-            (1, ),
-            (1, ),
-            (2, ),
-            (3, ),
-            (1,)
-        ])
+        # this order is matchin topping1: pizza1,2,3; topping2: pizza1, topping3:pizza1, etc
+        if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+            # sqlite compiler take into account the orderby in pizzas__pk.
+            self.assertEqual(res,  [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,)])
+        else:
+            # postgresql compiler loos the orderby in the process
+            self.assertEqual(len(res), 9)
+            self.assertEqual(set(res), {(1,), (2,), (3,)})
 
     def test_without_get_select_related_sample(self):
         with self.assertNumQueries(1, using='api'):
