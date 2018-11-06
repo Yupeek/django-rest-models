@@ -118,7 +118,7 @@ Provide the time for triggering a new query on the api. If a query take longer t
 and eventialy raise an OperationalError.
 
 ``OPTIONS['SKIP_CHECK']``
-======================
+=========================
 
 Will skip checking the api if this settings is set to true. By default, the Django check command
 (executed during tests and migration) will query the api to check if our models match the structure of the api.
@@ -132,6 +132,7 @@ This settings allow to accept request with a `distinct` clause without raising a
 Note that the distinct stuff will be trashed and the final query may repeat his lines.
 Enable it if you know what you are doing.
 
+.. _APIMeta:
 
 APIMeta
 *******

@@ -6,16 +6,17 @@ import threading
 
 from django.core.files import File
 from django.core.files.storage import Storage
+from django.utils.deconstruct import deconstructible
 
 logger = logging.getLogger(__name__)
 
 
-class ExpirableDict(object):
+class ExpirableDict(dict):
 
     def __init__(self, maxage=datetime.timedelta(hours=1)):
-        self.pool = {}
         self.maxage = maxage
         self.rlock = threading.RLock()
+        super(ExpirableDict, self).__init__()
 
     def _clean_cache(self):
         latest = datetime.datetime.now() - self.maxage
@@ -23,33 +24,39 @@ class ExpirableDict(object):
         with self.rlock:
             to_clear = [
                 key
-                for key, (d, val) in self.pool.items()
+                for key, (d, val) in self.items()
                 if d < latest
             ]
             for k in to_clear:
-                del self.pool[k]
+                del self[k]
 
     def __delitem__(self, key):
         with self.rlock:
-            del self.pool[key]
+            super(ExpirableDict, self).__delitem__(key)
 
     def __getitem__(self, key):
         with self.rlock:
-            return self.pool[key][1]
+            return super(ExpirableDict, self).__getitem__(key)[1]
 
     def get(self, key, default=None):
         with self.rlock:
-            if key in self.pool:
-                return self.pool.get(key)[1]
+            if key in self:
+                return super(ExpirableDict, self).get(key)[1]
             else:
                 return default
 
+    def pop(self, key, default=None):
+        with self.rlock:
+            return super(ExpirableDict, self).pop(key, default)
+
+
     def __setitem__(self, key, value):
         with self.rlock:
-            self.pool[key] = (datetime.datetime.now(), value)
+            super(ExpirableDict, self).__setitem__(key, (datetime.datetime.now(), value))
         self._clean_cache()
 
 
+@deconstructible
 class RestApiStorage(Storage):
     def __init__(self):
         self.result_file_pool = ExpirableDict()
