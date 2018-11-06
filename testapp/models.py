@@ -7,7 +7,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 from django.conf import settings
 from django.db import models
 
-from rest_models.backend.utils import JSONField
+from rest_models.storage import RestApiStorage
+
+if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    from rest_models.backend.utils import JSONField
+    has_jsonfield = True
+else:
+    # fake useless jsonfield
+    def JSONField(*args, **kwargs):
+        return None
+    has_jsonfield = False
 
 
 class Menu(models.Model):
@@ -43,6 +52,14 @@ class Pizza(models.Model):
 
     # extra field from serializers
     cost = models.FloatField()
+
+    class APIMeta:
+        db_name = 'api'
+
+
+class Review(models.Model):
+    comment = models.TextField(blank=True)
+    photo = models.ImageField(null=True, storage=RestApiStorage())
 
     class APIMeta:
         db_name = 'api'

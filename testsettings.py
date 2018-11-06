@@ -128,6 +128,8 @@ if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true':
 else:
     ROOT_URLCONF = 'testapi.urls'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
 DEBUG = True
 

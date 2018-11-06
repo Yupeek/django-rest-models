@@ -86,7 +86,10 @@ class LocalApiAdapter(BaseAdapter):
         response.encoding = get_encoding_from_headers(response.headers)
         response.raw = http_response
         response.reason = response.raw.reason_phrase
-        response._content = http_response.content
+        try:
+            response._content = http_response.content
+        except AttributeError:
+            response._streaming_content = http_response.streaming_content
         req = prepared_request
 
         if isinstance(req.url, bytes):  # pragma: no cover
@@ -249,6 +252,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
             url = url + '/'
         self.session = requests.Session()
         self.session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
+        self.session.mount('http://testserver', LocalApiAdapter())  # for special host used by django for unittests
         self.session.auth = self.auth = auth
         self.url = url
         self.retry = retry
