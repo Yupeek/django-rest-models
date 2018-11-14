@@ -5,8 +5,6 @@ Quick start
 Client
 ******
 
-
-
 Settings
 ========
 
@@ -38,19 +36,19 @@ Settings
     ]
 
 
-
 Models
 ======
 
 Create your models that will match your serializers on the api.
-The only customisation to make it a non database model is the addition of the class ``APIMeta``.
+The main customisation to make it a non database model is the addition of the class ``APIMeta``.
 Thanks to the RestModelRouter, this addition will choose the database with the rest_models backend
-as the backend to use.
+as the backend to use. see :ref:`APIMeta` for more details on all customisation.
 
 .. code-block:: python
 
     class MyModel(models.Model):
         field = models.IntegerField()
+        othermodel = models.ForeignKey(db_column="othermodel")
         ...
 
         class Meta:
@@ -60,6 +58,19 @@ as the backend to use.
         # the only customisation that makes this model special
         class APIMeta:
             pass
+
+
+.. note::
+
+  if you use any of these fields:
+
+    * ImageField
+    * FileField
+    * JSONField
+    * ForeignKey
+
+  you must take extra modifications on your models, see :ref:`models`.
+
 
 Usage
 =====

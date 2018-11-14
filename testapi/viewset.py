@@ -8,14 +8,19 @@ from django.views.decorators.csrf import csrf_exempt
 from dynamic_rest.viewsets import DynamicModelViewSet
 from rest_framework.permissions import DjangoModelPermissions
 
-from testapi.models import Menu, Pizza, PizzaGroup, Topping
+from testapi.models import Menu, Pizza, PizzaGroup, Review, Topping
 from testapi.serializers import (MenuSerializer, PizzaGroupSerializer, PizzaSerializer, PizzaToppingsSerializer,
-                                 ToppingSerializer)
+                                 ReviewSerializer, ToppingSerializer)
 
 
 class PizzaViewSet(DynamicModelViewSet):
     queryset = Pizza.objects.all()
     serializer_class = PizzaSerializer
+
+
+class ReviewViewSet(DynamicModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
 
 
 class ToppingViewSet(DynamicModelViewSet):

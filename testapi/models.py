@@ -8,15 +8,14 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-try:
+if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
     from django.contrib.postgres.fields import JSONField
-except ImportError:
+    has_jsonfield = True
+else:
     # fake useless jsonfield
     def JSONField(*args, **kwargs):
         return None
     has_jsonfield = False
-else:
-    has_jsonfield = True
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +54,14 @@ class Pizza(models.Model):
 
     def __str__(self):
         return self.name  # pragma: no cover
+
+
+class Review(models.Model):
+    comment = models.TextField(blank=True)
+    photo = models.ImageField(null=True)
+
+    def __str__(self):
+        return "review of %s" % self.pizza.name  # pragma: no cover
 
 
 class PizzaGroup(models.Model):

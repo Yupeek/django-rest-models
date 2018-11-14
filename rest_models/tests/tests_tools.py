@@ -2,12 +2,15 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import time
+import unittest
 
 from django.db import NotSupportedError, OperationalError
 from django.test import TestCase
 
 from rest_models.backend.compiler import (ApiResponseReader, QueryParser, SQLCompiler, build_aliases_tree,
                                           join_aliases, join_results, resolve_tree)
+from rest_models.storage import ExpirableDict
 from testapi import models as api_models
 from testapp import models as client_models
 
@@ -212,3 +215,43 @@ class TestJoinGenerator(TestCase):
             aliases['testapp_topping']: {'pizzas': datetime.date.today()},
         }
         self.assertRaisesMessage(NotSupportedError, "the result from the api ", list, join_results(row, resolved))
+
+
+class TestExpirableDict(unittest.TestCase):
+    def test_get_set(self):
+        ed = ExpirableDict()
+        ed[1] = 'a'
+        ed[2] = 'b'
+
+        self.assertEqual(len(ed), 2)
+        self.assertEqual(ed[1], 'a')
+        self.assertEqual(ed[2], 'b')
+        self.assertEqual(ed.get(1), 'a')
+        self.assertEqual(ed.get(2), 'b')
+        with self.assertRaises(KeyError):
+            _ = ed[3]
+
+    def test_delete(self):
+        ed = ExpirableDict()
+        ed[1] = 'a'
+        self.assertEqual(ed[1], 'a')
+        del ed[1]
+        with self.assertRaises(KeyError):
+            _ = ed[3]
+
+    def test_expriration(self):
+        ed = ExpirableDict(datetime.timedelta(seconds=0.01))
+        ed[1] = 'a'
+        ed[2] = 'b'
+        self.assertEqual(len(ed), 2)
+        self.assertEqual(ed[1], 'a')
+        self.assertEqual(ed[2], 'b')
+
+        time.sleep(0.02)
+        self.assertEqual(len(ed), 2)
+        self.assertEqual(ed[1], 'a')
+        self.assertEqual(ed[2], 'b')
+
+        ed[3] = 'c'
+        self.assertEqual(len(ed), 1)
+        self.assertEqual(ed[3], 'c')

@@ -8,7 +8,7 @@ import re
 from collections import namedtuple
 
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Transform
+from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
@@ -504,11 +504,12 @@ def join_aliases(aliases, responsereader, existing_aliases):
                 yield subresult
 
 
-def join_results(row, resolved):
+def join_results(row, resolved, connection=None):
     """
     a generator that will generate each results possible for the row data and the resolved data
     :param row:
     :param resolved:
+    :param connection: the connection which can release a cursor for further query (like fetching files on the api)
     :return:
     """
     if not resolved:
@@ -533,13 +534,14 @@ def join_results(row, resolved):
         else:
             field = alias.model._meta.get_field(db_column)
 
-        if hasattr(field, "to_python"):
+        if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
+            res.append(field.storage.prepare_result_from_api(raw_val, connection.cursor()))
+        elif hasattr(field, "to_python"):
             python_val = field.to_python(raw_val)
             res.append(python_val)
-
         elif isinstance(raw_val, list):
             for val in raw_val:
-                for subresult in join_results(row, resolved[:]):
+                for subresult in join_results(row, resolved[:], connection):
                     yield res + [val] + subresult
             return
         else:
@@ -833,6 +835,7 @@ class SQLCompiler(BaseSQLCompiler):
         :return:
         """
         return json.get(self.META_NAME)
+
     # #####################################
     #       real query for select
     # #####################################
@@ -872,7 +875,7 @@ class SQLCompiler(BaseSQLCompiler):
             self.query_parser.resolve_path(col)
             for col, _, _ in self.select
             if not isinstance(col, RawSQL) or col.sql != '1'  # skip special case with exists()
-            ]
+        ]
         if not resolved:
             # nothing in select. special case in exists()
             yield [[]]
@@ -882,7 +885,7 @@ class SQLCompiler(BaseSQLCompiler):
             alias_list = list(resolve_tree(alias_tree))
 
             for row in join_aliases(alias_list, responsereader, {alias_tree.alias: item}):
-                for subresult in join_results(row, resolved):
+                for subresult in join_results(row, resolved, self.connection):
                     yield subresult
 
     def result_iter(self, responsereader):
@@ -974,19 +977,40 @@ class SQLInsertCompiler(SQLCompiler):
         opts = query.get_meta()
         can_bulk = not return_id and self.connection.features.has_bulk_insert
 
+        def build_data(obj):
+            """
+            build the dict sent to the api containing all fields data
+            :param obj: the object (model instance) to transform
+            :return: the dict sent to drest
+            """
+            return {
+                f.column: f.get_db_prep_save(
+                    getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
+                    connection=self.connection
+                )
+                for f in query.fields
+                if not isinstance(f, FileField)
+            }
+
+        def build_files(obj):
+            res = {}
+            for field in query.fields:
+                if isinstance(field, FileField):
+                    fieldfile = getattr(obj, field.attname) if query.raw else field.pre_save(obj, True)
+                    # file.name is the return of our storage.save => we get the content file instead of his name
+                    # to retreive it there.
+                    file = fieldfile.name
+                    res[field.column] = (file.name, file, file.content_type)
+            return res
+
         query_objs = query.objs
-        if can_bulk:
-            # bulk insert
+
+        if can_bulk and not any(f for f in query.fields if isinstance(f, FileField)):
+            # bulk insert if we can and there is no filefield
             data = [
-                {
-                    f.column: f.get_db_prep_save(
-                        getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
-                        connection=self.connection
-                    )
-                    for f in query.fields
-                    }
+                build_data(obj)
                 for obj in query_objs
-                ]
+            ]
 
             json = {
                 get_resource_name(query.model, many=True): data
@@ -1007,28 +1031,30 @@ class SQLInsertCompiler(SQLCompiler):
         else:
             result_json = None
             for obj in query_objs:
-                data = {
-                    f.column: f.get_db_prep_save(
-                        getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
-                        connection=self.connection
-                    )
-                    for f in query.fields
-                    }
+                files = build_files(obj)
 
                 json = {
-                    get_resource_name(query.model, many=False): data
+                    get_resource_name(query.model, many=False): build_data(obj)
                 }
                 response = self.connection.cursor().post(
                     get_resource_path(self.query.model),
-                    json=json
+                    json=json,
+                    files=files
                 )
                 if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with %s.\n%s" % (
-                        obj, json, message_from_response(response)))
+                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s,files=%s.\n%s" % (
+                        obj, json, files, message_from_response(response)))
                 result_json = response.json()
                 new = result_json[get_resource_name(query.model, many=False)]
                 for field in opts.concrete_fields:
-                    setattr(obj, field.attname, field.to_python(new[field.concrete and field.db_column or field.name]))
+                    raw_val = new[field.concrete and field.db_column or field.name]
+                    if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
+                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
+                    elif hasattr(field, "to_python"):
+                        python_val = field.to_python(raw_val)
+                    else:
+                        python_val = raw_val
+                    setattr(obj, field.attname, python_val)
 
             if return_id and result_json:
                 return result_json[get_resource_name(query.model, many=False)][opts.pk.column]
@@ -1063,7 +1089,7 @@ class SQLUpdateCompiler(SQLCompiler):
                     val, connection=self.connection
                 )
                 for field, _, val in self.query.values
-                }
+            }
         }
 
     def execute_sql(self, result_type=MULTI, chunk_size=None):
@@ -1086,4 +1112,4 @@ class SQLAggregateCompiler(SQLCompiler):
 
     def execute_sql(self, result_type=MULTI, chunk_size=None):
         raise NotSupportedError("the aggregation for the database %s is not supported : %s" % (
-                                self.connection.alias, self.query))  # pragma: no cover
+            self.connection.alias, self.query))  # pragma: no cover
