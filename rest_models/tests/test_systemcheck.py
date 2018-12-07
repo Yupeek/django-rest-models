@@ -10,6 +10,7 @@ from django.core.management.base import SystemCheckError
 from django.db.utils import ProgrammingError
 from django.test.testcases import TestCase
 from django.test.utils import modify_settings, override_settings
+from dynamic_rest.routers import directory
 
 from rest_models.test import RestModelTestCase
 
@@ -32,6 +33,17 @@ class SystemCheckTest(TestCase):
             interactive=False,
             test_flush=True)
 #           settings.skip_check.set(False)
+
+    @classmethod
+    def tearDownClass(cls):
+        # hack to prevent some global varible to be tainted by our activation of badapi
+        try:
+            del directory['a']
+            del directory['aa']
+            del directory['b']
+            del directory['bb']
+        except KeyError:
+            pass
 
     def setUp(self):
         from testapp.badapp import models
@@ -93,6 +105,17 @@ class TestErrorsCheck(RestModelTestCase):
         'name': 'A List', 'resource_name': 'a'}
 
     database_rest_fixtures = {}
+
+    @classmethod
+    def tearDownClass(cls):
+        # hack to prevent some global varible to be tainted by our activation of badapi
+        try:
+            del directory['a']
+            del directory['aa']
+            del directory['b']
+            del directory['bb']
+        except KeyError:
+            pass
 
     def test_missing_feature(self):
         res_no_feature = copy.deepcopy(self.res_ok)
