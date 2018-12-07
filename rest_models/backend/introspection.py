@@ -69,7 +69,9 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         try:
             obj = data[ressource_name][0]
         except IndexError:
-            logger.exception("can't introspect %s. there is no data in the api for this model." % (ressource_name,))
+            logger.exception("can't introspect relatinos for  %s. "
+                             "there is no data in the api for this model and we use existing data to guess it.",
+                             ressource_name)
             obj = {}
 
         return {

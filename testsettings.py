@@ -164,6 +164,11 @@ LOGGING = {
         },
     },
     'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
         'django': {
             'handlers': ['console'],
             'level': 'ERROR',

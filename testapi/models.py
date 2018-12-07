@@ -61,12 +61,12 @@ class Review(models.Model):
     photo = models.ImageField(null=True)
 
     def __str__(self):
-        return "review of %s" % self.pizza.name  # pragma: no cover
+        return "review %s" % self.id  # pragma: no cover
 
 
 class PizzaGroup(models.Model):
 
-    parent = models.ForeignKey("self", related_name='children')
+    parent = models.ForeignKey("self", related_name='children', null=True)
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')
 

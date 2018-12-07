@@ -13,3 +13,4 @@ class TestIntrospection(TestCase):
         res = six.StringIO()
         call_command('inspectdb', database='api', stdout=res)
         self.assertIn('class Topping(models.Model):', res.getvalue())
+        self.assertIn('class Review(models.Model):', res.getvalue())
