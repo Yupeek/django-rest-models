@@ -1,7 +1,6 @@
 import os
 
 
-
 try:
     from django.core.paginator import UnorderedObjectListWarning
     import warnings
@@ -55,7 +54,7 @@ DATABASES = {
     },
 }
 
-ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = (
     # Default Django apps
