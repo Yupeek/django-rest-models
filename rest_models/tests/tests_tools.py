@@ -230,6 +230,7 @@ class TestExpirableDict(unittest.TestCase):
         self.assertEqual(ed.get(2), 'b')
         with self.assertRaises(KeyError):
             _ = ed[3]
+            del _
 
     def test_delete(self):
         ed = ExpirableDict()
@@ -238,6 +239,7 @@ class TestExpirableDict(unittest.TestCase):
         del ed[1]
         with self.assertRaises(KeyError):
             _ = ed[3]
+            del _
 
     def test_expriration(self):
         ed = ExpirableDict(datetime.timedelta(seconds=0.01))

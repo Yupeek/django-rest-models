@@ -36,6 +36,36 @@ class TestUploadDRF(TestCase):
         if os.path.exists(path):
             os.unlink(path)
 
+    def test_null_value(self):
+        review_api = apimodels.Review.objects.create(
+            comment="coucou",
+            photo=None,
+        )
+        self.assertFalse(review_api.photo)
+        self.assertFalse(review_api.photo.name)
+        review_api.refresh_from_db()
+        self.assertFalse(review_api.photo)
+        self.assertFalse(review_api.photo.name)
+
+        review_client = clientmodels.Review.objects.get(pk=review_api.pk)
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+
+    def test_null_value_client(self):
+        review_client = clientmodels.Review.objects.create(
+            comment="coucou",
+            photo=None,
+        )
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+        review_client.refresh_from_db()
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+
+        review_api = apimodels.Review.objects.get(pk=review_client.pk)
+        self.assertFalse(review_api.photo)
+        self.assertFalse(review_api.photo.name)
+
     def test_url_files(self):
 
         review_api = apimodels.Review.objects.create(

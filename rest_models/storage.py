@@ -49,7 +49,6 @@ class ExpirableDict(dict):
         with self.rlock:
             return super(ExpirableDict, self).pop(key, default)
 
-
     def __setitem__(self, key, value):
         with self.rlock:
             super(ExpirableDict, self).__setitem__(key, (datetime.datetime.now(), value))
@@ -64,6 +63,8 @@ class RestApiStorage(Storage):
     def prepare_result_from_api(self, result, cursor):
         # result is the full url from the api, we will return only the name,
         # and store the full url for later
+        if result is None:
+            return None
         name = os.path.basename(result)
         self.result_file_pool[name] = result, cursor
         return name

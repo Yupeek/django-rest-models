@@ -68,7 +68,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         ressource_name = list(set(data.keys()) - {'meta'})[0]
         try:
             obj = data[ressource_name][0]
-        except IndexError as ie:
+        except IndexError:
             logger.exception("can't introspect %s. there is no data in the api for this model." % (ressource_name,))
             obj = {}
 

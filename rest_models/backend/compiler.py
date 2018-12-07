@@ -1000,7 +1000,8 @@ class SQLInsertCompiler(SQLCompiler):
                     # file.name is the return of our storage.save => we get the content file instead of his name
                     # to retreive it there.
                     file = fieldfile.name
-                    res[field.column] = (file.name, file, file.content_type)
+                    if file is not None:  # field value can be None....
+                        res[field.column] = (file.name, file, file.content_type)
             return res
 
         query_objs = query.objs
