@@ -15,7 +15,7 @@ def message_from_response(response):
 
 try:
     from django.contrib.postgres.fields import JSONField as JSONFieldLegacy
-except ImportError as e:
+except ImportError:
     def JSONField(*args, **kwargs):
         return None
 else:

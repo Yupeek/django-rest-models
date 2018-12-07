@@ -17,6 +17,7 @@ Contents:
    :maxdepth: 2
 
    quickstart
+   models
    settings
    testing
    middlewares

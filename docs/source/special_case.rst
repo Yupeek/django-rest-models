@@ -74,39 +74,39 @@ This requires the creation of the serializer and viewset for this auto created m
 
 .. code:: python
 
-	# serializer.py
-	# many2many through serializer
-	class PizzaToppingsSerializer(DynamicModelSerializer):
-		class Meta:
-			model = Pizza._meta.get_field('toppings').rel.through
-			name = 'Pizza_topping'
-			fields = ('id', 'pizza', 'topping',)
+  # serializer.py
+  # many2many through serializer
+  class PizzaToppingsSerializer(DynamicModelSerializer):
+    class Meta:
+      model = Pizza._meta.get_field('toppings').rel.through
+      name = 'Pizza_topping'
+      fields = ('id', 'pizza', 'topping',)
 
-		topping = DynamicRelationField('ToppingSerializer', many=False, required=False)
-		pizza = DynamicRelationField('PizzaSerializer', many=False, required=False)
+    topping = DynamicRelationField('ToppingSerializer', many=False, required=False)
+    pizza = DynamicRelationField('PizzaSerializer', many=False, required=False)
 
-	# models.py
-	class Pizza_toppingsViewSet(DynamicModelViewSet):
-		serializer_class = PizzaToppingsSerializer
-		queryset = PizzaToppingsSerializer.get_model().objects.all()
+  # models.py
+  class Pizza_toppingsViewSet(DynamicModelViewSet):
+    serializer_class = PizzaToppingsSerializer
+    queryset = PizzaToppingsSerializer.get_model().objects.all()
 
 
-	# urls.py
-	router.register('Pizza_topping', Pizza_toppingsViewSet)
+  # urls.py
+  router.register('Pizza_topping', Pizza_toppingsViewSet)
 
 and the client should use it as any other model, without declaring it as a through model of Pizza and Topping
 
 .. code:: python
 
 
-	class Pizza_topping(models.Model):
-		pizza = models.ForeignKey(Pizza, on_delete=models.CASCADE, db_column='pizza', related_name='+')
-		topping = models.ForeignKey(Topping, on_delete=models.CASCADE, db_column='topping', related_name='+')
+  class Pizza_topping(models.Model):
+    pizza = models.ForeignKey(Pizza, on_delete=models.CASCADE, db_column='pizza', related_name='+')
+    topping = models.ForeignKey(Topping, on_delete=models.CASCADE, db_column='topping', related_name='+')
 
-		class APIMeta:
-			db_name = 'api'
-			resource_name = 'Pizza_topping'
-			resource_name_plural = 'Pizza_toppings'
+    class APIMeta:
+      db_name = 'api'
+      resource_name = 'Pizza_topping'
+      resource_name_plural = 'Pizza_toppings'
 
-		class Meta:
-			auto_created = True
+    class Meta:
+      auto_created = True

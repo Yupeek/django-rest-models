@@ -6,7 +6,7 @@ from dynamic_rest.fields.fields import DynamicRelationField
 from dynamic_rest.serializers import DynamicModelSerializer
 from rest_framework.fields import IntegerField, SerializerMethodField
 
-from testapi.models import Menu, Pizza, PizzaGroup, Topping
+from testapi.models import Menu, Pizza, PizzaGroup, Review, Topping
 
 
 class ToppingSerializer(DynamicModelSerializer):
@@ -46,6 +46,14 @@ class PizzaSerializer(DynamicModelSerializer):
 
     def get_cost(self, obj):
         return obj.toppings.aggregate(cost=Sum('cost'))['cost']
+
+
+class ReviewSerializer(DynamicModelSerializer):
+
+    class Meta:
+        model = Review
+        name = 'review'
+        fields = ('id', 'comment', 'photo', )
 
 
 class PizzaGroupSerializer(DynamicModelSerializer):

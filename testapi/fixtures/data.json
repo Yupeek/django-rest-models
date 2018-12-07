@@ -160,5 +160,22 @@
       "from_date": "2016-11-15",
       "to_date": "2016-11-20T08:46:02.016"
     }
+  },
+  {
+    "model": "testapi.pizzagroup",
+    "pk": 2,
+    "fields": {
+      "parent": null,
+      "name": "sub",
+      "pizzas": []
+    }
+  },
+  {
+    "model": "testapi.review",
+    "pk": 3,
+    "fields": {
+      "comment": "lollolollo",
+      "photo": ""
+    }
   }
 ]
