@@ -166,24 +166,24 @@ LOGGING = {
     'loggers': {
         '': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'propagate': True,
         },
-        'django': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'rest_models': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        }
+        # 'django': {
+        #     'handlers': ['console'],
+        #     'level': 'ERROR',
+        #     'propagate': True,
+        # },
+        # 'django.request': {
+        #     'handlers': ['console'],
+        #     'level': 'ERROR',
+        #     'propagate': False,
+        # },
+        # 'rest_models': {
+        #     'handlers': ['console'],
+        #     'level': 'ERROR',
+        #     'propagate': False,
+        # }
     }
 }
 
