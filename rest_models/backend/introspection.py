@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+from django.conf import settings
 from django.db.backends.base.introspection import BaseDatabaseIntrospection, FieldInfo, TableInfo
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,12 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         res = cursor.get('', params={'format': 'json'})
         if res.status_code != 200:
             raise Exception("error while querying the table list %s: "
-                            "[%s] %s" % (res.request.url, res.status_code, res.text[:500]))
+                            "[%s] %s" % (res.request.url, res.status_code,
+                                         res.text[
+                                             slice(None, None)
+                                             if settings.DEBUG
+                                             else slice(None, 500)
+                                         ]))
         tables = res.json().keys()
         for table in tables:
             response = cursor.options(table)
