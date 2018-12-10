@@ -26,10 +26,13 @@ class TestUploadDRF(TestCase):
 
     def setUp(self):
         self.img_name = str(uuid4()) + '.png'
+        self.img_name2 = str(uuid4()) + '.png'
         self.unlinkimg(self.img_name)
+        self.unlinkimg(self.img_name2)
 
     def tearDown(self):
         self.unlinkimg(self.img_name)
+        self.unlinkimg(self.img_name2)
 
     def unlinkimg(self, img_name):
         path = os.path.join(settings.MEDIA_ROOT, img_name)
@@ -159,10 +162,9 @@ class TestUploadDRF(TestCase):
         review_api.refresh_from_db()
         self.assertFalse(review_api.photo)
         self.assertFalse(review_api.photo.name)
-        img_name2 = 'lolilol.png'
-        review_client.photo = SimpleUploadedFile(img_name2, white_png, 'image/png')
+        review_client.photo = SimpleUploadedFile(self.img_name2, white_png, 'image/png')
         review_client.save()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % img_name2)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2)
         review_client.refresh_from_db()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % img_name2)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2)
         self.assertEqual(review_client.photo.file.read(), white_png)
