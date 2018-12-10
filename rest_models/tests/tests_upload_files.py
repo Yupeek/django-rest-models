@@ -26,10 +26,13 @@ class TestUploadDRF(TestCase):
 
     def setUp(self):
         self.img_name = str(uuid4()) + '.png'
+        self.img_name2 = str(uuid4()) + '.png'
         self.unlinkimg(self.img_name)
+        self.unlinkimg(self.img_name2)
 
     def tearDown(self):
         self.unlinkimg(self.img_name)
+        self.unlinkimg(self.img_name2)
 
     def unlinkimg(self, img_name):
         path = os.path.join(settings.MEDIA_ROOT, img_name)
@@ -124,3 +127,44 @@ class TestUploadDRF(TestCase):
 
         review_api = apimodels.Review.objects.get(pk=review_client.pk)
         self.assertEqual(review_api.photo.file.read(), white_png)
+
+    def test_null_value_update_from_client(self):
+        review_api = apimodels.Review.objects.create(
+            comment="coucou",
+            photo=None,
+        )
+        self.assertFalse(review_api.photo)
+        self.assertFalse(review_api.photo.name)
+
+        review_client = clientmodels.Review.objects.get(pk=review_api.pk)
+
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+        review_client.comment = 'comment'
+        review_client.save()
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+
+        review_client.photo = SimpleUploadedFile(self.img_name, white_png, 'image/png')
+        review_client.save()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
+        review_client.refresh_from_db()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
+        self.assertEqual(review_client.photo.file.read(), white_png)
+
+        review_client.photo = None
+        review_client.save()
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+        review_client.refresh_from_db()
+        self.assertFalse(review_client.photo)
+        self.assertFalse(review_client.photo.name)
+        review_api.refresh_from_db()
+        self.assertFalse(review_api.photo)
+        self.assertFalse(review_api.photo.name)
+        review_client.photo = SimpleUploadedFile(self.img_name2, white_png, 'image/png')
+        review_client.save()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2)
+        review_client.refresh_from_db()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2)
+        self.assertEqual(review_client.photo.file.read(), white_png)

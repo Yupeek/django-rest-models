@@ -1078,33 +1078,66 @@ class SQLDeleteCompiler(SQLCompiler):
 
 
 class SQLUpdateCompiler(SQLCompiler):
-    def resolve_data(self):
+    def resolve_data_n_files(self):
         """
         build the dict to send with a put/patch that contains the data to update
 
         :return:
         """
-        return {
-            get_resource_name(self.query.model, many=False): {
-                field.concrete and field.db_column or field.name: field.get_db_prep_save(
-                    val, connection=self.connection
-                )
-                for field, _, val in self.query.values
-            }
-        }
+
+        data = {}
+        files = {}
+        query = self.query
+        for field, _, val in query.values:
+            if isinstance(field, FileField):
+                fieldfile = field.pre_save(val.instance, False)
+                # file.name is the return of our storage.save => we get the content file instead of his name
+                # to retreive it there.
+                file = fieldfile.name
+                if file is not None:  # field value can be None....
+                    files[field.column] = (file.name, file, file.content_type)
+                else:
+                    data[field.column] = None
+            else:
+                fieldname = field.concrete and field.db_column or field.name
+                data[fieldname] = field.get_db_prep_save(val, connection=self.connection)
+
+        return (
+            {get_resource_name(self.query.model, many=False): data},  # json encoded data
+            files  # multipart file encoded data
+        )
 
     def execute_sql(self, result_type=MULTI, chunk_size=None):
         updated = 0
         if self.is_api_model():
-            q = self.query
-            json = self.resolve_data()
-            for id in self.resolve_ids():
+            query = self.query
+            json, files = self.resolve_data_n_files()
+            for id_ in self.resolve_ids():
                 result = self.connection.cursor().patch(
-                    get_resource_path(q.model, pk=id),
-                    json=json
+                    get_resource_path(query.model, pk=id_),
+                    json=json,
+                    files=files,
                 )
                 if result.status_code not in (200, 202, 204):
                     raise ProgrammingError("the update has failed : %s" % result.text)
+
+                # update object instance using result data if possible
+                result_json = result.json()
+                new = result_json[get_resource_name(query.model, many=False)]
+                instance_data = {}
+                obj = None
+                for field, _, val in self.query.values:
+                    raw_val = new[field.concrete and field.db_column or field.name]
+                    if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
+                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
+                        obj = val.instance
+                    elif hasattr(field, "to_python"):
+                        python_val = field.to_python(raw_val)
+                    else:
+                        python_val = raw_val
+                    instance_data[field.attname] = python_val
+                if obj:
+                    obj.__dict__.update(instance_data)
                 updated += 1
         return updated
 
