@@ -971,45 +971,51 @@ class SQLCompiler(BaseSQLCompiler):
 
 
 class SQLInsertCompiler(SQLCompiler):
+    def resolve_data_n_files(self, obj):
+        """
+        build the dict of files and data to send, from the values of obj.
+
+        :return:
+        """
+
+        data = {}
+        files = {}
+        query = self.query
+        for field in query.fields:
+            if isinstance(field, FileField):
+                fieldfile = getattr(obj, field.attname) if query.raw else field.pre_save(obj, True)
+                # file.name is the return of our storage.save => we get the content file instead of his name
+                # to retreive it there.
+                file = fieldfile.name
+
+                if file is not None:  # field value can be None....
+                    files[field.column] = (file.name, file, file.content_type)
+                else:
+                    data[field.column] = None
+            else:
+                fieldname = field.column
+                data[fieldname] = field.get_db_prep_save(
+                    getattr(obj, field.attname) if query.raw else field.pre_save(obj, True),
+                    connection=self.connection
+                )
+        if files:
+            return data, files
+        else:
+            return data, None
+
     def execute_sql(self, return_id=False, chunk_size=None):
         query = self.query
         """:type: django.db.models.sql.subqueries.InsertQuery"""
         opts = query.get_meta()
         can_bulk = not return_id and self.connection.features.has_bulk_insert
 
-        def build_data(obj):
-            """
-            build the dict sent to the api containing all fields data
-            :param obj: the object (model instance) to transform
-            :return: the dict sent to drest
-            """
-            return {
-                f.column: f.get_db_prep_save(
-                    getattr(obj, f.attname) if query.raw else f.pre_save(obj, True),
-                    connection=self.connection
-                )
-                for f in query.fields
-                if not isinstance(f, FileField)
-            }
-
-        def build_files(obj):
-            res = {}
-            for field in query.fields:
-                if isinstance(field, FileField):
-                    fieldfile = getattr(obj, field.attname) if query.raw else field.pre_save(obj, True)
-                    # file.name is the return of our storage.save => we get the content file instead of his name
-                    # to retreive it there.
-                    file = fieldfile.name
-                    if file is not None:  # field value can be None....
-                        res[field.column] = (file.name, file, file.content_type)
-            return res
-
         query_objs = query.objs
 
         if can_bulk and not any(f for f in query.fields if isinstance(f, FileField)):
             # bulk insert if we can and there is no filefield
+            # we send the json data as a dict.
             data = [
-                build_data(obj)
+                self.resolve_data_n_files(obj)[0]
                 for obj in query_objs
             ]
 
@@ -1018,7 +1024,7 @@ class SQLInsertCompiler(SQLCompiler):
             }
             response = self.connection.cursor().post(
                 get_resource_path(self.query.model),
-                json=json
+                json=json  # send json since we send a dict.
             )
             if response.status_code != 201:
                 raise FakeDatabaseDbAPI2.ProgrammingError(
@@ -1030,23 +1036,34 @@ class SQLInsertCompiler(SQLCompiler):
                 for field in opts.concrete_fields:
                     setattr(old, field.attname, field.to_python(new[field.concrete and field.db_column or field.name]))
         else:
+            # we send one object. we send all data as form-encoded data
             result_json = None
             for obj in query_objs:
-                files = build_files(obj)
-
-                json = {
-                    get_resource_name(query.model, many=False): build_data(obj)
-                }
+                obj_data, files = self.resolve_data_n_files(obj)
+                # first: make query to create the object with no files
                 response = self.connection.cursor().post(
                     get_resource_path(self.query.model),
-                    json=json,
-                    files=files
+                    json={get_resource_name(query.model, many=False): obj_data}
                 )
                 if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s,files=%s.\n%s" % (
-                        obj, json, files, message_from_response(response)))
+                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s.\n%s" % (
+                        obj, obj_data, message_from_response(response)))
                 result_json = response.json()
                 new = result_json[get_resource_name(query.model, many=False)]
+
+                if files:
+                    # then upload files
+                    url = get_resource_path(query.model, pk=new['id'])
+                    response_files = self.connection.cursor().patch(
+                        url,
+                        files=files
+                    )
+                    if response_files.status_code not in (200, 202, 204):
+                        raise FakeDatabaseDbAPI2.ProgrammingError(
+                            "error while creating (updating files) %s with files=%s.\n%s" % (
+                                obj, files, message_from_response(response)))
+                    new.update(response_files.json()[get_resource_name(query.model, many=False)])
+
                 for field in opts.concrete_fields:
                     raw_val = new[field.concrete and field.db_column or field.name]
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
@@ -1102,32 +1119,39 @@ class SQLUpdateCompiler(SQLCompiler):
                 fieldname = field.concrete and field.db_column or field.name
                 data[fieldname] = field.get_db_prep_save(val, connection=self.connection)
 
-        return (
-            {get_resource_name(self.query.model, many=False): data},  # json encoded data
-            files  # multipart file encoded data
-        )
+        return data, (files or None)
 
     def execute_sql(self, result_type=MULTI, chunk_size=None):
         updated = 0
         if self.is_api_model():
             query = self.query
-            json, files = self.resolve_data_n_files()
+            data, files = self.resolve_data_n_files()
             for id_ in self.resolve_ids():
-                result = self.connection.cursor().patch(
-                    get_resource_path(query.model, pk=id_),
-                    json=json,
-                    files=files,
-                )
-                if result.status_code not in (200, 202, 204):
-                    raise ProgrammingError("the update has failed : %s" % result.text)
 
-                # update object instance using result data if possible
-                result_json = result.json()
-                new = result_json[get_resource_name(query.model, many=False)]
+                url = get_resource_path(query.model, pk=id_)
+                result_json = {}
+                mixed = ([dict(json=data)] if data else []) + ([dict(files=files)] if files else [])
+                # do json update first and then patch files after.
+                # we can't do this in one request because wa can't mix json and file in the same patch
+                # and mixing data + files should not work because of typed values
+                for kw in mixed:
+                    result = self.connection.cursor().patch(
+                        url,
+                        **kw
+                    )
+                    if result.status_code not in (200, 202, 204):
+                        raise FakeDatabaseDbAPI2.ProgrammingError(
+                            "error while updating %s.pk=%s with data=%s,files=%s.\n%s" % (
+                             query.model.__name__, id_, data, files, message_from_response(result))
+                        )
+
+                    # update object instance using result data if possible
+                    result_json.update(result.json()[get_resource_name(query.model, many=False)])
+
                 instance_data = {}
                 obj = None
                 for field, _, val in self.query.values:
-                    raw_val = new[field.concrete and field.db_column or field.name]
+                    raw_val = result_json[field.concrete and field.db_column or field.name]
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
                         python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
                         obj = val.instance
