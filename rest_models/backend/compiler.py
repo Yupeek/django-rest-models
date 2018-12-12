@@ -1040,29 +1040,40 @@ class SQLInsertCompiler(SQLCompiler):
             result_json = None
             for obj in query_objs:
                 obj_data, files = self.resolve_data_n_files(obj)
-                # first: make query to create the object with no files
-                response = self.connection.cursor().post(
-                    get_resource_path(self.query.model),
-                    json={get_resource_name(query.model, many=False): obj_data}
-                )
-                if response.status_code != 201:
-                    raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s.\n%s" % (
-                        obj, obj_data, message_from_response(response)))
-                result_json = response.json()
-                new = result_json[get_resource_name(query.model, many=False)]
-
                 if files:
-                    # then upload files
-                    url = get_resource_path(query.model, pk=new['id'])
-                    response_files = self.connection.cursor().patch(
-                        url,
+                    # we make it in 2 requests: first we upload data and files to create the instance
+                    # then we update the instance with json which can be more accurate about None and special values
+
+                    response_files = self.connection.cursor().post(
+                        url=get_resource_path(query.model),
+                        data=obj_data,  # data will not be accurate enouth
                         files=files
                     )
-                    if response_files.status_code not in (200, 202, 204):
+                    if response_files.status_code != 201:
                         raise FakeDatabaseDbAPI2.ProgrammingError(
-                            "error while creating (updating files) %s with files=%s.\n%s" % (
-                                obj, files, message_from_response(response)))
-                    new.update(response_files.json()[get_resource_name(query.model, many=False)])
+                            "error while creating (uploading files and data) %s with data=%s ; files=%s.\n%s" % (
+                                obj, obj_data, files, message_from_response(response)))
+                    # update with json formated
+                    new_id = response_files.json()[get_resource_name(query.model, many=False)]['id']
+                    response = self.connection.cursor().patch(
+                        url=get_resource_path(query.model, pk=new_id),
+                        json={get_resource_name(query.model, many=False): obj_data}
+                    )
+                    if response.status_code not in (200, 202, 204):
+                        raise FakeDatabaseDbAPI2.ProgrammingError("error while updating %s with json=%s.\n%s" % (
+                            obj, obj_data, message_from_response(response)))
+                else:
+                    # update with json formated
+                    response = self.connection.cursor().post(
+                        url=get_resource_path(query.model),
+                        json={get_resource_name(query.model, many=False): obj_data}
+                    )
+                    if response.status_code != 201:
+                        raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s.\n%s" % (
+                            obj, obj_data, message_from_response(response)))
+
+                result_json = response.json()
+                new = result_json[get_resource_name(query.model, many=False)]
 
                 for field in opts.concrete_fields:
                     raw_val = new[field.concrete and field.db_column or field.name]
