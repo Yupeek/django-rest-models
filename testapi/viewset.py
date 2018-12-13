@@ -9,8 +9,8 @@ from dynamic_rest.viewsets import DynamicModelViewSet
 from rest_framework.permissions import DjangoModelPermissions
 
 from testapi.models import Menu, Pizza, PizzaGroup, Review, Topping
-from testapi.serializers import (MenuSerializer, PizzaGroupSerializer, PizzaSerializer, PizzaToppingsSerializer,
-                                 ReviewSerializer, ToppingSerializer)
+from testapi.serializers import (MenuSerializer, PizzaGroupSerializer, PizzaSerializer, ReviewSerializer,
+                                 ToppingSerializer)
 
 
 class PizzaViewSet(DynamicModelViewSet):
@@ -42,11 +42,6 @@ class MenuViewSet(DynamicModelViewSet):
 class PizzaGroupViewSet(DynamicModelViewSet):
     serializer_class = PizzaGroupSerializer
     queryset = PizzaGroup.objects.all()
-
-
-class Pizza_toppingsViewSet(DynamicModelViewSet):
-    serializer_class = PizzaToppingsSerializer
-    queryset = PizzaToppingsSerializer.get_model().objects.all()
 
 
 def wait(request):

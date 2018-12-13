@@ -65,20 +65,6 @@ class Review(models.Model):
         db_name = 'api'
 
 
-class Pizza_topping(models.Model):
-    pizza = models.ForeignKey(Pizza, on_delete=models.CASCADE, db_column='pizza', related_name='+')
-    topping = models.ForeignKey(Topping, on_delete=models.CASCADE, db_column='topping', related_name='+')
-
-    class APIMeta:
-        db_name = 'api'
-
-        resource_name = 'Pizza_topping'
-        resource_name_plural = 'Pizza_toppings'
-
-    class Meta:
-        auto_created = True
-
-
 class Bookmark(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     pizza_id = models.IntegerField(null=False)

@@ -5,13 +5,14 @@ import collections
 import itertools
 import logging
 import re
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
+from django.db.models.fields.related_lookups import RelatedExact, RelatedIn
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
@@ -235,6 +236,7 @@ class QueryParser(object):
         """
         self.query = query
         self._aliases = None
+        self._resolved_ids = None
         """
         the dict to store aliases giving the tuple
         :type: dict[str, Alias]
@@ -393,6 +395,8 @@ class QueryParser(object):
         a query on the api to fetch the ids.
         :return: the list of ids found, or None if it was not possible to find out.
         """
+        if self._resolved_ids is not None:
+            return self._resolved_ids
         ids = None
         first_connector = None
         try:
@@ -432,6 +436,7 @@ class QueryParser(object):
                 ids |= to_add
         if not ids:
             return None
+        self._resolved_ids = ids
         return ids
 
 
@@ -574,9 +579,64 @@ def simple_count(compiler, result):
     return False, None
 
 
+def introspect_many_to_many_relations(through):
+    """
+    helper to introspect a through model and return all usefull data like the many2many fields,
+    the fk and the related models.
+    return a list of 2 items: one for each «side» of the many2many.
+    each items contains a n3 tuple: the through.foreignkey, the related model, and the ManytoMany(Rel].
+    """
+    fields = []
+    for fk in through._meta.get_fields():
+        if fk.is_relation and fk.many_to_one:
+
+            for rel_model_f in fk.rel.model._meta.get_fields():
+                if rel_model_f.is_relation \
+                        and rel_model_f.many_to_many \
+                        and getattr(rel_model_f, 'rel', rel_model_f).through == through:
+                    fields.append((fk, fk.rel.model, rel_model_f))
+                    break
+            else:
+                raise AssertionError("we can't find the field used as relation using through %s" % through)
+
+    return fields
+
+
+def m2m_through(compiler, result):
+    # this si dark magic: instead of quering a auto created table, we get one side of the m2m, and we request it
+    # to get all values in the requested m2m
+    meta = compiler.query.get_meta()
+    if hasattr(meta, 'APIMeta') or not meta.auto_created or not meta.auto_created.APIMeta:
+        # this is a declared api model
+        return False, []
+    # this is a throug model apimodel <-> apimodel
+    assert compiler.query.where.connector == 'AND'  # we can only support a specific query to emuliate query on through
+    a, b = compiler.query.where.children
+    if isinstance(a, RelatedIn) and isinstance(b, RelatedExact):
+        rex = b
+    elif isinstance(b, RelatedIn) and isinstance(a, RelatedExact):
+        rex = a
+    else:
+        raise AssertionError("query on throuhg not supported: %s AND %s" % (a, b))
+    for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
+        if rex.lhs.target.rel.model == rel_model:
+            response = compiler.connection.cursor().get(
+                get_resource_path(rel_model, rex.rhs),
+                params={'exclude[]': '*', 'include[]': rel_m2m.name}
+            )
+            pks = response.json()[get_resource_name(rel_model)][rel_m2m.name]
+            if result == MULTI:
+                return True, [[(pk,) for pk in pks]]  # chunk of row of cols
+            else:
+                return True, [(pk,) for pk in pks]
+    else:
+        raise AssertionError("did not found a many2many relation using throug=%s" % (meta.model,))
+
+
 class SQLCompiler(BaseSQLCompiler):
     SPECIAL_CASES = [
-        simple_count
+        simple_count,
+        m2m_through,
     ]
 
     META_NAME = 'meta'
@@ -1003,10 +1063,58 @@ class SQLInsertCompiler(SQLCompiler):
         else:
             return data, None
 
+    def handle_insert_through(self):
+        """
+        special case where we don't insert into the given table because it's not exposed. we
+        handle this case by updating the field on either side of the through.
+        :return:
+        """
+        objs = self.query.objs
+        kept_n = None
+        kept_fks = None
+        other_fk = None
+        for fk, rel_model, rel_m2m in introspect_many_to_many_relations(self.query.get_meta().model):
+            cur_n = len({getattr(o, fk.name) for o in objs})
+            if kept_n is None or kept_n > cur_n:
+                other_fk = other_fk or fk
+                kept_n = cur_n
+                kept_fks = fk, rel_model, rel_m2m
+            else:
+                other_fk = fk
+        fk, rel_model, rel_m2m = kept_fks  # we restore the data about the model we will query and update
+
+        vals = defaultdict(list)
+        for obj in objs:
+            vals[getattr(obj, fk.attname)].append(getattr(obj, other_fk.attname))
+
+        for obj_pk, new_vals in vals.items():
+            url = get_resource_path(rel_model, obj_pk)
+            response = self.connection.cursor().get(
+                url,
+                params={'exclude[]': '*', 'include[]': rel_m2m.name}
+            )
+            if response.status_code != 200:
+                raise FakeDatabaseDbAPI2.ProgrammingError(
+                    "error while solving m2m final value at %s [%d]\n%s" %
+                    (url, response.status_code, response.text)
+                )
+            final_vals = set(new_vals) | set(response.json()[get_resource_name(rel_model)][rel_m2m.name])
+            response_update = self.connection.cursor().patch(
+                url,
+                json={get_resource_name(rel_model): {rel_m2m.name: list(final_vals)}}
+            )
+            if response_update.status_code not in (200, 202, 204):
+                raise FakeDatabaseDbAPI2.ProgrammingError(
+                    "error while solving m2m final value at %s [%d]\n%s" %
+                    (url, response_update.status_code, response.text)
+                )
+
     def execute_sql(self, return_id=False, chunk_size=None):
         query = self.query
         """:type: django.db.models.sql.subqueries.InsertQuery"""
         opts = query.get_meta()
+        if not hasattr(opts, 'APIMeta') and opts.auto_created and opts.auto_created.APIMeta:
+            return self.handle_insert_through()
         can_bulk = not return_id and self.connection.features.has_bulk_insert
 
         query_objs = query.objs
@@ -1089,20 +1197,78 @@ class SQLInsertCompiler(SQLCompiler):
                 return result_json[get_resource_name(query.model, many=False)][opts.pk.column]
 
 
+class FakeCursor(object):
+    """
+    a fake cursor with rowcount
+    """
+    def __init__(self, rowcount):
+        self.rowcount = rowcount
+
+
 class SQLDeleteCompiler(SQLCompiler):
     def execute_sql(self, result_type=MULTI, chunk_size=None):
+        opts = self.query.get_meta()
         if self.is_api_model():
 
             q = self.query
+            counter = 0
             # we don't care about many2many table, the api will clean it for us
             if not self.query.get_meta().auto_created:
 
-                for id in self.resolve_ids():
+                for id_ in self.resolve_ids():
+                    counter += 1
                     result = self.connection.cursor().delete(
-                        get_resource_path(q.model, pk=id),
+                        get_resource_path(q.model, pk=id_),
                     )
                     if result.status_code not in (200, 202, 204):
                         raise ProgrammingError("the deletion has failed : %s" % result.text)
+            count = counter
+        elif opts.auto_created and opts.auto_created.APIMeta:
+            # through
+            count = self.handle_delete_through()
+        if result_type == CURSOR:
+            return FakeCursor(count)
+
+    def handle_delete_through(self):
+        """
+        special case where we don't insert into the given table because it's not exposed. we
+        handle this case by updating the field on either side of the through.
+        :return:
+        """
+        meta = self.query.get_meta()
+        # this is a throug model apimodel <-> apimodel
+        assert self.query.where.connector == 'AND'  # we can only support a specific query to emuliate query on through
+
+        rin = rex = None
+        for part in self.query.where.children:
+            if isinstance(part, RelatedIn):
+                rin = part
+            elif isinstance(part, RelatedExact):
+                rex = part
+            else:
+                raise AssertionError("unexpected a part of the where clause to be %s for a through update" % part)
+        if rex is None:
+            # special case where we emulate CASCADE on through
+            return 1
+        for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
+            if rex.lhs.target.rel.model == rel_model:
+                if rin is None:
+                    # clear all entry
+                    final_pks = []
+                else:
+                    response = self.connection.cursor().get(
+                        get_resource_path(rel_model, rex.rhs),
+                        params={'exclude[]': '*', 'include[]': rel_m2m.name}
+                    )
+                    pks = response.json()[get_resource_name(rel_model)][rel_m2m.name]
+                    final_pks = set(pks) - set(rin.rhs)
+                response = self.connection.cursor().patch(
+                    get_resource_path(rel_model, rex.rhs),
+                    json={get_resource_name(rel_model): {rel_m2m.name: list(final_pks)}}
+                )
+                if response.status_code not in (200, 202, 204):
+                    raise ProgrammingError("the deletion of m2m intry has failed : %s" % response.text)
+                return 1
 
 
 class SQLUpdateCompiler(SQLCompiler):
