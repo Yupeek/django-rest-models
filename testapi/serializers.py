@@ -67,14 +67,3 @@ class PizzaGroupSerializer(DynamicModelSerializer):
         model = PizzaGroup
         name = 'pizzagroup'
         fields = ('id', 'name', 'pizzas', 'children', 'parent')
-
-
-# many2many through serializer
-class PizzaToppingsSerializer(DynamicModelSerializer):
-    class Meta:
-        model = Pizza._meta.get_field('toppings').rel.through
-        name = 'Pizza_topping'
-        fields = ('id', 'pizza', 'topping',)
-
-    topping = DynamicRelationField('ToppingSerializer', many=False, required=False)
-    pizza = DynamicRelationField('PizzaSerializer', many=False, required=False)

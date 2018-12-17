@@ -152,22 +152,72 @@ class TestQueryInsert(TestCase):
         for p in pizzas:
             self.assertIsNone(p.pk)
 
-    def test_many2many_insert(self):
-        p = client_models.Pizza.objects.create(
-            name='savoyarde',
-            price=13.3,
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
-        )
-        client_models.Topping.objects.create(
-            cost=1,
-            name='tomate',
-        )
-        topping = client_models.Topping.objects.get(name='tomate')
-        client_models.Pizza_topping.objects.create(topping=topping, pizza=p)
-        self.assertEqual(list(p.toppings.all()), [topping])
 
+class TestM2M(TestCase):
+    fixtures = ['data.json']
+
+    def setUp(self):
+        self.p4 = api_models.Pizza.objects.create(
+            pk=4,
+            name="vomito",
+            price=0
+        )
+        self.topping7 = api_models.Topping.objects.create(
+            pk=7,
+            cost=0.5,
+            name="champi perimé",
+        )
+
+    def test_many2many_insert(self):
+        p = client_models.Pizza.objects.get(pk=4)
+        p2 = client_models.Pizza.objects.get(pk=3)
+
+        topping = client_models.Topping.objects.get(pk=7)
+
+        self.assertEqual(list(p.toppings.all()), [])
+        self.assertEqual(list(topping.pizzas.all()), [])
+
+        topping.pizzas.add(p, p2)
+
+        self.assertEqual(list(p.toppings.all()), [topping])
+        self.assertEqual(set(topping.pizzas.all()), {p, p2})
+
+    def test_many2many_delete(self):
+        p = client_models.Pizza.objects.get(pk=3)
+        topping = client_models.Topping.objects.get(pk=6)
+        topping2 = client_models.Topping.objects.get(pk=4)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6, )])
         self.assertEqual(list(topping.pizzas.all()), [p])
+
+        p.toppings.remove(topping, topping2)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1, )])
+        self.assertEqual(list(topping.pizzas.all()), [])
+
+    def test_many2many_set(self):
+        p = client_models.Pizza.objects.get(pk=3)
+        topping = client_models.Topping.objects.get(pk=6)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
+        self.assertEqual(list(topping.pizzas.all()), [p])
+        vals = client_models.Topping.objects.filter(pk__in=[1, 2])
+        p.toppings.set(vals)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (2,)])
+        self.assertEqual(list(topping.pizzas.all()), [])
+
+    def test_many2many_clear(self):
+        p = client_models.Pizza.objects.get(pk=3)
+        topping = client_models.Topping.objects.get(pk=6)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
+        self.assertEqual(list(topping.pizzas.all()), [p])
+
+        topping.pizzas.clear()
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), ])
+        self.assertEqual(list(topping.pizzas.all()), [])
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
