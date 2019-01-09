@@ -180,8 +180,10 @@ class TestMockDataError(TestCase):
     def test_found_bad_filters(self):
         with self.assertRaises(Exception) as e:
             self.cnx.get('c')
-        self.assertEqual(e.exception.args, ("the query 'c' was not provided as mocked data: "
-                                            "1 fixture for this url, but filter did not match",))
+        self.assertTrue(e.exception.args[0].startswith("the query 'c' was not provided as mocked data: "
+                                                       "1 fixture for this url, but filter did not match. "
+                                                       "got "
+                                                       ))
 
     def test_ok(self):
         self.cnx.post('c', data={})

@@ -70,7 +70,8 @@ class LocalApiAdapter(BaseAdapter):
     def http_response_to_response(self, http_response, prepared_request):
         """
         transform a WSGIResponse into a requests's Response model
-        :param django.http.response.HttpResponse http_response: the http response send by django view
+        :param django.http.response.HttpResponse|django.http.response.StreamingHttpResponse http_response:
+            the http response send by django view
         :return: the requests's Response model corresponding to the http_response
         :rtype: Response
         """
@@ -89,7 +90,8 @@ class LocalApiAdapter(BaseAdapter):
         try:
             response._content = http_response.content
         except AttributeError:
-            response._streaming_content = http_response.streaming_content
+            response._content = http_response.getvalue()
+            response.raw.read = lambda *args: http_response.getvalue()
         req = prepared_request
 
         if isinstance(req.url, bytes):  # pragma: no cover
@@ -217,19 +219,25 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
     def request(self, method, url, **kwargs):
 
         start = time.time()
+        response = None
         try:
-            return self.connection.request(method, url, **kwargs)
+            response = self.connection.request(method, url, **kwargs)
         finally:
             stop = time.time()
             duration = stop - start
             sql = build_url(url, kwargs['params'])
             self.db.queries_log.append({
                 'sql': "%s %s ||| %s" % (method, sql, kwargs),
-                'time': "%.3f" % duration,
+                'time': "%.3f " % (
+                    response.elapsed.total_seconds() if response else 0.
+                )
             })
-            logger.debug('(%.3f) %s %s; args=%s' % (duration, method, sql, kwargs),
-                         extra={'duration': duration, 'sql': sql, 'params': kwargs, 'method': method}
+            logger.debug('(%.3f) (backend:%.3f) %s %s; args=%s' % (duration, response.elapsed.total_seconds(),
+                                                                   method, sql, kwargs),
+                         extra={'duration': duration, 'backend': response.elapsed.total_seconds(),
+                                'sql': sql, 'params': kwargs, 'method': method}
                          )
+        return response
 
 
 class ApiConnexion(ApiVerbShortcutMixin):

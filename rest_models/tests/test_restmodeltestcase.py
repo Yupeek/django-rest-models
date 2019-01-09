@@ -6,12 +6,13 @@ import os
 from django.db import connections
 
 from rest_models.test import RestModelTestCase
+from rest_models.utils import Path
 from testapp.models import Menu
 
 
 class TestLoadFixtureTest(RestModelTestCase):
     rest_fixtures = {
-        'c': str(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json')),
+        'c': Path(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json')),
         "a": [],
         "b": [{
             "status_code": 503,
@@ -36,12 +37,14 @@ class TestLoadFixtureTest(RestModelTestCase):
     def test_fixtures_loaded(self):
         self.assertEqual(self.client.get('c').json(), {'C': 'c'})
         self.assertEqual(self.client.get('d').json(), {'A': 'a', 'B': 'b'})
-        self.assertRaisesMessage(Exception,
-                                 "the query 'a' was not provided as mocked data: "
-                                 "0 fixture for this url, but filter did not match",
-                                 self.client.get, 'a')
         r = self.client.get('b')
         self.assertEqual(r.status_code, 503)
+
+    def test_fixtures_loaded_missing(self):
+        self.assertRaisesMessage(Exception,
+                                 "the query 'a' was not provided as mocked data: "
+                                 "urls was %r" % (['b', 'c', 'd'], ),
+                                 self.client.get, 'a')
 
     def test_variable_fixtures(self):
         self.rest_fixtures_variables['user'] = '123'

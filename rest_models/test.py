@@ -114,7 +114,10 @@ class MockDataApiMiddleware(ApiMiddleware):
             # no mocked data have matched
             return self.not_found(url,
                                   self,
-                                  extra='%s fixture for this url, but filter did not match' % len(results_for_url)
+                                  extra='%s fixture for this url, but filter did not match. got %s' % (
+                                      len(results_for_url),
+                                      params
+                                  )
                                   )
 
         data = result_found.get('data')

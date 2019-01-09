@@ -1184,7 +1184,10 @@ class SQLInsertCompiler(SQLCompiler):
                 new = result_json[get_resource_name(query.model, many=False)]
 
                 for field in opts.concrete_fields:
-                    raw_val = new[field.concrete and field.db_column or field.name]
+                    try:
+                        raw_val = new[field.concrete and field.db_column or field.name]
+                    except KeyError:
+                        continue
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
                         python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
                     elif hasattr(field, "to_python"):
@@ -1328,7 +1331,10 @@ class SQLUpdateCompiler(SQLCompiler):
                 instance_data = {}
                 obj = None
                 for field, _, val in self.query.values:
-                    raw_val = result_json[field.concrete and field.db_column or field.name]
+                    try:
+                        raw_val = result_json[field.concrete and field.db_column or field.name]
+                    except KeyError:
+                        continue
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
                         python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
                         obj = val.instance

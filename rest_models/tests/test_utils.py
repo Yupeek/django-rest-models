@@ -11,7 +11,7 @@ from django.test.testcases import TestCase
 import rest_models.utils
 from rest_models.backend.connexion import ApiConnexion
 from rest_models.test import MockDataApiMiddleware, PrintQueryMiddleware
-from rest_models.utils import JsonFixtures
+from rest_models.utils import JsonFixtures, Path
 
 
 def load_tests(loader, tests, ignore):
@@ -19,37 +19,37 @@ def load_tests(loader, tests, ignore):
     return tests
 
 
-PARTIAL_DATA_FIXTURES = str(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json'))
-FULL_TEST_FIXTURES = str(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'full_test_fixtures.json'))
+PARTIAL_DATA_FIXTURES = Path(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json'))
+FULL_TEST_FIXTURES = Path(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'full_test_fixtures.json'))
 
 
 class TestLoadFixtures(TestCase):
     def test_fixtures_file_full_path(self):
         a = JsonFixtures(FULL_TEST_FIXTURES)
         self.assertEqual(a._load(), {
-            'a': None,
-            'b': 503,
-            'd': {'A': 'a', 'B': 'b'}
+            'a': [None],
+            'b': [503],
+            'd': [{'A': 'a', 'B': 'b'}],
         })
 
     def test_fixtures_file_full_str(self):
-        a = JsonFixtures(str(FULL_TEST_FIXTURES))
+        a = JsonFixtures(Path(FULL_TEST_FIXTURES))
         self.assertEqual(a._load(), {
-            'a': None,
-            'b': 503,
-            'd': {'A': 'a', 'B': 'b'}
+            'a': [None],
+            'b': [503],
+            'd': [{'A': 'a', 'B': 'b'}]
         })
 
     def test_raw_data(self):
         a = JsonFixtures(**{
             'a': None,
-            'b': 503,
+            'b': (503,),
             'd': {'A': 'a', 'B': 'b'}
         })
         self.assertEqual(a._load(), {
-            'a': None,
-            'b': 503,
-            'd': {'A': 'a', 'B': 'b'}
+            'a': [None],
+            'b': [503],
+            'd': [{'A': 'a', 'B': 'b'}]
         })
 
     def test_fixtures_file_partial_path(self):
@@ -60,7 +60,7 @@ class TestLoadFixtures(TestCase):
 
     def test_fixtures_file_partial_str(self):
         a = JsonFixtures(
-            c=str(PARTIAL_DATA_FIXTURES)
+            c=Path(PARTIAL_DATA_FIXTURES)
         )
         self.assertEqual(a._load(), {'c': [{'data': {'C': 'c'}}, {}, {}]})
 
@@ -68,10 +68,10 @@ class TestLoadFixtures(TestCase):
         b = JsonFixtures(FULL_TEST_FIXTURES)
         a = JsonFixtures(b, c=[1, 2, 3])
         self.assertEqual(a._load(), {
-            'a': None,
-            'b': 503,
+            'a': [None],
+            'b': [503],
             'c': [1, 2, 3],
-            'd': {'A': 'a', 'B': 'b'}
+            'd': [{'A': 'a', 'B': 'b'}]
         })
 
     def test_args(self):
@@ -85,10 +85,10 @@ class TestLoadFixtures(TestCase):
             }
         )
         self.assertEqual(a._load(), {
-            'a': None,
-            'b': 502,
+            'a': [None],
+            'b': [503, 502],
             'c': [{'data': {'C': 'c'}}, {}, {}],
-            'd': {'A': 'a', 'B': 'b'}
+            'd': [{'A': 'a', 'B': 'b'}]
         })
 
     def test_type_error(self):
@@ -104,7 +104,7 @@ class TestLoadFixtures(TestCase):
         with self.assertRaises(KeyError):
             a["/me/1234/"]
         v['userid'] = 1234
-        self.assertIs(a["/me/1234/"], o)
+        self.assertEqual(a["/me/1234/"], [o])
 
     def test_load_bad_fixtures(self):
         _, path = tempfile.mkstemp(".json", text=True)

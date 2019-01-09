@@ -202,6 +202,10 @@ dynamic-rest filtering system too.
         Pizza.objects.exclude(..., ...).exclude(...)
         Pizza.objects.filter(Q(..) & Q(..))
         Pizza.objects.none()
+        pizza.toppings.add(...)
+        pizza.toppings.remove(...)
+        pizza.toppings.set(...)
+        pizza.toppings.clear(...)
 
 .. note::
 

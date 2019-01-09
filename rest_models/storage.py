@@ -4,7 +4,7 @@ import logging
 import os
 import threading
 
-from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
@@ -73,8 +73,9 @@ class RestApiStorage(Storage):
         if 'r' not in mode:
             NotImplementedError("This backend doesn't support writing on file.")
         cursor = self.get_cursor(name)  # fetch a valid cursor which just got the name
-        response = cursor.session.get(self.url(name), stream=True)
-        return File(response.raw.file_to_stream, name)
+        response = cursor.session.get(self.url(name))
+        response.raise_for_status()
+        return ContentFile(response.content, name)
 
     def _save(self, name, content):
         # self.uploaded_file_pool[id] = content
