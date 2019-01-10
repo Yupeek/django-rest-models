@@ -226,15 +226,14 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
             stop = time.time()
             duration = stop - start
             sql = build_url(url, kwargs['params'])
+            elapsed_sec = response.elapsed.total_seconds() if response else 0.
             self.db.queries_log.append({
                 'sql': "%s %s ||| %s" % (method, sql, kwargs),
-                'time': "%.3f " % (
-                    response.elapsed.total_seconds() if response else 0.
-                )
+                'time': "%.3f " % elapsed_sec
             })
-            logger.debug('(%.3f) (backend:%.3f) %s %s; args=%s' % (duration, response.elapsed.total_seconds(),
+            logger.debug('(%.3f) (backend:%.3f) %s %s; args=%s' % (duration, elapsed_sec,
                                                                    method, sql, kwargs),
-                         extra={'duration': duration, 'backend': response.elapsed.total_seconds(),
+                         extra={'duration': duration, 'backend': elapsed_sec,
                                 'sql': sql, 'params': kwargs, 'method': method}
                          )
         return response

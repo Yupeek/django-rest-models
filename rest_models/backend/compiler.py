@@ -1160,7 +1160,7 @@ class SQLInsertCompiler(SQLCompiler):
                     if response_files.status_code != 201:
                         raise FakeDatabaseDbAPI2.ProgrammingError(
                             "error while creating (uploading files and data) %s with data=%s ; files=%s.\n%s" % (
-                                obj, obj_data, files, message_from_response(response)))
+                                obj, obj_data, files, message_from_response(response_files)))
                     # update with json formated
                     new_id = response_files.json()[get_resource_name(query.model, many=False)]['id']
                     response = self.connection.cursor().patch(
@@ -1189,7 +1189,7 @@ class SQLInsertCompiler(SQLCompiler):
                     except KeyError:
                         continue
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
-                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
+                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection.cursor())
                     elif hasattr(field, "to_python"):
                         python_val = field.to_python(raw_val)
                     else:
@@ -1336,7 +1336,7 @@ class SQLUpdateCompiler(SQLCompiler):
                     except KeyError:
                         continue
                     if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
-                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection)
+                        python_val = field.storage.prepare_result_from_api(raw_val, self.connection.cursor())
                         obj = val.instance
                     elif hasattr(field, "to_python"):
                         python_val = field.to_python(raw_val)
