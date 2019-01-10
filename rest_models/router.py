@@ -102,7 +102,10 @@ class RestModelRouter(object):
         if model_name is None:
             return None  # we are model specific
         # all our models must not being created in other databases
-        model = apps.get_model(app_label, model_name)
+        try:
+            model = apps.get_model(app_label, model_name)
+        except LookupError:
+            return None
         if self.is_api_model(model):
             return False
         return None

@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,7 @@ class FakeApiResponse(object):
     def __init__(self, data, status_code):
         self.data = data
         self.status_code = status_code
+        self.elapsed = datetime.timedelta(seconds=1)
 
     def json(self):
         return self.data

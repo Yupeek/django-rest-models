@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import json
+from collections import defaultdict
 
 import six
 
@@ -13,6 +14,8 @@ except ImportError:  # pragma: no cover
         fake pathlib.Path for retro-compatiblitiy
         """
         def __init__(self, path):
+            if isinstance(path, Path):
+                path = path.path
             self.path = path
 
         def open(self, mode):
@@ -96,22 +99,39 @@ class JsonFixtures(object):
     >>> f['/model/134/'] == ['hey']
     True
 
-
+    >>> f = JsonFixtures({'/model': ['a'], 'b': 2}, c=3)
+    >>> f.update({'d': 4, '/model': ['b']}, c=4)
+    >>> f['/model'] == ['b', 'a']
+    True
+    >>> f['b']
+    [2]
+    >>> f['c']
+    [4, 3]
+    >>> f['d']
+    [4]
     """
+
     def __init__(self, *args, **kwargs):
         self.files = []
-        self.url_for_data = kwargs
+        self.url_for_data = defaultdict(list)
+        self.variable = {}
+        self.update(*args, **kwargs)
+
+    def update(self, *args, **kwargs):
+        for k, v in kwargs.items():
+            if isinstance(v, (list, tuple)):
+                self.url_for_data[k][0:0] = list(v)
+            else:
+                self.url_for_data[k].insert(0, v)
         for file in args:
             if isinstance(file, (six.text_type, six.binary_type, Path)):
                 self.files.append(file)
             elif isinstance(file, dict):
-                self.url_for_data.update(file)
+                self.update(**file)
             elif isinstance(file, JsonFixtures):
-                self.url_for_data.update(file._load())
+                self.update(**file._load())
             else:
                 raise ValueError("%s is not supported as *args" % (type(file)))
-
-        self.variable = {}
 
     def set_variable(self, variable):
         """
@@ -140,13 +160,24 @@ class JsonFixtures(object):
         """
         res = {}
         for file in self.files:
-            res.update(self.__load_json(file))
+            loaded = self.__load_json(file)
+            for k, v in loaded.items():
+                if isinstance(v, (list, tuple)):
+                    res.setdefault(k, []).extend(v)
+                else:
+                    res.setdefault(k, []).append(v)
 
-        for url, data in self.url_for_data.items():
-            if isinstance(data, (str, Path)):
-                # str mean filepath
-                data = self.__load_json(data)
-            res[url] = data
+        for url, datas in self.url_for_data.items():
+            if not isinstance(datas, (list, tuple)):
+                datas = [datas]
+            for data in datas:
+                res.setdefault(url, [])
+                if isinstance(data, Path):
+                    data = self.__load_json(data)
+                if isinstance(data, (list, tuple)):
+                    res[url].extend(data)
+                else:
+                    res[url].append(data)
         return res
 
     def __getitem__(self, item):
