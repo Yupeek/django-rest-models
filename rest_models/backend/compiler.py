@@ -7,6 +7,7 @@ import logging
 import re
 from collections import defaultdict, namedtuple
 
+import six
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
@@ -1294,7 +1295,7 @@ class SQLUpdateCompiler(SQLCompiler):
                 if file is None:
                     # field can be set to None
                     data[field.column] = None
-                elif isinstance(file, str):
+                elif isinstance(file, six.string_types):
                     # str => we don't change it since it's not comming from our custom storage
                     pass
                 else:
