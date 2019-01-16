@@ -182,3 +182,23 @@ class TestUploadDRF(TestCase):
         self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2)
         self.assertEqual(review_client.photo.file.read(), image_test)
         self.assertEqual(review_client.comment, 'comment')
+
+    def test_save_unchanged_file(self):
+
+        review_api = apimodels.Review.objects.create(
+            comment="coucou",
+            photo=SimpleUploadedFile(self.img_name, image_test, 'image/png'),
+        )
+
+        review_client = clientmodels.Review.objects.get(pk=review_api.pk)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
+        self.assertEqual(review_client.photo.name, self.img_name)
+
+        review_client.save()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
+        self.assertEqual(review_client.photo.name, self.img_name)
+        review_client.comment = 'eratum'
+        review_client.save()
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
+        self.assertEqual(review_client.photo.name, self.img_name)
+        self.assertEqual(review_client.photo.file.read(), image_test)
