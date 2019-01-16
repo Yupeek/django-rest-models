@@ -201,3 +201,4 @@ class TestUploadDRF(TestCase):
         review_client.save()
         self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name)
         self.assertEqual(review_client.photo.name, self.img_name)
+        self.assertEqual(review_client.photo.file.read(), image_test)
