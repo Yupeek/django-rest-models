@@ -1289,12 +1289,17 @@ class SQLUpdateCompiler(SQLCompiler):
             if isinstance(field, FileField):
                 fieldfile = field.pre_save(val.instance, False)
                 # file.name is the return of our storage.save => we get the content file instead of his name
-                # to retreive it there.
+                # file.name can be a string, in this case, we did got the file at all, he is unmodified
                 file = fieldfile.name
-                if file is not None:  # field value can be None....
-                    files[field.column] = (file.name, file, file.content_type)
-                else:
+                if file is None:
+                    # field can be set to None
                     data[field.column] = None
+                elif isinstance(file, str):
+                    # str => we don't change it since it's not comming from our custom storage
+                    pass
+                else:
+                    files[field.column] = (file.name, file, file.content_type)
+
             else:
                 fieldname = field.concrete and field.db_column or field.name
                 data[fieldname] = field.get_db_prep_save(val, connection=self.connection)
