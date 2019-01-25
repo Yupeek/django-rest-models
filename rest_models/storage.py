@@ -8,6 +8,8 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
+from rest_models.backend.connexion import get_basic_session
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +75,12 @@ class RestApiStorage(Storage):
         if 'r' not in mode:
             NotImplementedError("This backend doesn't support writing on file.")
         cursor = self.get_cursor(name)  # fetch a valid cursor which just got the name
-        response = cursor.session.get(self.url(name))
+        url = self.url(name)
+        # try with anonymous data
+        response = get_basic_session().get(url)
+        # if we fail, we try with authenticated session
+        if response.status_code in (403, 401):
+            response = cursor.session.get(url)
         response.raise_for_status()
         return ContentFile(response.content, name)
 

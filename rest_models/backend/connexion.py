@@ -239,6 +239,13 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
         return response
 
 
+def get_basic_session():
+    session = requests.Session()
+    session.mount(LocalApiAdapter.SPECIAL_URL, LocalApiAdapter())
+    session.mount('http://testserver', LocalApiAdapter())  # for special host used by django for unittests
+    return session
+
+
 class ApiConnexion(ApiVerbShortcutMixin):
     """
     wrapper for request.Session that in fact implement useless methods like rollback which
