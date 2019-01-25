@@ -4,10 +4,11 @@ import logging
 import os
 import threading
 
-import requests
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
+
+from rest_models.backend.connexion import get_basic_session
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class RestApiStorage(Storage):
         cursor = self.get_cursor(name)  # fetch a valid cursor which just got the name
         url = self.url(name)
         # try with anonymous data
-        response = requests.get(url)
+        response = get_basic_session().get(url)
         # if we fail, we try with authenticated session
         if response.status_code in (403, 401):
             response = cursor.session.get(url)
