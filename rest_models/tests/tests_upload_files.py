@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-from unittest import mock
 from uuid import uuid4
 
 from django.conf import settings
