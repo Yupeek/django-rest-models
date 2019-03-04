@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import datetime
 import logging
 import os
 import threading
 
+import unidecode
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
+from django.utils.http import urlunquote
 
 from rest_models.backend.connexion import get_basic_session
 
@@ -67,7 +71,7 @@ class RestApiStorage(Storage):
         # and store the full url for later
         if result is None:
             return None
-        name = os.path.basename(result)
+        name = urlunquote(os.path.basename(result))
         self.result_file_pool[name] = result, cursor
         return name
 
@@ -100,4 +104,7 @@ class RestApiStorage(Storage):
         return self.result_file_pool.get(name, (name, None))[0]  # pool contains url and cursor to get it
 
     def get_available_name(self, name, max_length=None):
-        return name
+        return unidecode.unidecode(name)
+
+    def get_valid_name(self, name):
+        return unidecode.unidecode(name)
