@@ -320,6 +320,14 @@ class TestJsonField(TestCase):
 class TestQueryLookupTransform(TestCase):
     fixtures = ['data.json']
 
+    def test_get_iexact(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(name__iexact="FlAm"))), 1)
+
+    def test_get_regex(self):
+        with self.assertNumQueries(1, using='api'):
+            self.assertEqual(len(list(client_models.Pizza.objects.filter(name__regex=r"[fF]lam*"))), 1)
+
     def test_get_transform_date(self):
         with self.assertNumQueries(1, using='api'):
             self.assertEqual(len(list(client_models.Pizza.objects.filter(from_date__year__exact=2016))), 2)

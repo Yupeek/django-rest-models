@@ -487,6 +487,21 @@ class TestCompilerFilterParams(CompilerTestCase):
             {'filter{menu}': 1}
         )
 
+    def test_transform_added(self):
+        self.assertQsToFilter(
+            Pizza.objects.filter(name__iexact='PepERonie'),
+            {'filter{name.iexact}': 'PepERonie'}
+        )
+        self.assertQsToFilter(
+            Pizza.objects.filter(name__icontains='PepERonie'),
+            {'filter{name.icontains}': 'PepERonie'}
+        )
+
+        self.assertQsToFilter(
+            Pizza.objects.filter(name__iendswith='Ronie'),
+            {'filter{name.iendswith}': 'Ronie'}
+        )
+
 
 class TestIncompatibleBuildCompiler(CompilerTestCase):
     def test_or_filter(self):
