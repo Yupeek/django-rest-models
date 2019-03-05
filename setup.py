@@ -49,6 +49,7 @@ setup(
         'requests',
         'six',
         'Django>=1.11',
+        'unidecode',
     ],
     packages=[
         'rest_models',
