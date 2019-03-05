@@ -103,18 +103,18 @@ class TestUploadDRF(TestCase):
             photo=SimpleUploadedFile(self.img_name, image_test, 'image/png'),
         )
 
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_quoted)
-        self.assertEqual(review_client.photo.name, self.img_name)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_cleaned)
+        self.assertEqual(review_client.photo.name, self.img_name_cleaned)
         self.assertEqual(review_client.comment, 'coucou')
         review_client.refresh_from_db()
         self.assertEqual(review_client.comment, 'coucou')
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_quoted)
-        self.assertEqual(review_client.photo.name, self.img_name)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_cleaned)
+        self.assertEqual(review_client.photo.name, self.img_name_cleaned)
 
         review_api = clientmodels.Review.objects.get(pk=review_client.pk)
         self.assertEqual(review_api.comment, 'coucou')
-        self.assertEqual(review_api.photo.name, self.img_name)
-        self.assertEqual(review_api.photo.url, 'http://testserver/media/%s' % self.img_name_quoted)
+        self.assertEqual(review_api.photo.name, self.img_name_cleaned)
+        self.assertEqual(review_api.photo.url, 'http://testserver/media/%s' % self.img_name_cleaned)
 
     def test_open_from_api(self):
         review_api = apimodels.Review.objects.create(
@@ -165,9 +165,9 @@ class TestUploadDRF(TestCase):
 
         review_client.photo = SimpleUploadedFile(self.img_name, image_test, 'image/png')
         review_client.save()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_quoted)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_cleaned)
         review_client.refresh_from_db()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_quoted)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name_cleaned)
         self.assertEqual(review_client.photo.file.read(), image_test)
 
         review_client.photo = None
@@ -186,9 +186,9 @@ class TestUploadDRF(TestCase):
 
         review_client.photo = SimpleUploadedFile(self.img_name2, image_test, 'image/png')
         review_client.save()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2_quoted)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2_cleaned)
         review_client.refresh_from_db()
-        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2_quoted)
+        self.assertEqual(review_client.photo.url, 'http://testserver/media/%s' % self.img_name2_cleaned)
         self.assertEqual(review_client.photo.file.read(), image_test)
         self.assertEqual(review_client.comment, 'comment')
 
