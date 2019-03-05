@@ -64,7 +64,7 @@ class LocalApiAdapter(BaseAdapter):
             content_type=prepared_request.headers.get('Content-Type', 'application/x-www-form-urlencoded')
         )
         for name, val in prepared_request.headers.items():
-            wsgi_request.META['HTTP_' + name.upper()] = val
+            wsgi_request.META[str('HTTP_') + str(name.upper())] = val
         return wsgi_request
 
     def http_response_to_response(self, http_response, prepared_request):
