@@ -119,5 +119,5 @@ class OAuthToken(ApiAuthBase):
 
     def __call__(self, request):
         if request.url != self.url_token:
-            request.headers['Authorization'] = "Bearer %s" % self.token.access_token
+            request.headers[str('Authorization')] = str("Bearer %s" % self.token.access_token)
         return request

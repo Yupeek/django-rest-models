@@ -196,7 +196,7 @@ class TestOauth(TestCase):
         res = self.ch['default'].cursor().get('view/')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(queries), 2)
-        self.assertEqual(queries[1].META['HTTP_AUTHORIZATION'], 'Bearer zU9inLFU8UmIJe6hnkGT9KXtcWwPFY')
+        self.assertEqual(queries[1].META[str('HTTP_AUTHORIZATION')], 'Bearer zU9inLFU8UmIJe6hnkGT9KXtcWwPFY')
 
 
 class TestLocalApiHandler(TestCase):
