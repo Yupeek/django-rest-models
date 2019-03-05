@@ -90,7 +90,7 @@ class RestApiStorage(Storage):
 
     def _save(self, name, content):
         # self.uploaded_file_pool[id] = content
-        content.original_name = name
+        content.name = content.original_name = name
         return content
 
     def get_cursor(self, name):

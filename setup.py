@@ -40,7 +40,7 @@ setup(
     version=version,
     description="""django Fake ORM model that query an RestAPI instead of a database — """,
     long_description=readme,
-    long_description_content_type='text/markdown',
+    long_description_content_type='text/x-rst',
     author='Darius BERNARD',
     author_email='darius@yupeek.com',
     url='https://github.com/Yupeek/django-rest-models',
