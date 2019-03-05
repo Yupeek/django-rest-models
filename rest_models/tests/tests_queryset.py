@@ -12,6 +12,7 @@ from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
 from testapi import models as api_models
+from testapi.models import auto_now_plus_5d
 from testapp import models as client_models
 
 
@@ -35,20 +36,29 @@ class TestQueryInsert(TestCase):
             self.assertEqual(getattr(new, attr), getattr(p, attr))
 
     def test_insert_default_value(self):
+
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 0)  # there is no fixture
-        p = client_models.Pizza.objects.create(
+        client_created = client_models.Pizza.objects.create(
             name='savoyarde',
             price=13.3,
             from_date=datetime.datetime.today(),
             # to_date has default value
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
-        self.assertIsNotNone(p.pk)
-        new = api_models.Pizza.objects.get(pk=p.pk)
+        self.assertIsNotNone(client_created.pk)
+        api_fetched = api_models.Pizza.objects.get(pk=client_created.pk)
+        client_fetched = client_models.Pizza.objects.get(pk=client_created.pk)
+
+        expected_default = auto_now_plus_5d()
+
+        self.assertLess((client_created.to_date - expected_default).total_seconds(), 1)
+        self.assertLess((client_fetched.to_date - expected_default).total_seconds(), 1)
+        self.assertLess((api_fetched.to_date - expected_default).total_seconds(), 1)
 
         for attr in ('name', 'price', 'from_date', 'to_date'):
-            self.assertEqual(getattr(new, attr), getattr(p, attr))
+            self.assertEqual(getattr(client_fetched, attr), getattr(client_created, attr), "%s differ" % attr)
+            self.assertEqual(getattr(api_fetched, attr), getattr(client_created, attr), "%s differ" % attr)
 
     def test_save_normal(self):
         n = api_models.Pizza.objects.count()
