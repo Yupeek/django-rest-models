@@ -1,4 +1,4 @@
-__VERSION__ = '1.8.3'
+__VERSION__ = '1.8.4'
 
 try:
     from rest_models.checks import register_checks
