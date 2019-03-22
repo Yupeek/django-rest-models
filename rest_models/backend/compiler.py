@@ -714,11 +714,8 @@ class SQLCompiler(BaseSQLCompiler):
                     else:  # pragma: no cover
                         raise ProgrammingError("unknown type for compiling the query : %s."
                                                " expeced a Lookup or WhereNode" % child.__class__)
-            else:
-                reason = "NOT (.. AND ..)" if is_negated else "OR"
-                raise FakeDatabaseDbAPI2.NotSupportedError(
-                    "%s in queryset is not supported yet" % reason
-                )
+            elif is_negated:
+                raise FakeDatabaseDbAPI2.NotSupportedError("NOT (.. AND ..) in queryset is not supported yet")
 
     def build_filter_params(self):
         """
@@ -736,7 +733,8 @@ class SQLCompiler(BaseSQLCompiler):
                 fieldname = field
             else:
                 fieldname = "{field}.{lookup}".format(field=field, lookup=lookup.lookup_name)
-            key = 'filter{%s%s}' % (negated_mark, fieldname)
+            filter_template = 'filter{%s%s}' if _ else 'filterOR{%s%s}'
+            key = filter_template % (negated_mark, fieldname)
             if isinstance(lookup.rhs, (tuple, list)):
                 res.setdefault(key, []).extend(lookup.rhs)
             else:
