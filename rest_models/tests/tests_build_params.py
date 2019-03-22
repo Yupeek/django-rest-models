@@ -10,7 +10,7 @@ from django.db.models.query_utils import Q
 from django.db.utils import NotSupportedError, ProgrammingError
 from django.test import TestCase
 
-from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field, get_resource_path
+from rest_models.backend.compiler import QueryParser, SQLCompiler, find_m2m_field, get_resource_path, Alias
 from testapp.models import Menu, Pizza, PizzaGroup, Topping
 
 unittest.util._MAX_LENGTH = 12000
@@ -505,12 +505,18 @@ class TestCompilerFilterParams(CompilerTestCase):
 
 class TestIncompatibleBuildCompiler(CompilerTestCase):
     def test_or_filter(self):
-        self.assertBadQs(
-            Pizza.objects.filter(Q(id=1) | Q(cost=10.0))
+        self.assertQsToFilter(
+            Pizza.objects.filter(Q(id=1) | Q(cost=10.0)),
+            {'filterOR{id}': 1, 'filterOR{cost}': 10.0}
         )
-        self.assertBadQs(
-            Pizza.objects.exclude(Q(id=2) | Q(cost=15.0))
+        self.assertQsToFilter(
+            Pizza.objects.filter(cost__gte=10).filter(Q(id=2) | Q(name__icontains='test')),
+            {'filterOR{id}': 2, 'filterOR{name.icontains}': 'test', 'filter{cost.gte}': [10.0]}
         )
+        # self.assertQsToFilter(
+        #     Pizza.objects.exclude(Q(id=2) | Q(cost=15.0)),
+        #     {'filterOR{-id}': 2, 'filterOR{-cost}': 15.0}
+        # )
 
     def test_negated_Q(self):
         # negate a AND give a OR, whiche is not supported
@@ -574,12 +580,12 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
             Pizza.objects.filter(Q(Q(id=1) & ~Q(cost=10.0)))
         )
 
-    def test_unseported_mix(self):
-        # negated OR give AND
-        # but it's took complexe to detect
-        self.assertBadQs(
-            Pizza.objects.filter(~Q(Q(id=1) | ~Q(cost=10.0)))
-        )
+    # def test_unseported_mix(self):
+    #     # negated OR give AND
+    #     # but it's took complexe to detect
+    #     self.assertBadQs(
+    #         Pizza.objects.filter(~Q(Q(id=1) | ~Q(cost=10.0)))
+    #     )
 
     def test_ored_exclude(self):
         self.assertBadQs(

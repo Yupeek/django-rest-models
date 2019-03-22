@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
+from django.db.models import Q
 from django.http.response import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from dynamic_rest.viewsets import DynamicModelViewSet
@@ -13,7 +14,48 @@ from testapi.serializers import (MenuSerializer, PizzaGroupSerializer, PizzaSeri
                                  ToppingSerializer)
 
 
-class PizzaViewSet(DynamicModelViewSet):
+class OrFilteringMixin(object):
+    """
+    Mixin to filter queryset with custom or clause sent by django-rest-models
+    """
+    def filter_queryset(self, queryset):
+        qs = super(OrFilteringMixin, self).filter_queryset(queryset)
+        or_params = self.extract_or_params()
+        if or_params:
+            qs = self.filter_with_or(qs, or_params)
+        return qs
+
+    def extract_or_params(self):
+        or_params = []
+        prefix = 'filterOR{'
+        offset = len(prefix)
+        for name, value in self.request.GET.items():
+            if name.startswith(prefix):
+                if name.endswith('}'):
+                    if '.in' in name:
+                        value = self.request.GET.getlist(name)
+                    name = name[offset:-1]
+                    or_params.append((name, value))
+        return or_params
+
+    def filter_with_or(self, qs, or_params):
+        queries = None
+        for name, value in or_params:
+            if '.' in name:
+                splitted = name.split('.')
+                field = splitted[0]
+                lookups = '__'.join(splitted[1:])
+                django_param = {'{}__{}'.format(field, lookups): value}
+            else:
+                django_param = {field: value}
+            if queries:
+                queries |= Q(**django_param)
+            else:
+                queries = Q(**django_param)
+        return qs.filter(queries)
+
+
+class PizzaViewSet(OrFilteringMixin, DynamicModelViewSet):
     queryset = Pizza.objects.all()
     serializer_class = PizzaSerializer
 
