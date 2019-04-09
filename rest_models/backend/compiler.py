@@ -1299,7 +1299,7 @@ class SQLUpdateCompiler(SQLCompiler):
                     # str => we don't change it since it's not comming from our custom storage
                     pass
                 else:
-                    files[field.column] = (file.name, file, file.content_type)
+                    files[field.column] = (file.name, file, getattr(file,'content_type',None))
 
             else:
                 fieldname = field.concrete and field.db_column or field.name
