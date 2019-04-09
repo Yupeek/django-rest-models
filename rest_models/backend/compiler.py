@@ -1050,7 +1050,7 @@ class SQLInsertCompiler(SQLCompiler):
                 file = fieldfile.name
 
                 if file is not None:  # field value can be None....
-                    files[field.column] = (file.name, file, file.content_type)
+                    files[field.column] = (file.name, file, getattr(file,'content_type',None))
                 else:
                     data[field.column] = None
             else:
