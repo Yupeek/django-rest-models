@@ -93,6 +93,17 @@ class RestApiStorage(Storage):
         content.name = content.original_name = name
         return content
 
+    def size(self, name):
+        cursor = self.get_cursor(name)  # fetch a valid cursor which just got the name
+        url = self.url(name)
+        # try with anonymous data
+        response = get_basic_session().get(url, stream=True)
+        # if we fail, we try with authenticated session
+        if response.status_code in (403, 401):
+            response = cursor.session.get(url, stream=True)
+
+        return response.headers['Content-length']
+
     def get_cursor(self, name):
         return self.result_file_pool[name][1]  # pool contains url and cursor to get it
 
