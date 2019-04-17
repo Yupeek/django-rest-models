@@ -7,9 +7,9 @@ import sys
 import rest_models
 
 try:
-    from setuptools import setup
-except ImportError:
     from distutils.core import setup
+except ImportError:
+    from setuptools import setup
 
 version = rest_models.__VERSION__
 
