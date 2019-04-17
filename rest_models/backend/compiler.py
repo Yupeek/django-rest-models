@@ -612,17 +612,25 @@ def m2m_through(compiler, result):
         return False, []
     # this is a throug model apimodel <-> apimodel
     assert compiler.query.where.connector == 'AND'  # we can only support a specific query to emuliate query on through
-    a, b = compiler.query.where.children
-    if isinstance(a, RelatedIn) and isinstance(b, RelatedExact):
-        rex = b
-    elif isinstance(b, RelatedIn) and isinstance(a, RelatedExact):
-        rex = a
+
+    rex = None
+    for child in  compiler.query.where.children:
+        if isinstance(child, RelatedExact):
+            rex = child
+            pk = rex.rhs
+            break
+        elif isinstance(child, RelatedIn) and len(child.rhs) == 1:
+            rex = child
+            pk = rex.rhs[0]
+            break
     else:
-        raise AssertionError("query on throuhg not supported: %s AND %s" % (a, b))
+        # isinstance related but already had rex
+        raise AssertionError("query on throuhg not supported: " % str(' AND '.join(compiler.query.where.children)))
+
     for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
         if rex.lhs.target.rel.model == rel_model:
             response = compiler.connection.cursor().get(
-                get_resource_path(rel_model, rex.rhs),
+                get_resource_path(rel_model, pk),
                 params={'exclude[]': '*', 'include[]': rel_m2m.name}
             )
             pks = response.json()[get_resource_name(rel_model)][rel_m2m.name]

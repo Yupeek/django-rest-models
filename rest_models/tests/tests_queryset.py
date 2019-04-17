@@ -7,6 +7,7 @@ from unittest import skipIf
 from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
+from django.db.models.signals import post_delete
 from django.test import TestCase
 from dynamic_rest.filters import DynamicFilterBackend
 
@@ -217,7 +218,31 @@ class TestM2M(TestCase):
         self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (2,)])
         self.assertEqual(list(topping.pizzas.all()), [])
 
-    def test_many2many_clear(self):
+    def test_many2many_clear_fast_delete(self):
+        # this handle the case where the model has no signal and so can be fast deleted
+        # see: django.db.models.deletion.Collector.can_fast_delete
+
+        p = client_models.Pizza.objects.get(pk=3)
+        topping = client_models.Topping.objects.get(pk=6)
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
+        self.assertEqual(list(topping.pizzas.all()), [p])
+
+        topping.pizzas.clear()
+
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), ])
+        self.assertEqual(list(topping.pizzas.all()), [])
+
+    def test_many2many_clear_signal_delete(self):
+        # this handle the case where the model has a signal and so can't be fast deleted
+        # see: django.db.models.deletion.Collector.can_fast_delete
+        called = []
+
+        def expect_be_called(*args, **kwargs):
+            called.append((args, kwargs))
+
+        post_delete.connect(expect_be_called, None)
+
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
