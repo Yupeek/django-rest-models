@@ -729,6 +729,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         res = {}
         query = self.query
+        list_of_in = {}
         for negated, _, lookup in self.query_parser.flaten_where_clause(query.where):  # type: bool, Lookup
             negated_mark = "-" if negated else ""
             field = self.query_parser.get_rest_path_for_col(lookup.lhs)
@@ -739,12 +740,17 @@ class SQLCompiler(BaseSQLCompiler):
             key = 'filter{%s%s}' % (negated_mark, fieldname)
             if isinstance(lookup.rhs, (tuple, list)):
                 res.setdefault(key, []).extend(lookup.rhs)
+                if lookup.lookup_name == 'in':
+                    list_of_in[key] = list_of_in.get(key, 0) + len(lookup.rhs)
             else:
                 if lookup.lookup_name == 'exact' and res.get(key, lookup.rhs) != lookup.rhs:
                     # a small performance that won't trigger any query if the
                     # queryset ask for differents exacts values
                     raise EmptyResultSet()
                 res.setdefault(key, []).append(lookup.rhs)
+        if not all(list_of_in.values()):
+            # if there is one «xxx.in=[]», me should not query the database
+            raise EmptyResultSet()
         return res
 
     def build_include_exclude_params(self):

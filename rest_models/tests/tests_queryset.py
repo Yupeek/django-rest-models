@@ -594,6 +594,16 @@ class TestQueryGet(TestCase):
         finally:
             SQLCompiler.META_NAME = old_meta_val
 
+    def test_query_pk_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(id__in=[])
+        self.assertEqual(list(res), [])
+
+    def test_query_field_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(name__in=[])
+        self.assertEqual(list(res), [])
+
 
 class TestQueryCount(TestCase):
     fixtures = ['data.json']
