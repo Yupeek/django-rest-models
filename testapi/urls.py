@@ -13,7 +13,7 @@ from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaGroupView
                              ToppingViewSet, fake_oauth, fake_view, wait)
 
 router = DynamicRouter()
-router.register('pizza', PizzaViewSet)
+router.register('pizza', PizzaViewSet, base_name='pizza')
 router.register('review', ReviewViewSet)
 router.register('topping', ToppingViewSet)
 router.register('menulol', MenuViewSet)

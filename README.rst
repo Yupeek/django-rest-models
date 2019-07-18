@@ -60,7 +60,7 @@ This database wrapper work with
 On the api, this is tested against
 
 - django-rest-framework 3.4, 3.5
-- dynamic-rest 1.5, 1.6
+- dynamic-rest 1.5, 1.6, 1.7, 1.8
 
 
 Examples
