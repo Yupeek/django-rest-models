@@ -17,7 +17,7 @@ python:
 install:
 - pip install tox-travis
 - pip install python-coveralls
-- travis_retry pip install "virtualenv<14.0.0" "tox>=1.9"
+- pip install "virtualenv" "tox>=1.9"
 script:
 - COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
 
