@@ -54,7 +54,7 @@ Requirements
 
 This database wrapper work with
 
-- python 2.7, 3.4, 3.5, 3.6
+- python 2.7, 3.5, 3.6
 - django 1.11
 
 On the api, this is tested against
@@ -268,7 +268,7 @@ The full documentation is at http://django-rest-models.readthedocs.org/en/latest
 Requirements
 ------------
 
-- Python 2.7, 3.4, 3.5
+- Python 2.7, 3.5
 - Django >= 1.8
 
 Contributions and pull requests are welcome.
