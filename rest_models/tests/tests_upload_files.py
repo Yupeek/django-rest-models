@@ -16,7 +16,8 @@ from testapp import models as clientmodels
 
 logger = logging.getLogger(__name__)
 
-image_test = open(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'okami.jpg'), 'rb').read()
+with open(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'okami.jpg'), 'rb') as f:
+    image_test = f.read()
 
 
 class TestUploadDRF(TestCase):
