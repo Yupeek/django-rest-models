@@ -591,12 +591,13 @@ def introspect_many_to_many_relations(through):
     for fk in through._meta.get_fields():
         if fk.is_relation and fk.many_to_one:
 
-            for rel_model_f in fk.rel.model._meta.get_fields():
+            for rel_model_f in fk.related_model._meta.get_fields():
                 if rel_model_f.is_relation \
-                        and rel_model_f.many_to_many \
-                        and getattr(rel_model_f, 'rel', rel_model_f).through == through:
-                    fields.append((fk, fk.rel.model, rel_model_f))
-                    break
+                        and rel_model_f.many_to_many:
+                    model_through = getattr(rel_model_f.remote_field, 'through', None) or getattr(rel_model_f, 'through')
+                    if model_through == through:
+                        fields.append((fk, fk.related_model, rel_model_f))
+                        break
             else:
                 raise AssertionError("we can't find the field used as relation using through %s" % through)
 
@@ -620,7 +621,7 @@ def m2m_through(compiler, result):
     else:
         raise AssertionError("query on throuhg not supported: %s AND %s" % (a, b))
     for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
-        if rex.lhs.target.rel.model == rel_model:
+        if rex.lhs.target.related_model == rel_model:
             response = compiler.connection.cursor().get(
                 get_resource_path(rel_model, rex.rhs),
                 params={'exclude[]': '*', 'include[]': rel_m2m.name}
@@ -1261,7 +1262,7 @@ class SQLDeleteCompiler(SQLCompiler):
             # special case where we emulate CASCADE on through
             return 1
         for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
-            if rex.lhs.target.rel.model == rel_model:
+            if rex.lhs.target.related_model == rel_model:
                 if rin is None:
                     # clear all entry
                     final_pks = []

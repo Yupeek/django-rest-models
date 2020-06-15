@@ -28,7 +28,7 @@ urlpatterns = [
     url(r'^api/v2/', include(router.urls)),
     url(r'^api/forbidden', lambda request: HttpResponseForbidden()),
     url(r'^other/view/', lambda request: HttpResponse(b'{"result": "ok"}')),
-    url(r'admin/', include(admin.site.urls)),
+    url(r'admin/', admin.site.urls),
     url(r'^$', RedirectView.as_view(url='api/v2', permanent=False))
 ]
 # static files (images, css, javascript, etc.)
