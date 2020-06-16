@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 })
 class SystemCheckTest(TestCase):
     fixtures = ['user.json']
+    databases = ['default', 'api', 'apifail']
 
     @classmethod
     def setUpClass(cls):
@@ -79,7 +80,7 @@ class SystemCheckTest(TestCase):
     def test_check_one_ok(self):
         res = six.StringIO()
         call_command('check', 'testapp', stdout=res)
-        self.assertEqual(res.getvalue(), '')
+        self.assertEqual(res.getvalue(), 'System check identified no issues (0 silenced).\n')
 
 
 @override_settings(ROOT_URLCONF='testapi.badapi.urls')
@@ -87,6 +88,7 @@ class SystemCheckTest(TestCase):
     'append': ['testapi.badapi', 'testapp.badapp'],
 })
 class TestErrorsCheck(RestModelTestCase):
+    databases = ['default', 'api', 'apifail']
     fixtures = ['user.json']
 
     res_ok = {

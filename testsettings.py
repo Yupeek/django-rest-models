@@ -23,18 +23,18 @@ DATABASES = {
         'NAME': 'http://localhost:8080/api/v2/',
         'USER': 'admin',
         'PASSWORD': 'admin',
-        'AUTH': 'rest_models.backend.auth.BasicAuth',
+        'AUTH': 'rest_models.backend.auth.AutoCreatUserBasicAuth',
         'TEST': {
             'NAME': 'http://localapi/api/v2/',
         },
-        'OPTIONS': {'SKIP_CHECK': skip_check}
+        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': False}
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',
         'NAME': 'http://localapi/api/v1/',
         'USER': 'admin',
         'PASSWORD': 'admin',
-        'OPTIONS': {'SKIP_CHECK': skip_check}
+        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': True}
     },
     'api2': {
         'ENGINE': 'rest_models.backend',
@@ -42,7 +42,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
-        'OPTIONS': {'SKIP_CHECK': skip_check}
+        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': True}
     },
     'TEST_api2': {
         'ENGINE': 'rest_models.backend',
@@ -50,7 +50,7 @@ DATABASES = {
         'USER': 'userapi',
         'PASSWORD': 'passwordapi',
         'AUTH': 'rest_models.backend.auth.BasicAuth',
-        'OPTIONS': {'SKIP_CHECK': skip_check}
+        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': True}
     },
 }
 
@@ -81,19 +81,19 @@ DATABASE_ROUTERS = [
 ]
 
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
 )
 
 REST_FRAMEWORK = {
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
 }
 
 PASSWORD_HASHERS = [

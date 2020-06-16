@@ -19,10 +19,7 @@ from requests.utils import get_encoding_from_headers
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 
-try:
-    from urllib.parse import urlparse, urlunparse
-except ImportError:  # pragma: no cover
-    from urlparse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 logger = logging.getLogger("django.db.backends")
 

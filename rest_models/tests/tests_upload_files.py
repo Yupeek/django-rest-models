@@ -22,6 +22,7 @@ with open(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'okami.j
 
 class TestUploadDRF(TestCase):
     fixtures = ['user.json']
+    databases = ['default', 'api']
     port = 8081
 
     def setUp(self):

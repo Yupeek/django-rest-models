@@ -20,6 +20,7 @@ from testapp import models as client_models
 
 class TestQueryInsert(TestCase):
     fixtures = ['user.json']
+    databases = ["default", "api"]
 
     def test_insert_normal(self):
         n = api_models.Pizza.objects.count()
@@ -353,6 +354,7 @@ class TestQueryLookupTransform(TestCase):
 
 class TestQueryGet(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def assertObjectEqual(self, obj, data):
         for k, v in data.items():
@@ -612,6 +614,7 @@ class TestQueryGet(TestCase):
 
 class TestQueryCount(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_count(self):
         with self.assertNumQueries(1, using='api'):
@@ -629,6 +632,7 @@ class TestQueryCount(TestCase):
 
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_delete_obj(self):
         n = api_models.Pizza.objects.count()
@@ -693,6 +697,7 @@ class TestQueryDelete(TestCase):
 
 class TestQueryUpdate(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_manual_update(self):
         p = api_models.Pizza.objects.get(pk=1)
@@ -792,6 +797,7 @@ class TestQueryUpdate(TestCase):
 
 class TestUnallowedQuery(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_raw_query_fail(self):
         self.assertRaisesMessage(NotSupportedError, "Only Col in sql select is supported", list,

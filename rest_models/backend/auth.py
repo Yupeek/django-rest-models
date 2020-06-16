@@ -4,17 +4,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import logging
 from collections import namedtuple
+from copy import copy
+from uuid import uuid4
 
+from django.contrib.auth import get_user_model
 from django.db.utils import ProgrammingError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 
-try:
-    from urllib.parse import urlparse, urlunparse
-except ImportError:  # pragma: no cover
-    from urlparse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,21 @@ class BasicAuth(ApiAuthBase):
 
     def __call__(self, request):
         return self.backend(request)
+
+
+class AutoCreatUserBasicAuth(BasicAuth):
+
+    def __init__(self, databasewrapper, settings_dict):
+        model = get_user_model()
+        if not model.objects.filter(username=settings_dict['USER']).exists():
+            settings_dict = copy(settings_dict)
+            settings_dict['USER'] = str(uuid4())
+            u = model.objects.create(username=settings_dict['USER'], is_superuser=True, is_staff=True)
+            u.set_password(settings_dict['PASSWORD'])
+            u.save()
+            print("created user ", settings_dict)
+            print(model.objects.values_list('username'))
+        super(AutoCreatUserBasicAuth, self).__init__(databasewrapper, settings_dict)
 
 
 class OAuthToken(ApiAuthBase):

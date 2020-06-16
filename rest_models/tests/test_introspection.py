@@ -9,8 +9,11 @@ from django.test.testcases import TestCase
 
 class TestIntrospection(TestCase):
     fixtures = ['data.json']
+    databases = ['api', 'default']
 
-    @override_settings(DEBUG=True)
+    @override_settings(
+        DEBUG=True,
+    )
     def test_make_models(self):
 
         res = six.StringIO()
