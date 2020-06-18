@@ -510,7 +510,7 @@ class TestQueryGet(TestCase):
         else:
             # postgresql compiler loos the orderby in the process
             self.assertEqual(len(res), 9)
-            self.assertEqual(set(res), {[1], [2], [3]})
+            self.assertEqual(set(tuple(r) for r in res), {(1,), (2,), (3,)})
 
     def test_without_get_select_related_sample(self):
         with self.assertNumQueries(1, using='api'):
