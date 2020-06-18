@@ -5,7 +5,7 @@ tox
 isort
 flake8
 requests
-djangorestframework==3.5
+djangorestframework==3.9.1
 dynamic-rest==1.8
 -r test_requirements.txt
 twine
