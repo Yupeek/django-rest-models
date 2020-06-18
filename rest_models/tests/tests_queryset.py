@@ -486,7 +486,6 @@ class TestQueryGet(TestCase):
         self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
         # self.assertEqual(res, [[1], [1], [1], [1], [1], [2], [2], [3], [3], [3]])
 
-
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
         # the test «test_query_backward_values_sample» which is the sample for a real database for this one return
@@ -620,6 +619,11 @@ class TestQueryCount(TestCase):
         with self.assertNumQueries(1, using='api'):
             self.assertEqual(client_models.Pizza.objects.all().count(), 3)
 
+    def test_count_ensure_no_cache(self):
+        with self.assertNumQueries(1, using='api'):
+            q = client_models.Pizza.objects.all().distinct()
+            self.assertEqual(q.query.get_count(using=q.db), 3)
+
     def test_count_no_result(self):
         api_models.Pizza.objects.all().delete()
         with self.assertNumQueries(1, using='api'):
@@ -701,7 +705,7 @@ class TestQueryUpdate(TestCase):
 
     def test_manual_update(self):
         p = api_models.Pizza.objects.get(pk=1)
-        menu = api_models.Menu.objects.get(pk=1)
+        api_models.Menu.objects.get(pk=1)
         menu2 = api_models.Menu.objects.create(name="menu2", code="m2")
 
         res = self.client.patch(reverse('pizza-detail', kwargs={'pk': p.pk}),
@@ -817,6 +821,6 @@ class TestUnallowedQuery(TestCase):
         compiler = SQLAggregateCompiler(qs.query, connections['api'], 'api')
         self.assertRaisesMessage(
             NotSupportedError,
-            "the aggregation for the database api is not supported",
+            "group by is not supported",
             compiler.execute_sql
         )

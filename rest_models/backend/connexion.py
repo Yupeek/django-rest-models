@@ -5,6 +5,7 @@ import collections
 import itertools
 import logging
 import time
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from django.core.handlers.base import BaseHandler
@@ -18,8 +19,6 @@ from requests.utils import get_encoding_from_headers
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
-
-from urllib.parse import urlparse, urlunparse
 
 logger = logging.getLogger("django.db.backends")
 

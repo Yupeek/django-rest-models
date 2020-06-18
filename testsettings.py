@@ -23,11 +23,12 @@ DATABASES = {
         'NAME': 'http://localhost:8080/api/v2/',
         'USER': 'admin',
         'PASSWORD': 'admin',
-        'AUTH': 'rest_models.backend.auth.AutoCreatUserBasicAuth',
+        'AUTH': 'rest_models.backend.auth.BasicAuth',
         'TEST': {
             'NAME': 'http://localapi/api/v2/',
         },
-        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': False}
+        'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': True},
+        'PREVENT_DISTINCT': False
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',

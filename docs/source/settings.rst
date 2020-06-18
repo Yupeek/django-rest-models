@@ -32,6 +32,7 @@ Example of many settings::
                 'OAUTH_URL': '/oauth2/token/',
                 'TIMEOUT': 10,
                 'SKIP_CHECK': True,
+                'IGNORE_INTROSPECT': True,
             },
             'PREVENT_DISTINCT': False,
         },
@@ -124,6 +125,15 @@ Will skip checking the api if this settings is set to true. By default, the Djan
 (executed during tests and migration) will query the api to check if our models match the structure of the api.
 Settings this to True will prevent any query to be made to the api.  This is useful for testing environments where
 all queries are faked and there is no api at all.
+
+``OPTIONS['IGNORE_INTROSPECT']``
+=========================
+
+will ignore INTROSPECTION step, allowing unittest to run in django 2.2 without error.
+
+if during tests, you get random errors telling you that access for database is forbiden, you should edd this settings to True.
+
+
 
 ``PREVENT_DISTINCT``
 ====================
