@@ -2,12 +2,14 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import json
 from unittest import skipIf
 
 from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
+from django.urls import reverse
 from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
@@ -594,6 +596,16 @@ class TestQueryGet(TestCase):
         finally:
             SQLCompiler.META_NAME = old_meta_val
 
+    def test_query_pk_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(id__in=[])
+        self.assertEqual(list(res), [])
+
+    def test_query_field_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(name__in=[])
+        self.assertEqual(list(res), [])
+
 
 class TestQueryCount(TestCase):
     fixtures = ['data.json']
@@ -678,6 +690,19 @@ class TestQueryDelete(TestCase):
 
 class TestQueryUpdate(TestCase):
     fixtures = ['data.json']
+
+    def test_manual_update(self):
+        p = api_models.Pizza.objects.get(pk=1)
+        menu = api_models.Menu.objects.get(pk=1)
+        menu2 = api_models.Menu.objects.create(name="menu2", code="m2")
+
+        res = self.client.patch(reverse('pizza-detail', kwargs={'pk': p.pk}),
+                                data=json.dumps({'pizza': {'menu': menu2.pk}}),
+                                content_type='application/json',
+                                HTTP_AUTHORIZATION='Basic YWRtaW46YWRtaW4=',
+                                )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data['pizza']['menu'], menu2.pk)
 
     def assertFieldsSameValues(self, a, b, excluded=None):
         # build commons attrubutes, excluding the excluded ones
