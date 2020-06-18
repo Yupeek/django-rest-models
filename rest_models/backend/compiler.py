@@ -559,13 +559,13 @@ def join_results(row, resolved, connection=None):
 
 def simple_count(compiler, result):
     """
-    special case that check if the query is a count on one column and shall return only one resulti.
+    special case that check if the query is a count on one column and shall return only one result.
     this can be made by the pagination hack
     :param SQLCompiler compiler: the compiler that is used
     :param result: the result type
     :return:
     """
-    if len(compiler.select) == 1 and isinstance(compiler.select[0][0], Count) and result is SINGLE:
+    if result is SINGLE and isinstance(compiler.select[-1][0], Count) and result is SINGLE:
         url = get_resource_path(compiler.query.model)
         params = compiler.build_filter_params()
         params['per_page'] = 1
@@ -575,7 +575,7 @@ def simple_count(compiler, result):
             params=params
         )
         compiler.raise_on_response(url, params, response)
-        return True, [response.json()['meta']['total_results']]
+        return True, ([] * (len(compiler.select) - 1)) + [response.json()['meta']['total_results']]
 
     return False, None
 
@@ -591,12 +591,14 @@ def introspect_many_to_many_relations(through):
     for fk in through._meta.get_fields():
         if fk.is_relation and fk.many_to_one:
 
-            for rel_model_f in fk.rel.model._meta.get_fields():
+            for rel_model_f in fk.related_model._meta.get_fields():
                 if rel_model_f.is_relation \
-                        and rel_model_f.many_to_many \
-                        and getattr(rel_model_f, 'rel', rel_model_f).through == through:
-                    fields.append((fk, fk.rel.model, rel_model_f))
-                    break
+                        and rel_model_f.many_to_many:
+                    model_through = getattr(rel_model_f.remote_field, 'through', None) \
+                                    or getattr(rel_model_f, 'through')
+                    if model_through == through:
+                        fields.append((fk, fk.related_model, rel_model_f))
+                        break
             else:
                 raise AssertionError("we can't find the field used as relation using through %s" % through)
 
@@ -620,7 +622,7 @@ def m2m_through(compiler, result):
     else:
         raise AssertionError("query on throuhg not supported: %s AND %s" % (a, b))
     for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
-        if rex.lhs.target.rel.model == rel_model:
+        if rex.lhs.target.related_model == rel_model:
             response = compiler.connection.cursor().get(
                 get_resource_path(rel_model, rex.rhs),
                 params={'exclude[]': '*', 'include[]': rel_m2m.name}
@@ -670,7 +672,7 @@ class SQLCompiler(BaseSQLCompiler):
         return RestModelRouter.is_api_model(self.query.model)
 
     def compile(self, node, select_format=False):
-        return None, None
+        return '', []
 
     def check_compatibility(self):
         """
@@ -682,7 +684,7 @@ class SQLCompiler(BaseSQLCompiler):
         query = self.query
         if query.group_by is not None:
             raise FakeDatabaseDbAPI2.NotSupportedError('group by is not supported')
-        if query.distinct and self.connection.settings_dict.get('PREVENT_DISTINCT', True):
+        if query.distinct and self.connection.settings_dict.get('PREVENT_DISTINCT', False):
             raise FakeDatabaseDbAPI2.NotSupportedError('distinct is not supported')
         # check where
         where_nodes = [query.where]
@@ -1261,7 +1263,7 @@ class SQLDeleteCompiler(SQLCompiler):
             # special case where we emulate CASCADE on through
             return 1
         for fk, rel_model, rel_m2m in introspect_many_to_many_relations(meta.model):
-            if rex.lhs.target.rel.model == rel_model:
+            if rex.lhs.target.related_model == rel_model:
                 if rin is None:
                     # clear all entry
                     final_pks = []
@@ -1364,5 +1366,11 @@ class SQLUpdateCompiler(SQLCompiler):
 class SQLAggregateCompiler(SQLCompiler):
 
     def execute_sql(self, result_type=MULTI, chunk_size=None):
+        self.setup_query()
+        if not result_type:
+            result_type = NO_RESULTS
+        is_special, result = self.special_cases(result_type)
+        if is_special:
+            return result
         raise NotSupportedError("the aggregation for the database %s is not supported : %s" % (
             self.connection.alias, self.query))  # pragma: no cover

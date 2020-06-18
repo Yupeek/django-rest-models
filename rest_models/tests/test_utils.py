@@ -108,11 +108,12 @@ class TestLoadFixtures(TestCase):
 
     def test_load_bad_fixtures(self):
         _, path = tempfile.mkstemp(".json", text=True)
-        file = open(path, "w")
+
         try:
-            file.write("coucoubad json")
-            file.flush()
-            file.close()
+            with open(path, "w") as file:
+                file.write("coucoubad json")
+                file.flush()
+                file.close()
             a = JsonFixtures(path)
             self.assertRaisesMessage(ValueError, 'error while loading ', a._load)
         finally:

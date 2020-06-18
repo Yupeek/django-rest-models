@@ -54,13 +54,13 @@ Requirements
 
 This database wrapper work with
 
-- python 2.7, 3.5, 3.6
-- django 1.11
+- python3.5, 3.6
+- django 2.0, 2.1, 2.2
 
 On the api, this is tested against
 
-- django-rest-framework 3.4, 3.5
-- dynamic-rest 1.5, 1.6, 1.7, 1.8
+- django-rest-framework 3.7, 3.8, 3.9, 3.10, 3.11
+- dynamic-rest 1.9
 
 
 Examples

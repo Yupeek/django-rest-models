@@ -521,10 +521,9 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
             Pizza.objects.filter(~Q(id=1, cost=10.0))
         )
 
-    def test_distinct(self):
-        self.assertBadQs(
-            Pizza.objects.all().distinct('name')
-        )
+    def test_distinct_default(self):
+        # by default, this don't raise
+        Pizza.objects.all().distinct('name')
 
     def test_distinct2(self):
 

@@ -149,7 +149,8 @@ class JsonFixtures(object):
         :return: the data loaded
         """
         try:
-            return json.load(Path(path).open('r'))
+            with Path(path).open('r') as f:
+                return json.load(f)
         except ValueError as ve:
             six.raise_from(ValueError("error while loading the fixture %s" % path), ve)
 

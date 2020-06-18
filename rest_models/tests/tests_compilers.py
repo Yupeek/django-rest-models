@@ -16,6 +16,7 @@ class TestSqlCompiler(TestCase):
     """
     test for coverage use. specials cases are not easy to trigger with queryset
     """
+    databases = ['default', 'api']
     fixtures = ['data.json']
 
     def get_compiler(self, queryset):
@@ -57,6 +58,7 @@ class TestSqlCompiler(TestCase):
 
 
 class TestErrorResponseFormat(RestModelTestCase):
+    databases = ['default', 'api']
     pizza_data = {
         "cost": 2.08,
         "to_date": "2016-11-20T08:46:02.016000",

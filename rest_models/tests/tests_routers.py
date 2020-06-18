@@ -16,8 +16,7 @@ from rest_models.router import RestModelRouter
 class TestMigrationRouter(TestCase):
 
     def test_make_migration(self):
-        call_command('makemigrations', app_label='testapi', interactive=False, dry_run=True, verbosity=0)
-        call_command('makemigrations', app_label='testapp', interactive=False, dry_run=True, verbosity=0)
+        call_command('makemigrations', 'testapi', 'testapp', interactive=False, dry_run=True, verbosity=0)
 
 
 class TestApiResolution(TestCase):

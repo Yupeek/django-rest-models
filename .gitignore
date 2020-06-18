@@ -90,3 +90,4 @@ ENV/
 db.sq3
 
 media/
+.idea/

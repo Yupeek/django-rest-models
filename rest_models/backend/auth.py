@@ -4,17 +4,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import logging
 from collections import namedtuple
+from urllib.parse import urlparse, urlunparse
 
 from django.db.utils import ProgrammingError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
-
-try:
-    from urllib.parse import urlparse, urlunparse
-except ImportError:  # pragma: no cover
-    from urlparse import urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
 

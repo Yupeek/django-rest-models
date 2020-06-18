@@ -6,6 +6,7 @@ import logging
 
 from django.conf import settings
 from django.db import models
+from django.db.models import CASCADE
 from django.utils import timezone
 
 if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
@@ -48,9 +49,9 @@ class Pizza(models.Model):
     from_date = models.DateField(auto_now_add=True)
     to_date = models.DateTimeField(default=auto_now_plus_5d)
 
-    creator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=CASCADE)
     toppings = models.ManyToManyField(Topping, related_name='pizzas', blank=True)
-    menu = models.ForeignKey(Menu, null=True, related_name='pizzas')
+    menu = models.ForeignKey(Menu, null=True, related_name='pizzas', on_delete=CASCADE)
 
     def __str__(self):
         return self.name  # pragma: no cover
@@ -66,7 +67,7 @@ class Review(models.Model):
 
 class PizzaGroup(models.Model):
 
-    parent = models.ForeignKey("self", related_name='children', null=True)
+    parent = models.ForeignKey("self", related_name='children', null=True, on_delete=CASCADE)
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')
 
