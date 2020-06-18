@@ -34,6 +34,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         return []
 
     def get_table_list(self, cursor):
+        if self.connection.settings_dict.get('OPTIONS', {}).get('IGNORE_INTROSPECT', False):
+            return []
         res = cursor.get('', params={'format': 'json'})
         if res.status_code != 200:
             raise Exception("error while querying the table list %s: "
@@ -62,6 +64,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         return {}
 
     def get_relations(self, cursor, table_name):
+        if self.connection.settings_dict.get('OPTIONS', {}).get('IGNORE_INTROSPECT', False):
+            return []
         res = cursor.get(
             table_name,
             params={'page': 1, 'per_page': 1}
@@ -86,6 +90,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
             }
 
     def get_table_description(self, cursor, table_name):
+        if self.connection.settings_dict.get('OPTIONS', {}).get('IGNORE_INTROSPECT', False):
+            return []
         options = cursor.options(table_name).json()
         fields = options['properties']
 
