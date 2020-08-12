@@ -5,9 +5,9 @@ tox
 isort
 flake8
 requests
-djangorestframework==3.11
+djangorestframework<3.12
 dynamic-rest==1.9.6
 -r test_requirements.txt
 twine
 psycopg2-binary
-Pillow==5
+Pillow==7.1.0
