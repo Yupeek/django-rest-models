@@ -5,6 +5,7 @@ import datetime
 import logging
 import os
 import threading
+from urllib.parse import urlparse
 
 import unidecode
 from django.core.files.base import ContentFile
@@ -108,3 +109,13 @@ class RestApiStorage(Storage):
 
     def get_valid_name(self, name):
         return unidecode.unidecode(name)
+
+    def delete(self, name):
+        cursor = self.get_cursor(name)
+        url = cursor.connection.url + 'storage/delete/'
+        print(url)
+        full_path = urlparse(self.result_file_pool[name][0]).path
+        response = get_basic_session().delete(url=url, data={name: full_path})
+        # if we fail, we try with authenticated session
+        if response.status_code in (403, 401):
+            response = cursor.session.delete(url=url, data={name: full_path})
