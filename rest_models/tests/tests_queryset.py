@@ -2,12 +2,14 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import json
 from unittest import skipIf
 
 from django.conf import settings
 from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
+from django.urls import reverse
 from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
@@ -18,6 +20,7 @@ from testapp import models as client_models
 
 class TestQueryInsert(TestCase):
     fixtures = ['user.json']
+    databases = ["default", "api"]
 
     def test_insert_normal(self):
         n = api_models.Pizza.objects.count()
@@ -165,6 +168,7 @@ class TestQueryInsert(TestCase):
 
 class TestM2M(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def setUp(self):
         self.p4 = api_models.Pizza.objects.create(
@@ -197,36 +201,36 @@ class TestM2M(TestCase):
         topping = client_models.Topping.objects.get(pk=6)
         topping2 = client_models.Topping.objects.get(pk=4)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6, )])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         p.toppings.remove(topping, topping2)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1, )])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1]])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_set(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
         self.assertEqual(list(topping.pizzas.all()), [p])
         vals = client_models.Topping.objects.filter(pk__in=[1, 2])
         p.toppings.set(vals)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (2,)])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [2]])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_clear(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         topping.pizzas.clear()
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), ])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], ])
         self.assertEqual(list(topping.pizzas.all()), [])
 
 
@@ -285,7 +289,7 @@ class TestJsonField(TestCase):
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=False).values_list('pk')),
                          [(t.pk,)])
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=True).values_list('pk')),
-                         [(1,), (2,), (3,), (4,), (5,), (6,)])
+                         [[1], [2], [3], [4], [5], [6]])
 
     def test_jsonfield_lookup(self):
         t = api_models.Topping.objects.create(
@@ -350,6 +354,7 @@ class TestQueryLookupTransform(TestCase):
 
 class TestQueryGet(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def assertObjectEqual(self, obj, data):
         for k, v in data.items():
@@ -412,9 +417,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(
             res,
             [
-                (3, "miam d'oie"),
-                (2, 'flam'),
-                (1, 'suprème')
+                [3, "miam d'oie"],
+                [2, 'flam'],
+                [1, 'suprème']
             ]
         )
 
@@ -423,7 +428,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Pizza.objects.values_list('id', 'menu__name').order_by('-id'))
         self.assertEqual(
             res,
-            [(3, None), (2, None), (1, 'main menu')]
+            [[3, None], [2, None], [1, 'main menu']]
         )
 
     def test_get_values_list_backward_fk(self):
@@ -431,7 +436,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Menu.objects.values_list('id', 'pizzas__name').order_by('-id'))
         self.assertEqual(
             res,
-            [(1, 'suprème')]
+            [[1, 'suprème']]
         )
 
     def test_get_no_result(self):
@@ -479,6 +484,7 @@ class TestQueryGet(TestCase):
         res = list(api_models.Topping.objects.order_by('pizzas__pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
         self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
+        # self.assertEqual(res, [[1], [1], [1], [1], [1], [2], [2], [3], [3], [3]])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -500,11 +506,11 @@ class TestQueryGet(TestCase):
         # this order is matchin topping1: pizza1,2,3; topping2: pizza1, topping3:pizza1, etc
         if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
             # sqlite compiler take into account the orderby in pizzas__pk.
-            self.assertEqual(res,  [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,)])
+            self.assertEqual(res,  [[1], [2], [3], [1], [1], [1], [2], [3], [1]])
         else:
             # postgresql compiler loos the orderby in the process
             self.assertEqual(len(res), 9)
-            self.assertEqual(set(res), {(1,), (2,), (3,)})
+            self.assertEqual(set(tuple(r) for r in res), {(1,), (2,), (3,)})
 
     def test_without_get_select_related_sample(self):
         with self.assertNumQueries(1, using='api'):
@@ -589,18 +595,34 @@ class TestQueryGet(TestCase):
             with self.assertNumQueries(1, using='api'):
                 self.assertEqual(
                     list(client_models.Pizza.objects.values_list('pk')),
-                    [(1,), (2,), (3,)]
+                    [[1], [2], [3]]
                 )
         finally:
             SQLCompiler.META_NAME = old_meta_val
 
+    def test_query_pk_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(id__in=[])
+        self.assertEqual(list(res), [])
+
+    def test_query_field_empty_in(self):
+        with self.assertNumQueries(0, using='api'):
+            res = client_models.Pizza.objects.filter(name__in=[])
+        self.assertEqual(list(res), [])
+
 
 class TestQueryCount(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_count(self):
         with self.assertNumQueries(1, using='api'):
             self.assertEqual(client_models.Pizza.objects.all().count(), 3)
+
+    def test_count_ensure_no_cache(self):
+        with self.assertNumQueries(1, using='api'):
+            q = client_models.Pizza.objects.all().distinct()
+            self.assertEqual(q.query.get_count(using=q.db), 3)
 
     def test_count_no_result(self):
         api_models.Pizza.objects.all().delete()
@@ -614,6 +636,7 @@ class TestQueryCount(TestCase):
 
 class TestQueryDelete(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_delete_obj(self):
         n = api_models.Pizza.objects.count()
@@ -678,6 +701,20 @@ class TestQueryDelete(TestCase):
 
 class TestQueryUpdate(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
+
+    def test_manual_update(self):
+        p = api_models.Pizza.objects.get(pk=1)
+        api_models.Menu.objects.get(pk=1)
+        menu2 = api_models.Menu.objects.create(name="menu2", code="m2")
+
+        res = self.client.patch(reverse('pizza-detail', kwargs={'pk': p.pk}),
+                                data=json.dumps({'pizza': {'menu': menu2.pk}}),
+                                content_type='application/json',
+                                HTTP_AUTHORIZATION='Basic YWRtaW46YWRtaW4=',
+                                )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data['pizza']['menu'], menu2.pk)
 
     def assertFieldsSameValues(self, a, b, excluded=None):
         # build commons attrubutes, excluding the excluded ones
@@ -764,6 +801,7 @@ class TestQueryUpdate(TestCase):
 
 class TestUnallowedQuery(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_raw_query_fail(self):
         self.assertRaisesMessage(NotSupportedError, "Only Col in sql select is supported", list,
@@ -783,6 +821,6 @@ class TestUnallowedQuery(TestCase):
         compiler = SQLAggregateCompiler(qs.query, connections['api'], 'api')
         self.assertRaisesMessage(
             NotSupportedError,
-            "the aggregation for the database api is not supported",
+            "group by is not supported",
             compiler.execute_sql
         )

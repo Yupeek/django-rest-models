@@ -13,7 +13,7 @@ from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaGroupView
                              ToppingViewSet, fake_oauth, fake_view, wait)
 
 router = DynamicRouter()
-router.register('pizza', PizzaViewSet)
+router.register('pizza', PizzaViewSet, base_name='pizza')
 router.register('review', ReviewViewSet)
 router.register('topping', ToppingViewSet)
 router.register('menulol', MenuViewSet)
@@ -28,7 +28,7 @@ urlpatterns = [
     url(r'^api/v2/', include(router.urls)),
     url(r'^api/forbidden', lambda request: HttpResponseForbidden()),
     url(r'^other/view/', lambda request: HttpResponse(b'{"result": "ok"}')),
-    url(r'admin/', include(admin.site.urls)),
+    url(r'admin/', admin.site.urls),
     url(r'^$', RedirectView.as_view(url='api/v2', permanent=False))
 ]
 # static files (images, css, javascript, etc.)

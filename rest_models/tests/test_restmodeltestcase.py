@@ -11,6 +11,7 @@ from testapp.models import Menu
 
 
 class TestLoadFixtureTest(RestModelTestCase):
+    databases = ['default', 'api']
     rest_fixtures = {
         'c': Path(os.path.join(os.path.dirname(__file__), 'rest_fixtures', 'data_test_fixtures.json')),
         "a": [],
@@ -77,6 +78,7 @@ class TestLoadFixtureTest(RestModelTestCase):
 
 
 class TestMockDataSample(RestModelTestCase):
+    databases = ['default', 'api']
     database_rest_fixtures = {'api': {  # api => response mocker for databasen named «api»
         'menulol': [  # url menulol
             {
@@ -222,6 +224,7 @@ class TestMockDataSample(RestModelTestCase):
 
 
 class TestMockUrlResolving(RestModelTestCase):
+    databases = ['default', 'api']
     database_rest_fixtures = {'api': {
         '/root/': [  # url menulol
             {

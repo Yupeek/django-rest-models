@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
+from django.db.models import CASCADE
 
 
 class Migration(migrations.Migration):
@@ -22,7 +23,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True, serialize=False)),
                 ('name', models.CharField(max_length=135)),
-                ('a', models.ForeignKey(related_name='aa', to='badapi.A')),
+                ('a', models.ForeignKey(related_name='aa', to='badapi.A', on_delete=CASCADE)),
             ],
         ),
         migrations.CreateModel(

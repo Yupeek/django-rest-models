@@ -101,7 +101,7 @@ class QueryParserPathResolutionTest(TestCase):
             set(res_dict_testable.keys()),
             "%s = %s" % (set(alieses_dict_testable.keys()), set(res_dict_testable.keys()))
         )
-        for model_alias, alias in alieses_dict_testable.items():  # type: str, Alias
+        for model_alias, alias in alieses_dict_testable.items():
             model_name, parent, field, attrname, m2m = res_dict_testable[model_alias]
 
             self.assertEqual(model_name, alias.model.__name__)
@@ -521,10 +521,9 @@ class TestIncompatibleBuildCompiler(CompilerTestCase):
             Pizza.objects.filter(~Q(id=1, cost=10.0))
         )
 
-    def test_distinct(self):
-        self.assertBadQs(
-            Pizza.objects.all().distinct('name')
-        )
+    def test_distinct_default(self):
+        # by default, this don't raise
+        Pizza.objects.all().distinct('name')
 
     def test_distinct2(self):
 

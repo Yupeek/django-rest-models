@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 })
 class SystemCheckTest(TestCase):
     fixtures = ['user.json']
+    databases = ['default', 'api', 'apifail']
 
     @classmethod
     def setUpClass(cls):
@@ -30,8 +31,7 @@ class SystemCheckTest(TestCase):
         call_command(
             'migrate',
             verbosity=0,
-            interactive=False,
-            test_flush=True)
+            interactive=False)
 #           settings.skip_check.set(False)
 
     @classmethod
@@ -65,7 +65,7 @@ class SystemCheckTest(TestCase):
         self.assertIn('has a field "bb"', msg)
         self.assertIn('Serializer.many value corresponding to the local model a', msg)
         self.assertIn('OPTIONS http://localapi/api/v1/c => 404', msg)
-        self.assertIn('System check identified 4 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some issues', msg)
 
     def test_check_one_error(self):
         with self.assertRaises(SystemCheckError) as ctx:
@@ -75,7 +75,7 @@ class SystemCheckTest(TestCase):
         self.assertIn('has a field "bb"', msg)
         self.assertIn('Serializer.many value corresponding to the local model a', msg)
         self.assertIn('OPTIONS http://localapi/api/v1/c => 404', msg)
-        self.assertIn('System check identified 4 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some issues', msg)
 
     def test_check_one_ok(self):
         res = six.StringIO()
@@ -88,6 +88,7 @@ class SystemCheckTest(TestCase):
     'append': ['testapi.badapi', 'testapp.badapp'],
 })
 class TestErrorsCheck(RestModelTestCase):
+    databases = ['default', 'api', 'apifail']
     fixtures = ['user.json']
 
     res_ok = {
@@ -126,7 +127,7 @@ class TestErrorsCheck(RestModelTestCase):
         msg = ctx.exception.args[0]
 
         self.assertIn('running with dynamic-rest ?', msg)
-        self.assertIn('System check identified 4 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some ', msg)
 
     def test_ok_feature(self):
         with self.assertRaises(SystemCheckError) as ctx:
@@ -134,7 +135,7 @@ class TestErrorsCheck(RestModelTestCase):
         msg = ctx.exception.args[0]
 
         self.assertNotIn('running with dynamic-rest ?', msg)
-        self.assertIn('System check identified 4 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some ', msg)
 
     def test_missing_prop(self):
         res_missing_field = copy.deepcopy(self.res_ok)
@@ -145,7 +146,7 @@ class TestErrorsCheck(RestModelTestCase):
         msg = ctx.exception.args[0]
 
         self.assertIn('the field A.name in not present on the remote serializer', msg)
-        self.assertIn('System check identified 5 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some issues', msg)
 
     def test_too_many_choices(self):
         res_toomany_choices = copy.deepcopy(self.res_ok)
@@ -156,4 +157,4 @@ class TestErrorsCheck(RestModelTestCase):
         msg = ctx.exception.args[0]
 
         self.assertIn('the field A.bb has many choices values (150) in OPTIONS ', msg)
-        self.assertIn('System check identified 5 issues', msg)
+        self.assertIn('SystemCheckError: System check identified some issues', msg)

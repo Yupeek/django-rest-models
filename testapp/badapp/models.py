@@ -5,6 +5,7 @@ import datetime
 import logging
 
 from django.db import models
+from django.db.models import CASCADE
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class C(models.Model):
 
 class AA(models.Model):
     name = models.CharField(max_length=135)
-    a = models.ForeignKey(A, related_name='aa')
+    a = models.ForeignKey(A, related_name='aa', on_delete=CASCADE)
 
     class APIMeta:
         db_name = 'apifail'

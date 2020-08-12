@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+from django.db.models import CASCADE
 
 import testapi.models
 from testapi.models import has_jsonfield

@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from django.conf import settings
 from django.db import models
+from django.db.models import CASCADE
 
 from rest_models.storage import RestApiStorage
 
@@ -48,7 +49,7 @@ class Pizza(models.Model):
 
     # creator = models.ForeignKey(settings.AUTH_USER_MODEL)
     toppings = models.ManyToManyField(Topping, related_name='pizzas')
-    menu = models.ForeignKey(Menu, null=True, related_name='pizzas', db_column='menu')
+    menu = models.ForeignKey(Menu, null=True, related_name='pizzas', db_column='menu', on_delete=CASCADE)
 
     # extra field from serializers
     cost = models.FloatField()
@@ -66,7 +67,7 @@ class Review(models.Model):
 
 
 class Bookmark(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=CASCADE)
     pizza_id = models.IntegerField(null=False)
     date = models.DateTimeField(auto_now_add=True)
 
@@ -81,7 +82,7 @@ class Bookmark(models.Model):
 
 class PizzaGroup(models.Model):
 
-    parent = models.ForeignKey("self", related_name='children', db_column='parent')
+    parent = models.ForeignKey("self", related_name='children', db_column='parent', on_delete=CASCADE)
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')
 
