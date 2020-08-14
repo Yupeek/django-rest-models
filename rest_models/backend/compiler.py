@@ -1307,7 +1307,11 @@ class SQLUpdateCompiler(SQLCompiler):
                     # str => we don't change it since it's not comming from our custom storage
                     pass
                 else:
-                    files[field.column] = (file.name, file, file.content_type)
+                    try:
+                        files[field.column] = (file.name, file, file.content_type)
+                    except AttributeError:
+                        # This case happen when you create an image with a ContentFile() there is no 'content_type' in it
+                        files[field.column] = (file.name, file)
 
             else:
                 fieldname = field.concrete and field.db_column or field.name
