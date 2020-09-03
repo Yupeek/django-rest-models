@@ -1058,7 +1058,7 @@ class SQLInsertCompiler(SQLCompiler):
                 file = fieldfile.name
 
                 if file is not None:  # field value can be None....
-                    files[field.column] = (file.name, file, file.content_type)
+                    files[field.column] = (file.name, file, getattr(file, 'content_type', None))
                 else:
                     data[field.column] = None
             else:
@@ -1213,6 +1213,7 @@ class FakeCursor(object):
     """
     a fake cursor with rowcount
     """
+
     def __init__(self, rowcount):
         self.rowcount = rowcount
 
@@ -1307,8 +1308,7 @@ class SQLUpdateCompiler(SQLCompiler):
                     # str => we don't change it since it's not comming from our custom storage
                     pass
                 else:
-                    files[field.column] = (file.name, file, file.content_type)
-
+                    files[field.column] = (file.name, file, getattr(file, 'content_type', None))
             else:
                 fieldname = field.concrete and field.db_column or field.name
                 data[fieldname] = field.get_db_prep_save(val, connection=self.connection)
@@ -1336,7 +1336,7 @@ class SQLUpdateCompiler(SQLCompiler):
                     if result.status_code not in (200, 202, 204):
                         raise FakeDatabaseDbAPI2.ProgrammingError(
                             "error while updating %s.pk=%s with data=%s,files=%s.\n%s" % (
-                             query.model.__name__, id_, data, files, message_from_response(result))
+                                query.model.__name__, id_, data, files, message_from_response(result))
                         )
 
                     # update object instance using result data if possible
