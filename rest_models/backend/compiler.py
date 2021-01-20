@@ -496,7 +496,10 @@ def join_aliases(aliases, responsereader, existing_aliases):
         # resolve the values of next jump
         val_for_model = responsereader[alias.model]
         current_data = existing_aliases[alias.parent]
-        val = current_data[alias.field.concrete and alias.field.db_column or alias.attrname]
+        val = current_data.get(alias.field.concrete and alias.field.db_column or alias.attrname, None)
+        if not val:
+            yield existing_aliases
+            return
         if not isinstance(val, list):
             val = [val]
         for pk in val:
