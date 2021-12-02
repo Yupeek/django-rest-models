@@ -6,6 +6,7 @@ import itertools
 import logging
 import re
 from collections import defaultdict, namedtuple
+from json import JSONDecodeError
 
 import six
 from django.core.exceptions import ImproperlyConfigured
@@ -990,13 +991,15 @@ class SQLCompiler(BaseSQLCompiler):
 
             pk, params = self.build_params_and_pk()
             url = get_resource_path(self.query.model, pk)
-            response = self.connection.cursor().get(
-                url,
-                params=params
-            )
-            self.raise_on_response(url, params, response)
+            response = self.make_request(params, url)
 
-            json = response.json()
+            try:
+                json = response.json()
+            except JSONDecodeError:
+                extra = {'params': params, 'response': response}
+                logger.error('json decode error while calling {}; retrying'.format(url), extra=extra)
+                json = self.make_request(params, url).json()
+
             meta = self.get_meta(json, response)
             if meta:
                 # pagination and others thing
@@ -1037,6 +1040,14 @@ class SQLCompiler(BaseSQLCompiler):
         response_reader = ApiResponseReader(json, next_=next_from_query, many=pk is None)
         result = self.result_iter(response_reader)
         return result
+
+    def make_request(self, params, url):
+        response = self.connection.cursor().get(
+            url,
+            params=params
+        )
+        self.raise_on_response(url, params, response)
+        return response
 
 
 class SQLInsertCompiler(SQLCompiler):
