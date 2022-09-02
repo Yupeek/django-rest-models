@@ -11,3 +11,4 @@ dynamic-rest==1.9.6
 twine
 psycopg2-binary
 Pillow==7.1.0
+unidecode
