@@ -29,7 +29,7 @@ jobs:
   include:
   # deploy if master and tag
   - stage: test_postgres
-    python: '3.7'
+    python: '3.6'
     script: COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox -e postgresql
   - stage: deploy
     script: skip # to not run Travis' default script
