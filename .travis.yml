@@ -16,6 +16,7 @@ install:
 - pip install tox-travis
 - pip install python-coveralls
 - pip install "virtualenv" "tox>=1.9"
+- pip install -U importlib_metadata
 script:
 - COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
 
@@ -28,7 +29,7 @@ jobs:
   include:
   # deploy if master and tag
   - stage: test_postgres
-    python: '3.6'
+    python: '3.7'
     script: COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox -e postgresql
   - stage: deploy
     script: skip # to not run Travis' default script
