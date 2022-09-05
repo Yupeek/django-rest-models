@@ -6,8 +6,9 @@ isort
 flake8
 requests
 djangorestframework<3.12
-dynamic-rest==1.9.6
+dynamic-rest<2.2
 -r test_requirements.txt
 twine
 psycopg2-binary
-Pillow==7.1.0
+Pillow<9
+unidecode

@@ -186,8 +186,8 @@ class TestPrintQueryMiddleware(TestCase):
         else:
             expected = "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
 
-        for l in split_output:
-            if expected in l:
+        for line in split_output:
+            if expected in line:
                 break
         else:
             self.fail("%s not found in %s" % (expected, split_output))
@@ -229,10 +229,10 @@ class TestPrintQueryMiddleware(TestCase):
         res = self.cnx.get('c')  # generate many lines
         self.assertEqual(res.status_code, 200)
         getvalue = self.s.getvalue()
-        if six.PY2:
-            self.assertIn("u'exception': TypeError('<object object at ",
+        if sys.version_info[:2] >= (3, 7):
+            self.assertIn("<object object at ",
                           getvalue)
-            self.assertIn("u'text': \"{u'res': <object object at ",
+            self.assertIn("Object of type object is not JSON serializable",
                           getvalue)
         elif sys.version_info[:2] >= (3, 6):
             self.assertIn("'exception': TypeError(\"Object of type 'object' is not JSON serializable\"",
