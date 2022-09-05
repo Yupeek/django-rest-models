@@ -61,6 +61,20 @@ class ExpirableDict(dict):
         self._clean_cache()
 
 
+class RestFileField(str):
+    content = None
+
+    @property
+    def name(self):
+        return self.content.name if self.content else ''
+
+    def __init__(self, content):
+        self.content = content
+
+    def __str__(self):
+        return self.content and self.content.name
+
+
 @deconstructible
 class RestApiStorage(Storage):
     def __init__(self):
@@ -88,10 +102,11 @@ class RestApiStorage(Storage):
         response.raise_for_status()
         return ContentFile(response.content, name)
 
-    def _save(self, name, content):
+    @staticmethod
+    def _save(name, content):
         # self.uploaded_file_pool[id] = content
         content.name = content.original_name = name
-        return content
+        return RestFileField(content)
 
     def size(self, name):
         cursor = self.get_cursor(name)  # fetch a valid cursor which just got the name
@@ -108,14 +123,16 @@ class RestApiStorage(Storage):
         return self.result_file_pool[name][1]  # pool contains url and cursor to get it
 
     def url(self, name):
-        """return a usable url fro this name"""
-        # since the api return us a full url, and it's concidered just the name by django
+        """return a usable url from this name"""
+        # since the api return us a full url, and it's considered just the name by django
         # we don't do anything
 
         return self.result_file_pool.get(name, (name, None))[0]  # pool contains url and cursor to get it
 
-    def get_available_name(self, name, max_length=None):
+    @staticmethod
+    def get_available_name(name, max_length=None):
         return unidecode.unidecode(name)
 
-    def get_valid_name(self, name):
+    @staticmethod
+    def get_valid_name(name):
         return unidecode.unidecode(name)

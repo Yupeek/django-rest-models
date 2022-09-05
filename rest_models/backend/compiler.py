@@ -27,6 +27,7 @@ from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
 from rest_models.backend.utils import message_from_response
 from rest_models.router import RestModelRouter
+from rest_models.storage import RestFileField
 from rest_models.utils import pgcd
 
 logger = logging.getLogger(__name__)
@@ -1069,7 +1070,7 @@ class SQLInsertCompiler(SQLCompiler):
                 file = fieldfile.name
 
                 if file is not None:  # field value can be None....
-                    files[field.column] = (file.name, file, getattr(file, 'content_type', None))
+                    files[field.column] = (file.name, file.content, getattr(file, 'content_type', None))
                 else:
                     data[field.column] = None
             else:
@@ -1315,8 +1316,11 @@ class SQLUpdateCompiler(SQLCompiler):
                 if file is None:
                     # field can be set to None
                     data[field.column] = None
+                elif isinstance(file, RestFileField):
+                    content_type = getattr(file.content, 'content_type', None)
+                    files[field.column] = (file.content.name, file.content, content_type)
                 elif isinstance(file, six.string_types):
-                    # str => we don't change it since it's not comming from our custom storage
+                    # str => we don't change it since it's not coming from our custom storage
                     pass
                 else:
                     files[field.column] = (file.name, file, getattr(file, 'content_type', None))
