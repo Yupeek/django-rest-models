@@ -5,7 +5,7 @@ services:
 - postgresql
 
 addons:
-  postgresql: "9.4"
+  postgresql: "11"
 
 cache: pip
 
