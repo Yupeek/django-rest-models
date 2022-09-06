@@ -35,7 +35,7 @@ class DatabaseClient(BaseDatabaseClient):
             self.server_thread.terminate()
             self.server_thread.join()
 
-    def runshell(self):
+    def runshell(self, *args, **kwargs):
         resty_path = os.path.join(os.path.dirname(__file__), "exec", "resty")
         args = [self.executable_name, "--init-file", resty_path]
 

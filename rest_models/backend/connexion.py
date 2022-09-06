@@ -77,7 +77,7 @@ class LocalApiAdapter(BaseAdapter):
         response.status_code = getattr(http_response, 'status_code', None)
 
         # Make headers case-insensitive.
-        response.headers = CaseInsensitiveDict(getattr(http_response._headers, 'headers', {}))
+        response.headers = CaseInsensitiveDict(getattr(http_response, 'headers', {}))
 
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
