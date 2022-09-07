@@ -805,6 +805,9 @@ class SQLCompiler(BaseSQLCompiler):
         :param field: the field to parse
         :rtype: tuple[bool, unicode]
         """
+        if field == '?':
+            return False, '?'
+
         if self.query.standard_ordering:
             asc, desc = ORDER_DIR['ASC']
         else:
