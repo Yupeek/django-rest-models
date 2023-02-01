@@ -8,15 +8,15 @@ import re
 from collections import defaultdict, namedtuple
 from json import JSONDecodeError
 
+import django
 import six
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import EmptyResultSet, ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
 from django.db.models.expressions import Col, RawSQL
 from django.db.models.fields.related_lookups import RelatedExact, RelatedIn
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
-from django.db.models.query import EmptyResultSet
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
 from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
 from django.db.models.sql.datastructures import BaseTable
@@ -1218,7 +1218,12 @@ class SQLInsertCompiler(SQLCompiler):
                     setattr(obj, field.attname, python_val)
 
             if return_id and result_json:
-                return result_json[get_resource_name(query.model, many=False)][opts.pk.column]
+                result = result_json[get_resource_name(query.model, many=False)][opts.pk.column]
+                if django.VERSION >= (3, 1):
+                    result = [result_json[get_resource_name(query.model, many=False)][opts.pk.column]]
+                elif django.VERSION < (3, 0):
+                    return result
+                return (result, )
 
 
 class FakeCursor(object):
@@ -1228,6 +1233,12 @@ class FakeCursor(object):
 
     def __init__(self, rowcount):
         self.rowcount = rowcount
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
 
 class SQLDeleteCompiler(SQLCompiler):

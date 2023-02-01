@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class NoCheckDiscoverRunner(DiscoverRunner):
-    def run_checks(self):
+    def run_checks(self, *args, **kwargs):
         pass
 
 
 class NoCheckTeamcityDjangoRunner(TeamcityDjangoRunner):
-    def run_checks(self):
+    def run_checks(self, *args, **kwargs):
         pass

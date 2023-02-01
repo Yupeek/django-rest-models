@@ -1,15 +1,14 @@
 import os
 
-
 try:
     from django.core.paginator import UnorderedObjectListWarning
     import warnings
+
     warnings.simplefilter('ignore', UnorderedObjectListWarning)
 except ImportError:
     pass
 
 SECRET_KEY = 'FAKEDKEYDONOUSEITINREALLIFE'
-
 
 skip_check = os.environ.get('SKIP_CHECK', '').upper() in ('TRUE', 'Y')
 
@@ -58,29 +57,28 @@ DATABASES = {
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = (
-    # Default Django apps
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+                     # Default Django apps
+                     'django.contrib.admin',
+                     'django.contrib.auth',
+                     'django.contrib.contenttypes',
+                     'django.contrib.sessions',
+                     'django.contrib.messages',
+                     'django.contrib.staticfiles',
 
-    # We test this one
-    'testapp',
-    'testapi',
-    'rest_framework',
-    'dynamic_rest',
-) + (
-    ('testapi.badapi', 'testapp.badapp')
-    if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
-    else tuple()
-)
+                     # We test this one
+                     'testapp',
+                     'testapi',
+                     'rest_framework',
+                     'dynamic_rest',
+                 ) + (
+                     ('testapi.badapi', 'testapp.badapp')
+                     if os.environ.get('WITH_BADAPP', "false").lower().strip() == 'true'
+                     else tuple()
+                 )
 
 DATABASE_ROUTERS = [
     'rest_models.router.RestModelRouter',
 ]
-
 
 MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -118,6 +116,7 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
                 'django.template.context_processors.tz',
+                'django.template.context_processors.request',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -187,6 +186,7 @@ if os.environ.get('QUIET', False):
 
 try:  # pragma: nocover
     import teamcity
+
     if teamcity.is_running_under_teamcity():  # pragma: nocover
         TEST_RUNNER = "test_runner.NoCheckTeamcityDjangoRunner"
     else:
@@ -199,3 +199,4 @@ if teamcity and teamcity.is_running_under_teamcity():  # pragma: nocover
 else:
     TEST_RUNNER = "test_runner.NoCheckDiscoverRunner"
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
