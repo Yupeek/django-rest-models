@@ -35,6 +35,7 @@ jobs:
     python: '3.7'
     script: COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox -e postgresql
   - stage: deploy
+    python: '3.7'
     script: skip # to not run Travis' default script
     install: skip
     on:
