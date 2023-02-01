@@ -14,11 +14,17 @@ def message_from_response(response):
 
 
 try:
-    from django.contrib.postgres.fields import JSONField as JSONFieldLegacy
+    from django.db.models import JSONField as JSONFieldLegacy
 except ImportError:
-    def JSONField(*args, **kwargs):
-        return None
-else:
+    try:
+        from django.contrib.postgres.fields import JSONField as JSONFieldLegacy
+    except ImportError:
+        pass
+
+try:
     class JSONField(JSONFieldLegacy):
         def get_prep_value(self, value):
             return value
+except NameError:
+    def JSONField(*args, **kwargs):
+        return None
