@@ -4,11 +4,11 @@ from __future__ import unicode_literals
 
 import django.db.models.deletion
 from django.conf import settings
+from django.contrib.gis.db.models import PointField
 from django.db import migrations, models
-from django.db.models import CASCADE
 
 import testapi.models
-from testapi.models import has_jsonfield
+from testapi.models import has_jsonfield, POSTGIS
 
 
 class Migration(migrations.Migration):
@@ -20,6 +20,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.CreateModel(
+            name='Restaurant',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=135)),
+            ] + ([('location', PointField(blank=True, null=True, srid=4326))] if POSTGIS else [])
+        ),
         migrations.CreateModel(
             name='Menu',
             fields=[

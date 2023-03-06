@@ -4,10 +4,10 @@ from testsettings import *
 
 DATABASES = copy.deepcopy(DATABASES)
 DATABASES['default'] = {
-    'ENGINE': 'django.db.backends.postgresql',
+    'ENGINE': 'django.contrib.gis.db.backends.postgis',
     'NAME': 'django-rest-models',
-    'USER': os.environ.get('PGUSER', 'postgres'),
-    'PASSWORD': os.environ.get('PGPASSWORD', ''),
-    'HOST': os.environ.get('PGHOST', '127.0.0.1'),
-    'PORT': os.environ.get('PGPORT', '5433'),
+    'USER': os.environ.get('PGUSER', 'yupeeposting'),
+    'PASSWORD': os.environ.get('PGPASSWORD', 'yupeeposting'),
+    'HOST': os.environ.get('PGHOST', 'yupeek-db2'),
+    'PORT': os.environ.get('PGPORT', '5432'),
 }

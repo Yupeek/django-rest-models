@@ -5,18 +5,37 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 from django.conf import settings
+from django.contrib.gis.db.models import PointField
 from django.db import models
 from django.db.models import CASCADE
 
 from rest_models.storage import RestApiStorage
 
-if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+POSTGIS = False
+if settings.DATABASES['default']['ENGINE'] == 'django.contrib.gis.db.backends.postgis':
+    class Restaurant(models.Model):
+        name = models.CharField(max_length=135)
+        location = PointField(
+            null=True,
+            blank=True,
+        )
+
+        class APIMeta:
+            db_name = 'api'
+            resource_path = 'restaurant'
+
+    POSTGIS = True
+
+if settings.DATABASES['default']['ENGINE'] in ['django.db.backends.postgresql',
+                                               'django.contrib.gis.db.backends.postgis']:
     from rest_models.backend.utils import JSONField
+
     has_jsonfield = True
 else:
     # fake useless jsonfield
     def JSONField(*args, **kwargs):
         return None
+
     has_jsonfield = False
 
 
@@ -39,7 +58,6 @@ class Topping(models.Model):
 
 
 class Pizza(models.Model):
-
     name = models.CharField(max_length=125)
     price = models.FloatField()
     from_date = models.DateField(auto_now_add=True)
@@ -81,7 +99,6 @@ class Bookmark(models.Model):
 
 
 class PizzaGroup(models.Model):
-
     parent = models.ForeignKey("self", related_name='children', db_column='parent', on_delete=CASCADE)
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')

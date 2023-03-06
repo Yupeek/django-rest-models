@@ -9,16 +9,22 @@ from django.http.response import HttpResponse, HttpResponseForbidden
 from django.views.generic.base import RedirectView
 from dynamic_rest.routers import DynamicRouter
 
-from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaGroupViewSet, PizzaViewSet, ReviewViewSet,
-                             ToppingViewSet, fake_oauth, fake_view, wait)
+from testapi.viewset import (AuthorizedPizzaViewSet, MenuViewSet, PizzaGroupViewSet, PizzaViewSet, POSTGIS,
+                             ReviewViewSet, ToppingViewSet, fake_oauth, fake_view, wait, )
 
 router = DynamicRouter()
+
+if POSTGIS:
+    from testapi.viewset import RestaurantViewSet
+
+    router.register('restaurant', RestaurantViewSet)
+
+
 router.register('pizza', PizzaViewSet, base_name='pizza')
 router.register('review', ReviewViewSet)
 router.register('topping', ToppingViewSet)
 router.register('menulol', MenuViewSet)
 router.register('pizzagroup', PizzaGroupViewSet)
-
 router.register('authpizza', AuthorizedPizzaViewSet)
 
 urlpatterns = [

@@ -5,17 +5,35 @@ import datetime
 import logging
 
 from django.conf import settings
+from django.contrib.gis.db.models import PointField
 from django.db import models
 from django.db.models import CASCADE
 from django.utils import timezone
 
-if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+POSTGIS = False
+if settings.DATABASES['default']['ENGINE'] == 'django.contrib.gis.db.backends.postgis':
+    class Restaurant(models.Model):
+        name = models.CharField(max_length=135)
+        location = PointField(
+            null=True,
+            blank=True,
+        )
+
+        def __str__(self):
+            return self.name  # pragma: no cover
+
+    POSTGIS = True
+
+if settings.DATABASES['default']['ENGINE'] in ['django.db.backends.postgresql',
+                                               'django.contrib.gis.db.backends.postgis']:
     from django.contrib.postgres.fields import JSONField
+
     has_jsonfield = True
 else:
     # fake useless jsonfield
     def JSONField(*args, **kwargs):
         return None
+
     has_jsonfield = False
 
 logger = logging.getLogger(__name__)
@@ -43,7 +61,6 @@ class Topping(models.Model):
 
 
 class Pizza(models.Model):
-
     name = models.CharField(max_length=125)
     price = models.FloatField()
     from_date = models.DateField(auto_now_add=True)
@@ -66,7 +83,6 @@ class Review(models.Model):
 
 
 class PizzaGroup(models.Model):
-
     parent = models.ForeignKey("self", related_name='children', null=True, on_delete=CASCADE)
     name = models.CharField(max_length=125)
     pizzas = models.ManyToManyField(Pizza, related_name='groups')
