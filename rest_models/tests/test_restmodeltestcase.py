@@ -7,7 +7,7 @@ from django.db import connections
 
 from rest_models.test import RestModelTestCase
 from rest_models.utils import Path
-from testapp.models import Menu, POSTGIS
+from testapp.models import POSTGIS, Menu
 
 if POSTGIS:
     from testapp.models import Restaurant
