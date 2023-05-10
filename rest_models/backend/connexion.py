@@ -380,7 +380,7 @@ class ApiConnexion(ApiVerbShortcutMixin):
         kwargs.setdefault("allow_redirects", False)
         kwargs.setdefault("timeout", self.get_timeout())
         kwargs.setdefault('stream', False)
-        real_url = self.get_final_url(url)
+        real_url = url #self.get_final_url(url)
 
         error = 0
         last_exception = None
@@ -395,7 +395,6 @@ class ApiConnexion(ApiVerbShortcutMixin):
                 else:
                     execute = self.execute
                 response = execute("%s %s" % (method.upper(), real_url), dict(method=method, url=real_url, **kwargs))
-
             except Timeout as e:
                 error += 1
                 last_exception = e
@@ -420,8 +419,11 @@ class ApiConnexion(ApiVerbShortcutMixin):
 
     def get_final_url(self, url):
         if url.startswith("/"):
-            parsed_url = urlparse(url)
-            api_url = urlparse(self.url)
-            return urlunparse(api_url[:2] + parsed_url[2:])
+            url = url[1:]
+        if not url.endswith("/"):
+            url = url + "/"
 
-        return self.url + url
+        if self.url.endswith("/"):
+            self.url = self.url[:-1]
+
+        return self.url + "/" +  url

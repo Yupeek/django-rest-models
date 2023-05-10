@@ -10,7 +10,7 @@ import unidecode
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
-from django.utils.http import urlunquote
+import urllib.parse
 
 from rest_models.backend.connexion import get_basic_session
 
@@ -85,7 +85,7 @@ class RestApiStorage(Storage):
         # and store the full url for later
         if result is None:
             return None
-        name = urlunquote(os.path.basename(result))
+        name = urllib.parse.unquote(os.path.basename(result))
         self.result_file_pool[name] = result, cursor
         return name
 

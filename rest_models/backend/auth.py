@@ -117,3 +117,14 @@ class OAuthToken(ApiAuthBase):
         if request.url != self.url_token:
             request.headers[str('Authorization')] = str("Bearer %s" % self.token.access_token)
         return request
+
+
+class JWTToken(ApiAuthBase):
+    def __init__(self, databasewrapper, settings_dict):
+        super().__init__(databasewrapper, settings_dict)
+        self.token = ""
+
+    def __call__(self, request):
+        request.headers[str('Authorization')] = f"Bearer {self.token}"
+        request.headers[str('content-type')] = "application/json"
+        return request

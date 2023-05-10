@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import itertools
+import json
 import logging
 import re
 from collections import defaultdict, namedtuple
@@ -14,7 +15,7 @@ from django.core.exceptions import EmptyResultSet, ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
-from django.db.models.expressions import Col, RawSQL
+from django.db.models.expressions import Col, RawSQL, Value
 from django.db.models.fields.related_lookups import RelatedExact, RelatedIn
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
@@ -25,7 +26,7 @@ from django.db.utils import NotSupportedError, OperationalError, ProgrammingErro
 
 from rest_models.backend.connexion import build_url
 from rest_models.backend.exceptions import FakeDatabaseDbAPI2
-from rest_models.backend.utils import message_from_response
+from rest_models.backend.utils import JSONField, message_from_response
 from rest_models.router import RestModelRouter
 from rest_models.storage import RestFileField
 from rest_models.utils import pgcd
@@ -75,9 +76,11 @@ def get_resource_path(model, pk=None):
     :return: the path of the resource
     :rtype: str
     """
-    ret = getattr(model.APIMeta, 'resource_path', None) or get_resource_name(model, False)
+    ret = getattr(model.APIMeta, 'resource_path', None)
+    if not ret:
+        return None
     if pk is not None:
-        ret += "/%s/" % pk
+        ret += "%s/" % pk
     return ret
 
 
@@ -168,14 +171,14 @@ class ApiResponseReader(object):
                 # many result in the json.
                 # list of results
                 while True:
-                    for data in self.json[resource_name]:
+                    for data in self.json["items"]:
                         yield data
 
                     self.json = next(iter_next)
                     self.cache = {}
             else:
                 # on result in the response
-                yield self.json[resource_name]
+                yield self.json
         except StopIteration:
             pass
         except KeyError:
@@ -343,7 +346,7 @@ class QueryParser(object):
             transform_name = getattr(col, 'key_name', None) or getattr(col, 'lookup_name')
             field = '%s.%s' % (transforms, transform_name)
         else:
-            raise NotSupportedError("Only Col in sql select is supported")
+            raise NotSupportedError(f"Only Col in sql select is supported! {type(col) = } --- {col = } ")
         if current.m2m is not None:
             final_att_name = current.m2m.name
             current = current.parent
@@ -379,7 +382,7 @@ class QueryParser(object):
         :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the resources, with the
                  attributes
         """
-        resolved = [self.resolve_path(col) for col in cols if not isinstance(col, RawSQL) or col.sql != '1']
+        resolved = [self.resolve_path(col) for col in cols if (not isinstance(col, RawSQL) and not isinstance(col, Value))]
 
         return (
             set(r[0] for r in resolved),  # set of tuple of Alias successives
@@ -544,6 +547,8 @@ def join_results(row, resolved, connection=None):
 
         if isinstance(field, FileField) and hasattr(field.storage, 'prepare_result_from_api'):
             res.append(field.storage.prepare_result_from_api(raw_val, connection.cursor()))
+        elif isinstance(field, JSONField):
+            res.append(json.dumps(raw_val))
         elif hasattr(field, "to_python"):
             python_val = field.to_python(raw_val)
             res.append(python_val)
@@ -570,14 +575,14 @@ def simple_count(compiler, result):
     if result is SINGLE and isinstance(compiler.select[-1][0], Count) and result is SINGLE:
         url = get_resource_path(compiler.query.model)
         params = compiler.build_filter_params()
-        params['per_page'] = 1
+        params['offset'] = 1
         params['exclude[]'] = '*'
         response = compiler.connection.cursor().get(
             url,
             params=params
         )
         compiler.raise_on_response(url, params, response)
-        return True, ([] * (len(compiler.select) - 1)) + [response.json()['meta']['total_results']]
+        return True, ([] * (len(compiler.select) - 1)) + [response.json()['count']]
 
     return False, None
 
@@ -646,7 +651,7 @@ class SQLCompiler(BaseSQLCompiler):
 
     META_NAME = 'meta'
 
-    def __init__(self, query, connection, using):
+    def __init__(self, query, connection, using, elide_empty=True):
         """
         :param django.db.models.sql.query.Query query: the query
         :param rest_models.backend.base.DatabaseWrapper connection: the connection
@@ -654,6 +659,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         self.query = query
         self.connection = connection
+        self.connection.cursor().auth.token = getattr(query.model.APIMeta, 'token', None)
         self.using = using
         self.quote_cache = {'*': '*'}
         # The select, klass_info, and annotations are needed by QuerySet.iterator()
@@ -718,11 +724,6 @@ class SQLCompiler(BaseSQLCompiler):
                     else:  # pragma: no cover
                         raise ProgrammingError("unknown type for compiling the query : %s."
                                                " expeced a Lookup or WhereNode" % child.__class__)
-            else:
-                reason = "NOT (.. AND ..)" if is_negated else "OR"
-                raise FakeDatabaseDbAPI2.NotSupportedError(
-                    "%s in queryset is not supported yet" % reason
-                )
 
     def build_filter_params(self):
         """
@@ -735,13 +736,13 @@ class SQLCompiler(BaseSQLCompiler):
         query = self.query
         list_of_in = {}
         for negated, _, lookup in self.query_parser.flaten_where_clause(query.where):  # type: bool, Lookup
-            negated_mark = "-" if negated else ""
+            negated_mark = "exclude_" if negated else ""
             field = self.query_parser.get_rest_path_for_col(lookup.lhs)
             if lookup.lookup_name == 'exact':  # implicite lookup is not needed
                 fieldname = field
             else:
-                fieldname = "{field}.{lookup}".format(field=field, lookup=lookup.lookup_name)
-            key = 'filter{%s%s}' % (negated_mark, fieldname)
+                fieldname = "search"
+            key = '%s%s' % (negated_mark, fieldname)
             if isinstance(lookup.rhs, (tuple, list)):
                 res.setdefault(key, []).extend(lookup.rhs)
                 if lookup.lookup_name == 'in':
@@ -751,7 +752,8 @@ class SQLCompiler(BaseSQLCompiler):
                     # a small performance that won't trigger any query if the
                     # queryset ask for differents exacts values
                     raise EmptyResultSet()
-                res.setdefault(key, []).append(lookup.rhs)
+                if lookup.rhs not in res.get(key, []):
+                    res.setdefault(key, []).append(lookup.rhs)
         if not all(list_of_in.values()):
             # if there is one «xxx.in=[]», me should not query the database
             raise EmptyResultSet()
@@ -844,12 +846,12 @@ class SQLCompiler(BaseSQLCompiler):
             if self.query.low_mark not in (0, None):
                 page_size = pgcd(self.query.high_mark, self.query.low_mark)
                 return {
-                    'per_page': page_size,
-                    'page': (self.query.low_mark // page_size) + 1
+                    'limit': page_size,
+                    'offset': (self.query.low_mark // page_size) + 1
                 }
             else:
                 return {
-                    'per_page': self.query.high_mark,
+                    'limit': self.query.high_mark,
                 }
         return {}
 
@@ -895,20 +897,9 @@ class SQLCompiler(BaseSQLCompiler):
         if response.status_code == 204:
             raise EmptyResultSet()
         elif response.status_code != 200:
-            raise ProgrammingError("the query to the api has failed : GET %s/%s \n=> %s" %
+            raise ProgrammingError("the query to the api has failed : GET %s/%s \n=> '%s' => status_code %s" %
                                    (self.connection.connection.url, build_url(url, params),
-                                    message_from_response(response)))
-
-    def get_meta(self, json, response):
-        """
-        small shortcut to get the metadata from a response data.
-        simle for now, but allow for refactoring in future release if meta system has changed
-
-        :param dict json: the data of the response
-        :param response: the response if used
-        :return:
-        """
-        return json.get(self.META_NAME)
+                                    message_from_response(response), response.status_code))
 
     # #####################################
     #       real query for select
@@ -948,7 +939,7 @@ class SQLCompiler(BaseSQLCompiler):
         resolved = [
             self.query_parser.resolve_path(col)
             for col, _, _ in self.select
-            if not isinstance(col, RawSQL) or col.sql != '1'  # skip special case with exists()
+            if not isinstance(col, RawSQL) and not isinstance(col, Value)  # skip special case with exists()
         ]
         if not resolved:
             # nothing in select. special case in exists()
@@ -995,7 +986,11 @@ class SQLCompiler(BaseSQLCompiler):
 
             pk, params = self.build_params_and_pk()
             url = get_resource_path(self.query.model, pk)
+            if not url:
+                return []
+
             response = self.make_request(params, url)
+
 
             try:
                 json = response.json()
@@ -1004,25 +999,26 @@ class SQLCompiler(BaseSQLCompiler):
                 logger.error('json decode error while calling {}; retrying'.format(url), extra=extra)
                 json = self.make_request(params, url).json()
 
-            meta = self.get_meta(json, response)
-            if meta:
-                # pagination and others thing
+            
+            # TODO(yazan): I can't make this work with cursor based pagination, consider switching to page based pagination
+            # if meta := json.get("items"):
+            #     # pagination and others thing
 
-                high_mark = self.query.high_mark
-                page_to_stop = None if high_mark is None else (high_mark // meta['per_page'])
+            #     high_mark = self.query.high_mark
+            #     page_to_stop = None if high_mark is None else (high_mark // len(meta))
 
-                def next_from_query():
-                    for i in range(meta['page'], page_to_stop or meta['total_pages']):
-                        tmp_params = params.copy()
-                        tmp_params['page'] = i + 1  # + 1 because of range include start and exclude stop
-                        last_response = self.connection.cursor().get(
-                            url,
-                            params=tmp_params
-                        )
-                        yield last_response.json()
+            #     def next_from_query():
+            #         for i in range(meta['page'], page_to_stop or meta['total_pages']):
+            #             tmp_params = params.copy()
+            #             tmp_params['page'] = i + 1  # + 1 because of range include start and exclude stop
+            #             last_response = self.connection.cursor().get(
+            #                 url,
+            #                 params=tmp_params
+            #             )
+            #             yield last_response.json()
 
-            else:
-                next_from_query = None
+            # else:
+            next_from_query = None
 
         except EmptyResultSet:
             if result_type == MULTI:
@@ -1198,14 +1194,14 @@ class SQLInsertCompiler(SQLCompiler):
                     # update with json formated
                     response = self.connection.cursor().post(
                         url=get_resource_path(query.model),
-                        json={get_resource_name(query.model, many=False): obj_data}
+                        json=obj_data,
                     )
                     if response.status_code != 201:
                         raise FakeDatabaseDbAPI2.ProgrammingError("error while creating %s with json=%s.\n%s" % (
                             obj, obj_data, message_from_response(response)))
 
                 result_json = response.json()
-                new = result_json[get_resource_name(query.model, many=False)]
+                new = result_json
 
                 for field in opts.concrete_fields:
                     try:
@@ -1219,14 +1215,14 @@ class SQLInsertCompiler(SQLCompiler):
                     else:
                         python_val = raw_val
                     setattr(obj, field.attname, python_val)
-
-            if return_id and result_json:
-                result = result_json[get_resource_name(query.model, many=False)][opts.pk.column]
-                if django.VERSION >= (3, 1):
-                    result = [result_json[get_resource_name(query.model, many=False)][opts.pk.column]]
-                elif django.VERSION < (3, 0):
-                    return result
-                return (result, )
+            return (list(result_json.values()), )
+            # if return_id and result_json:
+            #     result = result_json[get_resource_name(query.model, many=False)][opts.pk.column]
+            #     if django.VERSION >= (3, 1):
+            #         result = [result_json[get_resource_name(query.model, many=False)][opts.pk.column]]
+            #     elif django.VERSION < (3, 0):
+            #         return result
+            #     return (result, )
 
 
 class FakeCursor(object):
@@ -1369,7 +1365,7 @@ class SQLUpdateCompiler(SQLCompiler):
                         )
 
                     # update object instance using result data if possible
-                    result_json.update(result.json()[get_resource_name(query.model, many=False)])
+                    result_json.update(result.json())
 
                 instance_data = {}
                 obj = None

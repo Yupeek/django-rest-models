@@ -1,13 +1,13 @@
-Django<3.3
+Django
 wheel
 sphinx
 tox
 isort
 flake8
 requests
-djangorestframework<3.14
-dynamic-rest<2.2
--r test_requirements.txt
+djangorestframework
+dynamic-rest
+# -r test_requirements.txt
 twine
 psycopg2-binary
 Pillow<11
