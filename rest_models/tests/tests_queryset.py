@@ -235,9 +235,9 @@ class TestM2M(TestCase):
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
-@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestJsonField(TestCase):
     fixtures = ['data.json']
+    databases = ["default", "api"]
 
     def test_jsonfield_create(self):
         t = client_models.Topping.objects.create(
@@ -276,6 +276,12 @@ class TestJsonField(TestCase):
             {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
             {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
         )
+
+
+@skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
+@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+class TestJsonLookup(TestCase):
+    fixtures = ['data.json']
 
     def test_jsonfield_lookup_isnull(self):
         t = api_models.Topping.objects.create(

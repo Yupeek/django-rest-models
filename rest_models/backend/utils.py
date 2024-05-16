@@ -25,6 +25,13 @@ try:
     class JSONField(JSONFieldLegacy):
         def get_prep_value(self, value):
             return value
+
+        def from_db_value(self, value, expression, connection):
+            try:
+                return super().from_db_value(value, expression, connection)
+            except TypeError:
+                return value
+
 except NameError:
     def JSONField(*args, **kwargs):
         return None
