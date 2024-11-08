@@ -383,7 +383,7 @@ class QueryParser(object):
             self.resolve_path(col)
             for col in cols
             if (not isinstance(col, RawSQL) or col.sql != '1')
-               and (not isinstance(col, Value) or col.value != 1) # skip special cases with exists()
+            and (not isinstance(col, Value) or col.value != 1)  # skip special cases with exists()
         ]
 
         return (
@@ -955,7 +955,7 @@ class SQLCompiler(BaseSQLCompiler):
             self.query_parser.resolve_path(col)
             for col, _, _ in self.select
             if (not isinstance(col, RawSQL) or col.sql != '1')
-               and (not isinstance(col, Value) or col.value != 1)  # skip special cases with exists()
+            and (not isinstance(col, Value) or col.value != 1)   # skip special cases with exists()
         ]
         if not resolved:
             # nothing in select. special case in exists()

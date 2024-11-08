@@ -11,7 +11,6 @@ from django.db.models import Q, Sum
 from django.test import TestCase
 from django.urls import reverse
 from dynamic_rest.constants import VALID_FILTER_OPERATORS
-from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
 from testapi import models as api_models
@@ -247,7 +246,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -264,7 +263,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -657,7 +656,6 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_one(self):
         n = api_models.Pizza.objects.count()
 
-        from django.conf import settings
         self.assertEqual(n, 3)
         with self.assertNumQueries(3, using='api'):
             client_models.Pizza.objects.filter(pk=1).delete()
