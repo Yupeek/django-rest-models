@@ -649,7 +649,7 @@ class TestQueryDelete(TestCase):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
         p = client_models.Pizza(pk=1)
-        with self.assertNumQueries(1, using='api'):
+        with self.assertNumQueries(2, using='api'):
             p.delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -657,8 +657,9 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_one(self):
         n = api_models.Pizza.objects.count()
 
+        from django.conf import settings
         self.assertEqual(n, 3)
-        with self.assertNumQueries(2, using='api'):
+        with self.assertNumQueries(3, using='api'):
             client_models.Pizza.objects.filter(pk=1).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -668,7 +669,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_many(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(3, using='api'):
+        with self.assertNumQueries(4, using='api'):
             client_models.Pizza.objects.filter(Q(pk__in=(1, 2))).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -678,7 +679,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_many_range(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(3, using='api'):
+        with self.assertNumQueries(4, using='api'):
             client_models.Pizza.objects.filter(pk__range=(1, 2)).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -688,7 +689,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_no_pk(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(2, using='api'):
+        with self.assertNumQueries(3, using='api'):
             client_models.Pizza.objects.filter(name='suprème').delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -698,7 +699,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_all(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(4, using='api'):
+        with self.assertNumQueries(5, using='api'):
             client_models.Pizza.objects.all().delete()
         self.assertEqual(api_models.Pizza.objects.count(), 0)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())

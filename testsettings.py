@@ -27,7 +27,7 @@ DATABASES = {
             'NAME': 'http://localapi/api/v2/',
         },
         'OPTIONS': {'SKIP_CHECK': skip_check, 'IGNORE_INTROSPECT': True},
-        'PREVENT_DISTINCT': False
+        'PREVENT_DISTINCT': False,
     },
     'apifail': {
         'ENGINE': 'rest_models.backend',
