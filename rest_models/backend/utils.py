@@ -17,7 +17,7 @@ try:
     from django.db.models import JSONField as JSONFieldLegacy
 except ImportError:
     try:
-        from django.contrib.postgres.fields import JSONField as JSONFieldLegacy
+        from django.db.models import JSONField as JSONFieldLegacy
     except ImportError:
         pass
 

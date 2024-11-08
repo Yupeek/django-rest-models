@@ -10,6 +10,7 @@ from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
 from django.urls import reverse
+from dynamic_rest.constants import VALID_FILTER_OPERATORS
 from dynamic_rest.filters import DynamicFilterBackend
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
@@ -279,7 +280,7 @@ class TestJsonField(TestCase):
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
-@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+@skipIf('year' in VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestJsonLookup(TestCase):
     fixtures = ['data.json']
 
@@ -336,7 +337,7 @@ class TestJsonLookup(TestCase):
         ), [(t.pk,)])
 
 
-@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+@skipIf('year' in VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestQueryLookupTransform(TestCase):
     fixtures = ['data.json']
 
@@ -717,7 +718,7 @@ class TestQueryUpdate(TestCase):
         res = self.client.patch(reverse('pizza-detail', kwargs={'pk': p.pk}),
                                 data=json.dumps({'pizza': {'menu': menu2.pk}}),
                                 content_type='application/json',
-                                HTTP_AUTHORIZATION='Basic YWRtaW46YWRtaW4=',
+                                headers={"authorization": 'Basic YWRtaW46YWRtaW4='}
                                 )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data['pizza']['menu'], menu2.pk)

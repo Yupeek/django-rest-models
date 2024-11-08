@@ -646,7 +646,7 @@ class SQLCompiler(BaseSQLCompiler):
 
     META_NAME = 'meta'
 
-    def __init__(self, query, connection, using):
+    def __init__(self, query, connection, using, elide_empty=True):
         """
         :param django.db.models.sql.query.Query query: the query
         :param rest_models.backend.base.DatabaseWrapper connection: the connection
@@ -654,6 +654,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         self.query = query
         self.connection = connection
+        self.elide_empty = elide_empty
         self.using = using
         self.quote_cache = {'*': '*'}
         # The select, klass_info, and annotations are needed by QuerySet.iterator()

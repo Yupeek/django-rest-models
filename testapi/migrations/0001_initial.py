@@ -8,7 +8,7 @@ from django.contrib.gis.db.models import PointField
 from django.db import migrations, models
 
 import testapi.models
-from testapi.models import has_jsonfield, POSTGIS
+from testapi.models import POSTGIS, has_jsonfield
 
 
 class Migration(migrations.Migration):
