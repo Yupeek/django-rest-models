@@ -47,7 +47,7 @@ setup(
     install_requires=[
         'requests',
         'six',
-        'Django<4.3',
+        'Django<5.2',
         'unidecode',
     ],
     packages=[

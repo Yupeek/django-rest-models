@@ -1,4 +1,4 @@
-Django<4.3
+Django<5.2
 wheel
 sphinx
 tox
@@ -10,5 +10,5 @@ dynamic-rest-bse<2.5
 -r test_requirements.txt
 twine
 psycopg2-binary
-Pillow<11
+Pillow<12
 unidecode
