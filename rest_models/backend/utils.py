@@ -16,10 +16,7 @@ def message_from_response(response):
 try:
     from django.db.models import JSONField as JSONFieldLegacy
 except ImportError:
-    try:
-        from django.db.models import JSONField as JSONFieldLegacy
-    except ImportError:
-        pass
+    pass
 
 try:
     class JSONField(JSONFieldLegacy):

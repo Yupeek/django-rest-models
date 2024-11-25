@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=125)),
                 ('cost', models.FloatField()),
-            ] + ([('metadata', django.contrib.postgres.fields.jsonb.JSONField(null=True))] if has_jsonfield else []),
+            ] + ([('metadata', django.db.models.JSONField(null=True))] if has_jsonfield else []),
         ),
         migrations.AddField(
             model_name='pizza',
