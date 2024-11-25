@@ -20,7 +20,7 @@ class ClientTest(TestCase):
         called = []
 
         def tmp_exec(self_dc, args, env):
-            self.assertRegexpMatches(env['_resty_host'], r'http://localhost:[0-9]*/api/v2\*')
+            self.assertRegex(env['_resty_host'], r'http://localhost:[0-9]*/api/v2\*')
             called.append(args)
 
         DatabaseClient.execute_subprocess = tmp_exec
@@ -33,7 +33,7 @@ class ClientTest(TestCase):
         called = []
 
         def tmp_exec(self_dc, args, env):
-            self.assertRegexpMatches(env['_resty_host'], r'http://localhost:[0-9]*/api/v2\*')
+            self.assertRegex(env['_resty_host'], r'http://localhost:[0-9]*/api/v2\*')
             called.append(args)
 
         DatabaseClient.execute_subprocess = tmp_exec

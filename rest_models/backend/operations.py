@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = 'rest_models.backend.compiler'
+    # postgis compatibility
+    select = '%s'
 
     def sql_flush(self, *args, **kwargs):  # pragma: no cover
         return ""

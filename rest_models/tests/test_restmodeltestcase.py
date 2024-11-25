@@ -7,7 +7,10 @@ from django.db import connections
 
 from rest_models.test import RestModelTestCase
 from rest_models.utils import Path
-from testapp.models import Menu
+from testapp.models import POSTGIS, Menu
+
+if POSTGIS:
+    from testapp.models import Restaurant
 
 
 class TestLoadFixtureTest(RestModelTestCase):
@@ -44,7 +47,7 @@ class TestLoadFixtureTest(RestModelTestCase):
     def test_fixtures_loaded_missing(self):
         self.assertRaisesMessage(Exception,
                                  "the query 'a' was not provided as mocked data: "
-                                 "urls was %r" % (['b', 'c', 'd'], ),
+                                 "urls was %r" % (['b', 'c', 'd'],),
                                  self.client.get, 'a')
 
     def test_variable_fixtures(self):
@@ -79,6 +82,7 @@ class TestLoadFixtureTest(RestModelTestCase):
 
 class TestMockDataSample(RestModelTestCase):
     databases = ['default', 'api']
+    fixtures = (['restaurant.json'] if POSTGIS else [])
     database_rest_fixtures = {'api': {  # api => response mocker for databasen named «api»
         'menulol': [  # url menulol
             {
@@ -192,9 +196,32 @@ class TestMockDataSample(RestModelTestCase):
 
             }
         ],
+        'restaurant': [  # url restaurant
+            {
+                'filter': {  # set of filter to match
+                    'params': {}
+                },
+                'data': {
+                    "restaurants": [{
+                        "id": 1,
+                        "name": "ShopShoy",
+                        "location": "POINT (7.3370199999999999 47.8078000000000003)"
+                    }],
+                    "meta": {
+                        "per_page": 10,
+                        "total_pages": 1,
+                        "page": 1,
+                        "total_results": 0
+                    }
+                }
+            },
+        ]
     }}
 
     def test_multi_results_filter(self):
+        # postgis compatibility
+        if POSTGIS:
+            self.assertEqual(len(list(Restaurant.objects.all())), 1)
         # no filter/no sort => fallback
         self.assertEqual(len(list(Menu.objects.all())), 2)
         # no matching filter => fallback

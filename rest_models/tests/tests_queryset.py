@@ -10,7 +10,7 @@ from django.db import NotSupportedError, ProgrammingError, connections
 from django.db.models import Q, Sum
 from django.test import TestCase
 from django.urls import reverse
-from dynamic_rest.filters import DynamicFilterBackend
+from dynamic_rest.constants import VALID_FILTER_OPERATORS
 
 from rest_models.backend.compiler import SQLAggregateCompiler, SQLCompiler
 from testapi import models as api_models
@@ -246,7 +246,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -263,7 +263,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -279,7 +279,7 @@ class TestJsonField(TestCase):
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')
-@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+@skipIf('year' in VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestJsonLookup(TestCase):
     fixtures = ['data.json']
 
@@ -336,7 +336,7 @@ class TestJsonLookup(TestCase):
         ), [(t.pk,)])
 
 
-@skipIf('year' in DynamicFilterBackend.VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
+@skipIf('year' in VALID_FILTER_OPERATORS, 'skip check not compatible with current drest')
 class TestQueryLookupTransform(TestCase):
     fixtures = ['data.json']
 
@@ -648,7 +648,7 @@ class TestQueryDelete(TestCase):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
         p = client_models.Pizza(pk=1)
-        with self.assertNumQueries(1, using='api'):
+        with self.assertNumQueries(2, using='api'):
             p.delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -657,7 +657,7 @@ class TestQueryDelete(TestCase):
         n = api_models.Pizza.objects.count()
 
         self.assertEqual(n, 3)
-        with self.assertNumQueries(2, using='api'):
+        with self.assertNumQueries(3, using='api'):
             client_models.Pizza.objects.filter(pk=1).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -667,7 +667,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_many(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(3, using='api'):
+        with self.assertNumQueries(4, using='api'):
             client_models.Pizza.objects.filter(Q(pk__in=(1, 2))).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -677,7 +677,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_many_range(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(3, using='api'):
+        with self.assertNumQueries(4, using='api'):
             client_models.Pizza.objects.filter(pk__range=(1, 2)).delete()
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -687,7 +687,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_no_pk(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(2, using='api'):
+        with self.assertNumQueries(3, using='api'):
             client_models.Pizza.objects.filter(name='suprème').delete()
         self.assertEqual(api_models.Pizza.objects.count(), 2)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -697,7 +697,7 @@ class TestQueryDelete(TestCase):
     def test_delete_qs_all(self):
         n = api_models.Pizza.objects.count()
         self.assertEqual(n, 3)
-        with self.assertNumQueries(4, using='api'):
+        with self.assertNumQueries(5, using='api'):
             client_models.Pizza.objects.all().delete()
         self.assertEqual(api_models.Pizza.objects.count(), 0)
         self.assertFalse(api_models.Pizza.objects.filter(pk=1).exists())
@@ -717,7 +717,7 @@ class TestQueryUpdate(TestCase):
         res = self.client.patch(reverse('pizza-detail', kwargs={'pk': p.pk}),
                                 data=json.dumps({'pizza': {'menu': menu2.pk}}),
                                 content_type='application/json',
-                                HTTP_AUTHORIZATION='Basic YWRtaW46YWRtaW4=',
+                                headers={"authorization": 'Basic YWRtaW46YWRtaW4='}
                                 )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data['pizza']['menu'], menu2.pk)

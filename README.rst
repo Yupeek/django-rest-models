@@ -54,13 +54,13 @@ Requirements
 
 This database wrapper work with
 
-- python 3.6, 3.7
-- django 2.0, 2.1, 2.2, 3.0, 3.1, 3.2
+- python 3.9, 3.10, 3.11, 3.12
+- django 4.2, 5.0, 5.1
 
 On the api, this is tested against
 
-- django-rest-framework 3.11, 3.12, 3.13
-- dynamic-rest 2.1
+- django-rest-framework 3.14, 3.15
+- dynamic-rest-bse 2.4 (It's a fork because dynamic-rest is not compatible with django 4.2 at this day)
 
 
 Examples
@@ -259,6 +259,31 @@ This database api support :
 		Support for ForeignKey is only available with models on the same database (api<->api) or (default<->default).
 		It's not possible to add a ForeignKey/ManyToMany field on a local model related to a remote model (with ApiMeta)
 
+OAuthToken auth backend
+-----------------------
+
+grant_type is provided to the API get_token view by a GET parameter.
+
+Recent framework updates like Django OAuth Toolkit enforce that no GET parameters are used.
+
+Use ENFORCE_POST setting in OPTIONS of api's DATABASE :
+
+.. code-block:: python
+
+    DATABASES = {
+        'default': {
+            ...
+        },
+        'api': {
+            ...
+            'OPTIONS': {
+                'OAUTH_URL': '/oauth2/token/',
+                'ENFORCE_POST': True,
+            }
+        },
+    }
+
+
 Documentation
 -------------
 
@@ -268,8 +293,8 @@ The full documentation is at http://django-rest-models.readthedocs.org/en/latest
 Requirements
 ------------
 
-- Python 2.7, 3.5
-- Django >= 1.8
+- Python 3.9, 3.10, 3.11, 3.12
+- Django >= 4.2
 
 Contributions and pull requests are welcome.
 

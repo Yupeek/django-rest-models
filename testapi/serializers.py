@@ -6,7 +6,18 @@ from dynamic_rest.fields.fields import DynamicRelationField
 from dynamic_rest.serializers import DynamicModelSerializer
 from rest_framework.fields import IntegerField, SerializerMethodField
 
-from testapi.models import Menu, Pizza, PizzaGroup, Review, Topping
+from testapi.models import POSTGIS, Menu, Pizza, PizzaGroup, Review, Topping
+
+if POSTGIS:
+    from testapi.models import Restaurant
+
+    class RestaurantSerializer(DynamicModelSerializer):
+
+        class Meta:
+            model = Restaurant
+            name = 'restaurant'
+            fields = ('id', 'name', 'location', )
+            # deferred_fields = (, )
 
 
 class ToppingSerializer(DynamicModelSerializer):

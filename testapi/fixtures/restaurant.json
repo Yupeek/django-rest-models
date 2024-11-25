@@ -1,0 +1,10 @@
+[
+  {
+    "pk": 1,
+    "model": "testapi.restaurant",
+    "fields": {
+      "name": "ShopShoy",
+      "location": "POINT (7.3370199999999999 47.8078000000000003)"
+    }
+  }
+]
