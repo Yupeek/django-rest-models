@@ -3,13 +3,13 @@ from __future__ import unicode_literals
 
 import logging
 import os
+from urllib.parse import quote
 from uuid import uuid4
 
 import unidecode
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from django.utils.http import urlquote
 
 from testapi import models as apimodels
 from testapp import models as clientmodels
@@ -28,8 +28,8 @@ class TestUploadDRF(TestCase):
     def setUp(self):
         self.img_name = str(uuid4()) + '-b--é--o--ç--é--_--b--É.png'
         self.img_name2 = str(uuid4()) + '-b--é--o--ç--é--_--b--É.png'
-        self.img_name_quoted = urlquote(self.img_name)
-        self.img_name2_quoted = urlquote(self.img_name2)
+        self.img_name_quoted = quote(self.img_name)
+        self.img_name2_quoted = quote(self.img_name2)
         self.img_name_cleaned = unidecode.unidecode(self.img_name)
         self.img_name2_cleaned = unidecode.unidecode(self.img_name2)
 

@@ -14,7 +14,7 @@ from django.core.exceptions import EmptyResultSet, ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
 from django.db.models.base import ModelBase
-from django.db.models.expressions import Col, RawSQL
+from django.db.models.expressions import Col, RawSQL, Value
 from django.db.models.fields.related_lookups import RelatedExact, RelatedIn
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
@@ -60,8 +60,8 @@ def extract_exact_pk_value(where):
         exact, isnull = where.children
 
         if (
-            isinstance(exact, Exact) and isinstance(isnull, IsNull) and
-            exact.lhs.target == isnull.lhs.target
+                isinstance(exact, Exact) and isinstance(isnull, IsNull) and
+                exact.lhs.target == isnull.lhs.target
         ):
             return exact
     return None
@@ -379,7 +379,12 @@ class QueryParser(object):
         :return: 2 sets, the first if the alias useds, the 2nd is the set of the full path of the resources, with the
                  attributes
         """
-        resolved = [self.resolve_path(col) for col in cols if not isinstance(col, RawSQL) or col.sql != '1']
+        resolved = [
+            self.resolve_path(col)
+            for col in cols
+            if (not isinstance(col, RawSQL) or col.sql != '1')
+            and (not isinstance(col, Value) or col.value != 1)  # skip special cases with exists()
+        ]
 
         return (
             set(r[0] for r in resolved),  # set of tuple of Alias successives
@@ -646,7 +651,7 @@ class SQLCompiler(BaseSQLCompiler):
 
     META_NAME = 'meta'
 
-    def __init__(self, query, connection, using):
+    def __init__(self, query, connection, using, elide_empty=True):
         """
         :param django.db.models.sql.query.Query query: the query
         :param rest_models.backend.base.DatabaseWrapper connection: the connection
@@ -654,6 +659,7 @@ class SQLCompiler(BaseSQLCompiler):
         """
         self.query = query
         self.connection = connection
+        self.elide_empty = elide_empty
         self.using = using
         self.quote_cache = {'*': '*'}
         # The select, klass_info, and annotations are needed by QuerySet.iterator()
@@ -948,7 +954,8 @@ class SQLCompiler(BaseSQLCompiler):
         resolved = [
             self.query_parser.resolve_path(col)
             for col, _, _ in self.select
-            if not isinstance(col, RawSQL) or col.sql != '1'  # skip special case with exists()
+            if (not isinstance(col, RawSQL) or col.sql != '1')
+            and (not isinstance(col, Value) or col.value != 1)   # skip special cases with exists()
         ]
         if not resolved:
             # nothing in select. special case in exists()
@@ -1226,7 +1233,7 @@ class SQLInsertCompiler(SQLCompiler):
                     result = [result_json[get_resource_name(query.model, many=False)][opts.pk.column]]
                 elif django.VERSION < (3, 0):
                     return result
-                return (result, )
+                return (result,)
 
 
 class FakeCursor(object):

@@ -26,7 +26,7 @@ if settings.DATABASES['default']['ENGINE'] == 'django.contrib.gis.db.backends.po
 
 if settings.DATABASES['default']['ENGINE'] in ['django.db.backends.postgresql',
                                                'django.contrib.gis.db.backends.postgis']:
-    from django.contrib.postgres.fields import JSONField
+    from django.db.models import JSONField
 
     has_jsonfield = True
 else:

@@ -8,7 +8,7 @@ from django.contrib.gis.db.models import PointField
 from django.db import migrations, models
 
 import testapi.models
-from testapi.models import has_jsonfield, POSTGIS
+from testapi.models import POSTGIS, has_jsonfield
 
 
 class Migration(migrations.Migration):
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=125)),
                 ('cost', models.FloatField()),
-            ] + ([('metadata', django.contrib.postgres.fields.jsonb.JSONField(null=True))] if has_jsonfield else []),
+            ] + ([('metadata', django.db.models.JSONField(null=True))] if has_jsonfield else []),
         ),
         migrations.AddField(
             model_name='pizza',

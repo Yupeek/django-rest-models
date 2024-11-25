@@ -5,12 +5,12 @@ import datetime
 import logging
 import os
 import threading
+from urllib.parse import unquote
 
 import unidecode
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
-from django.utils.http import urlunquote
 
 from rest_models.backend.connexion import get_basic_session
 
@@ -85,7 +85,7 @@ class RestApiStorage(Storage):
         # and store the full url for later
         if result is None:
             return None
-        name = urlunquote(os.path.basename(result))
+        name = unquote(os.path.basename(result))
         self.result_file_pool[name] = result, cursor
         return name
 

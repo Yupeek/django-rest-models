@@ -81,7 +81,8 @@ class TestLoadFixtureTest(RestModelTestCase):
 
 
 class TestMockDataSample(RestModelTestCase):
-    databases = ['default', 'api'] + (['restaurant.json'] if POSTGIS else [])
+    databases = ['default', 'api']
+    fixtures = (['restaurant.json'] if POSTGIS else [])
     database_rest_fixtures = {'api': {  # api => response mocker for databasen named «api»
         'menulol': [  # url menulol
             {
