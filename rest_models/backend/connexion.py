@@ -212,6 +212,14 @@ class DebugApiConnectionWrapper(ApiVerbShortcutMixin):
     def __exit__(self, *args):
         self.connection.close()
 
+    # django-debug-toolbar>=4 compatibility
+    @property
+    def cursor(self):
+        return self.connection
+
+    def execute(self, *args, **kwargs):
+        return self.connection.execute(*args, **kwargs)
+
     def request(self, method, url, **kwargs):
 
         start = time.time()
