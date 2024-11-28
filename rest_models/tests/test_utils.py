@@ -1,11 +1,11 @@
 from __future__ import unicode_literals
 
 import doctest
+import io
 import os
 import sys
 import tempfile
 
-import six
 from django.test.testcases import TestCase
 
 import rest_models.utils
@@ -125,7 +125,7 @@ class TestLoadFixtures(TestCase):
 
 class TestPrintQueryMiddleware(TestCase):
     def setUp(self):
-        self.s = six.StringIO()
+        self.s = io.StringIO()
         self.mdlw = PrintQueryMiddleware(self.s)
         self.mdlw.colors = {
             'reset': "",
@@ -181,10 +181,7 @@ class TestPrintQueryMiddleware(TestCase):
         output = self.s.getvalue()
         split_output = output.split('\n')
         self.assertEqual(split_output[0], "## BEGIN GET b =>")
-        if six.PY2:
-            expected = "u'params': {u'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], u'name': u'rest'}},"
-        else:
-            expected = "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
+        expected = "'params': {'l': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 'name': 'rest'}},"
 
         for line in split_output:
             if expected in line:
