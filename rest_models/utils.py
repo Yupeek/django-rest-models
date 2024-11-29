@@ -3,23 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 from collections import defaultdict
-
-import six
-
-try:
-    from pathlib import Path
-except ImportError:  # pragma: no cover
-    class Path(object):
-        """
-        fake pathlib.Path for retro-compatiblitiy
-        """
-        def __init__(self, path):
-            if isinstance(path, Path):
-                path = path.path
-            self.path = path
-
-        def open(self, mode):
-            return open(self.path, mode)
+from pathlib import Path
 
 
 def dict_contains(subdict, maindict):
@@ -124,7 +108,7 @@ class JsonFixtures(object):
             else:
                 self.url_for_data[k].insert(0, v)
         for file in args:
-            if isinstance(file, (six.text_type, six.binary_type, Path)):
+            if isinstance(file, (str, bytes, Path)):
                 self.files.append(file)
             elif isinstance(file, dict):
                 self.update(**file)
@@ -152,7 +136,7 @@ class JsonFixtures(object):
             with Path(path).open('r') as f:
                 return json.load(f)
         except ValueError as ve:
-            six.raise_from(ValueError("error while loading the fixture %s" % path), ve)
+            raise ValueError("error while loading the fixture %s" % path) from ve
 
     def _load(self):
         """
