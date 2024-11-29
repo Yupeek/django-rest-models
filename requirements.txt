@@ -1,5 +1,5 @@
 Django<5.2
-wheel
+build
 sphinx
 tox
 isort
