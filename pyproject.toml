@@ -36,10 +36,10 @@ classifiers = [
 ]
 
 [tool.setuptools]
-packages = ["rest_models", "rest_models.backend"]
+packages = ["rest_models", "rest_models.backend", "rest_models.backend.exec"]
 
 [tool.setuptools.dynamic]
-version = { attr = "rest_models.__version__" }
+version = { attr = "rest_models.__VERSION__" }
 
 [tool.coverage.run]
 omit = ["docs"]
