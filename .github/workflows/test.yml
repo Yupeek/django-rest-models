@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    # Service containers to run
+    services:
+      postgres:
+        image: postgis/postgis
+        env:
+          POSTGRES_USER: gh_test
+          POSTGRES_PASSWORD: testpw
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install tox tox-gh-actions
+
+    - name: Test with tox
+      run: COMMAND_PREFIX='coverage run --source=testapp,rest_models' QUIET=true tox
+      env:
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: gh_test
+        PGPASSWORD: testpw
