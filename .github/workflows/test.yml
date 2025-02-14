@@ -30,11 +30,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-        packages: binutils libproj-dev gdal-bin
-        version: 1.0
-
+    - name: Install linux deps
+      run: sudo apt install binutils libproj-dev gdal-bin
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
