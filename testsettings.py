@@ -184,19 +184,6 @@ LOGGING = {
 if os.environ.get('QUIET', False):
     LOGGING['handlers']['console']['level'] = 70
 
-try:  # pragma: nocover
-    import teamcity
-
-    if teamcity.is_running_under_teamcity():  # pragma: nocover
-        TEST_RUNNER = "test_runner.NoCheckTeamcityDjangoRunner"
-    else:
-        TEST_RUNNER = "test_runner.NoCheckDiscoverRunner"
-except ImportError:  # pragma: nocover
-    temacity = None
-
-if teamcity and teamcity.is_running_under_teamcity():  # pragma: nocover
-    TEST_RUNNER = "test_runner.NoCheckTeamcityDjangoRunner"
-else:
-    TEST_RUNNER = "test_runner.NoCheckDiscoverRunner"
+TEST_RUNNER = "test_runner.NoCheckDiscoverRunner"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

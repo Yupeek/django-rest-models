@@ -2,9 +2,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+import io
 import logging
 
-import six
 from django.core.management import call_command
 from django.core.management.base import SystemCheckError
 from django.db.utils import ProgrammingError
@@ -78,7 +78,7 @@ class SystemCheckTest(TestCase):
         self.assertIn('SystemCheckError: System check identified some issues', msg)
 
     def test_check_one_ok(self):
-        res = six.StringIO()
+        res = io.StringIO()
         call_command('check', 'testapp', stdout=res)
         self.assertEqual(res.getvalue(), 'System check identified no issues (0 silenced).\n')
 

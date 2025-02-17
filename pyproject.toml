@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-rest-models"
+dynamic = ["version"]
+description = "A Django fake ORM model that query an RestAPI instead of a database."
+readme = "README.rst"
+requires-python = ">= 3.9"
+dependencies = [
+    "django>=4.2,<5.2",
+    "requests",
+    "unidecode"
+]
+authors = [
+    { name = "Darius BERNARD", email = "darius@yupeek.com" }
+]
+urls = { source = "https://github.com/Yupeek/django-rest-models" }
+license = { file = "LICENSE.md" }
+keywords = ["django", "rest", "models", "API", "ORM"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+]
+
+[tool.setuptools]
+packages = ["rest_models", "rest_models.backend", "rest_models.backend.exec"]
+
+[tool.setuptools.dynamic]
+version = { attr = "rest_models.__VERSION__" }
+
+[tool.coverage.run]
+omit = ["docs"]
+
+[tool.isort]
+line_length = 119
+default_section = "THIRDPARTY"
+known_first_party = ["rest_models", "testapi", "testapp", "testappsimple"]
