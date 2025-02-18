@@ -9,7 +9,6 @@ from collections import defaultdict, namedtuple
 from json import JSONDecodeError
 
 import django
-import six
 from django.core.exceptions import EmptyResultSet, ImproperlyConfigured
 from django.db.models import FileField, Transform
 from django.db.models.aggregates import Count
@@ -1340,7 +1339,7 @@ class SQLUpdateCompiler(SQLCompiler):
                 elif isinstance(file, RestFileField):
                     content_type = getattr(file.content, 'content_type', None)
                     files[field.column] = (file.content.name, file.content, content_type)
-                elif isinstance(file, six.string_types):
+                elif isinstance(file, str):
                     # str => we don't change it since it's not coming from our custom storage
                     pass
                 else:
