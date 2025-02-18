@@ -246,7 +246,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -263,7 +263,7 @@ class TestJsonField(TestCase):
             metadata={'origine': 'france', 'abattage': 2018}
         )
         self.assertIsNotNone(t)
-        self.assertEqual(json.loads(t.metadata), {'origine': 'france', 'abattage': 2018})
+        self.assertEqual(t.metadata, {'origine': 'france', 'abattage': 2018})
         self.assertEqual(t.cost, 2)
         self.assertEqual(t.name, 'lardons lux')
 
@@ -276,6 +276,17 @@ class TestJsonField(TestCase):
             {k: v for k, v in t.__dict__.items() if k in ('name', 'cost', 'metadata')},
             {k: v for k, v in t2.__dict__.items() if k in ('name', 'cost', 'metadata')}
         )
+
+    def test_jsonfield_load(self):
+        t = api_models.Topping.objects.create(
+            name='lardons lux',
+            cost=2,
+            metadata={'origine': 'france', 'abattage': 2018}
+        )
+        self.assertIsNotNone(t)
+
+        t2 = client_models.Topping.objects.get(pk=t.pk)
+        self.assertEqual(t2.metadata, {'origine': 'france', 'abattage': 2018})
 
 
 @skipIf(settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3', 'no json in sqlite')

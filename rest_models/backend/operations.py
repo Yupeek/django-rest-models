@@ -18,3 +18,6 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def quote_name(self, name):
         return "quoted(!%s!)" % name
+
+    def adapt_json_value(self, value, encoder):
+        return value
