@@ -9,7 +9,7 @@ description = "A Django fake ORM model that query an RestAPI instead of a databa
 readme = "README.rst"
 requires-python = ">= 3.9"
 dependencies = [
-    "django>=4.2,<6.0",
+    "django>=5.0,<6.0",
     "requests",
     "unidecode"
 ]
