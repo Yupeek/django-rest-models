@@ -233,7 +233,7 @@ class NullPasswordHasher(BasePasswordHasher):
     def verify(self, password, encoded):
         decoded = self.decode(encoded)
         encoded_2 = self.encode(password, decoded["salt"])
-        return encoded==encoded_2
+        return encoded == encoded_2
 
     def safe_summary(self, encoded):
         decoded = self.decode(encoded)
