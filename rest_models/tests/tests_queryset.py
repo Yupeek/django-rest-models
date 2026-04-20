@@ -201,36 +201,36 @@ class TestM2M(TestCase):
         topping = client_models.Topping.objects.get(pk=6)
         topping2 = client_models.Topping.objects.get(pk=4)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         p.toppings.remove(topping, topping2)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,)])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_set(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
         vals = client_models.Topping.objects.filter(pk__in=[1, 2])
         p.toppings.set(vals)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [2]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (2,)])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_clear(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         topping.pizzas.clear()
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], ])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), ])
         self.assertEqual(list(topping.pizzas.all()), [])
 
 
@@ -306,7 +306,7 @@ class TestJsonLookup(TestCase):
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=False).values_list('pk')),
                          [(t.pk,)])
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=True).values_list('pk')),
-                         [[1], [2], [3], [4], [5], [6]])
+                         [(1,), (2,), (3,), (4,), (5,), (6,)])
 
     def test_jsonfield_lookup(self):
         t = api_models.Topping.objects.create(
@@ -434,9 +434,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(
             res,
             [
-                [3, "miam d'oie"],
-                [2, 'flam'],
-                [1, 'suprème']
+                (3, "miam d'oie"),
+                (2, 'flam'),
+                (1, 'suprème')
             ]
         )
 
@@ -445,7 +445,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Pizza.objects.values_list('id', 'menu__name').order_by('-id'))
         self.assertEqual(
             res,
-            [[3, None], [2, None], [1, 'main menu']]
+            [(3, None), (2, None), (1, 'main menu')]
         )
 
     def test_get_values_list_backward_fk(self):
@@ -453,7 +453,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Menu.objects.values_list('id', 'pizzas__name').order_by('-id'))
         self.assertEqual(
             res,
-            [[1, 'suprème']]
+            [(1, 'suprème')]
         )
 
     def test_get_no_result(self):
@@ -501,7 +501,7 @@ class TestQueryGet(TestCase):
         res = list(api_models.Topping.objects.order_by('pizzas__pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
         self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
-        # self.assertEqual(res, [[1], [1], [1], [1], [1], [2], [2], [3], [3], [3]])
+        # self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -523,7 +523,7 @@ class TestQueryGet(TestCase):
         # this order is matchin topping1: pizza1,2,3; topping2: pizza1, topping3:pizza1, etc
         if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
             # sqlite compiler take into account the orderby in pizzas__pk.
-            self.assertEqual(res,  [[1], [2], [3], [1], [1], [1], [2], [3], [1]])
+            self.assertEqual(res,  [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,)])
         else:
             # postgresql compiler loos the orderby in the process
             self.assertEqual(len(res), 9)
@@ -612,7 +612,7 @@ class TestQueryGet(TestCase):
             with self.assertNumQueries(1, using='api'):
                 self.assertEqual(
                     list(client_models.Pizza.objects.values_list('pk')),
-                    [[1], [2], [3]]
+                    [(1,), (2,), (3,)]
                 )
         finally:
             SQLCompiler.META_NAME = old_meta_val

@@ -9,6 +9,6 @@ djangorestframework<3.16
 dynamic-rest-bse<2.6
 -r test_requirements.txt
 twine
-psycopg2-binary
+psycopg[binary]
 Pillow<12
 unidecode
