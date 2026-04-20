@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import json
+from datetime import timezone, tzinfo
 from unittest import skipIf
 
 from django.conf import settings
@@ -28,8 +29,8 @@ class TestQueryInsert(TestCase):
         p = client_models.Pizza.objects.create(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertIsNotNone(p.pk)
@@ -45,7 +46,7 @@ class TestQueryInsert(TestCase):
         client_created = client_models.Pizza.objects.create(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
+            from_date=datetime.date.today(),
             # to_date has default value
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
@@ -69,8 +70,8 @@ class TestQueryInsert(TestCase):
         p = client_models.Pizza(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         p.save(force_insert=True)
         self.assertEqual(api_models.Pizza.objects.count(), 1)
@@ -84,8 +85,8 @@ class TestQueryInsert(TestCase):
         with self.assertRaises(ProgrammingError):
             client_models.Pizza.objects.create(
                 name='savoyarde',
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
 
     def test_insert_too_many_data(self):
@@ -95,8 +96,8 @@ class TestQueryInsert(TestCase):
             name='savoyarde',
             price=13.4,
             cost=777,  # cost is a computed value
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertIsNotNone(p.pk)
@@ -109,20 +110,20 @@ class TestQueryInsert(TestCase):
             client_models.Pizza(
                 name='savoyarde',
                 price=13.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='vide',
                 price=5,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='poulet',
                 price=11.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
         ]
         client_models.Pizza.objects.bulk_create(pizzas)
@@ -142,20 +143,20 @@ class TestQueryInsert(TestCase):
             client_models.Pizza(
                 name='savoyarde',
                 price=13.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='vide',
                 # cost is missing
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='poulet',
                 price=11.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
         ]
         with self.assertRaises(ProgrammingError):
@@ -393,7 +394,7 @@ class TestQueryGet(TestCase):
                     "name": "supr\u00e8me",
                     "price": 10.0,
                     "from_date": datetime.date(2016, 11, 15),
-                    "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000),
+                    "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000, tzinfo=timezone.utc),
                 }
             )
 
