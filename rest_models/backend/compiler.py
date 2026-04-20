@@ -14,7 +14,7 @@ from django.db.models.expressions import Col, RawSQL, Value
 from django.db.models.fields.related_lookups import RelatedExact, RelatedIn
 from django.db.models.lookups import Exact, In, IsNull, Lookup, Range
 from django.db.models.sql.compiler import SQLCompiler as BaseSQLCompiler
-from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, SINGLE
+from django.db.models.sql.constants import CURSOR, MULTI, NO_RESULTS, ORDER_DIR, ROW_COUNT, SINGLE
 from django.db.models.sql.datastructures import BaseTable
 from django.db.models.sql.where import NothingNode, WhereNode
 from django.db.utils import NotSupportedError, OperationalError, ProgrammingError
@@ -1266,6 +1266,8 @@ class SQLDeleteCompiler(SQLCompiler):
             count = self.handle_delete_through()
         if result_type == CURSOR:
             return FakeCursor(count)
+        elif result_type == ROW_COUNT:
+            return count
 
     def handle_delete_through(self):
         """

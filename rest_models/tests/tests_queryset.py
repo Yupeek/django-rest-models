@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import json
-from datetime import timezone, tzinfo
+from datetime import timezone
 from unittest import skipIf
 
 from django.conf import settings
