@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from django.db.utils import (DatabaseError, DataError, Error, IntegrityError, InterfaceError, InternalError,  # noqa
                              NotSupportedError, OperationalError, ProgrammingError)
 
