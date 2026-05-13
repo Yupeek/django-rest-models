@@ -746,9 +746,12 @@ class SQLCompiler(BaseSQLCompiler):
                 fieldname = "{field}.{lookup}".format(field=field, lookup=lookup.lookup_name)
             key = 'filter{%s%s}' % (negated_mark, fieldname)
             if isinstance(lookup.rhs, (tuple, list)):
-                res.setdefault(key, []).extend(lookup.rhs)
+                rhs = lookup.rhs
+                if all(isinstance(v, tuple) and len(v) == 1 for v in lookup.rhs):
+                    rhs = [v[0] for v in lookup.rhs]
+                res.setdefault(key, []).extend(rhs)
                 if lookup.lookup_name == 'in':
-                    list_of_in[key] = list_of_in.get(key, 0) + len(lookup.rhs)
+                    list_of_in[key] = list_of_in.get(key, 0) + len(rhs)
             else:
                 if lookup.lookup_name == 'exact' and res.get(key, lookup.rhs) != lookup.rhs:
                     # a small performance that won't trigger any query if the
