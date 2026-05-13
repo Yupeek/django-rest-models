@@ -54,13 +54,13 @@ Requirements
 
 This database wrapper work with
 
-- python 3.9, 3.10, 3.11, 3.12
-- django 4.2, 5.0, 5.1
+- python 3.10, 3.11, 3.12
+- django 5.2
 
 On the api, this is tested against
 
 - django-rest-framework 3.14, 3.15
-- dynamic-rest-bse 2.4 (It's a fork because dynamic-rest is not compatible with django 4.2 at this day)
+- dynamic-rest-bse 2.5 (It's a fork because dynamic-rest is not compatible with django 4.2 at this day)
 
 
 Examples
@@ -293,8 +293,8 @@ The full documentation is at http://django-rest-models.readthedocs.org/en/latest
 Requirements
 ------------
 
-- Python 3.9, 3.10, 3.11, 3.12
-- Django >= 4.2
+- Python 3.10, 3.11, 3.12
+- Django == 5.2
 
 Contributions and pull requests are welcome.
 

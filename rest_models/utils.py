@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import json
 from collections import defaultdict
 from pathlib import Path
+
+from django.contrib.auth.hashers import BasePasswordHasher
 
 
 def dict_contains(subdict, maindict):
@@ -210,3 +209,39 @@ def pgcd(a, b):
     while a % b != 0:
         a, b = b, a % b
     return b
+
+
+class NullPasswordHasher(BasePasswordHasher):
+    """
+    A non hashing password algorithm (only for tests)
+    """
+
+    algorithm = "null"
+
+    def encode(self, password, salt):
+        return "%s$%s$%s" % (self.algorithm, salt, password)
+
+    def decode(self, encoded):
+        algorithm, salt, password = encoded.split("$", 2)
+        assert algorithm == self.algorithm
+        return {
+            "algorithm": algorithm,
+            "password": password,
+            "salt": salt,
+        }
+
+    def verify(self, password, encoded):
+        decoded = self.decode(encoded)
+        encoded_2 = self.encode(password, decoded["salt"])
+        return encoded == encoded_2
+
+    def safe_summary(self, encoded):
+        decoded = self.decode(encoded)
+        return {
+            "algorithm": decoded["algorithm"],
+            "salt": decoded["salt"],
+            "hash": decoded["password"],
+        }
+
+    def harden_runtime(self, password, encoded):
+        pass
