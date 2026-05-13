@@ -627,6 +627,16 @@ class TestQueryGet(TestCase):
             res = client_models.Pizza.objects.filter(name__in=[])
         self.assertEqual(list(res), [])
 
+class TestQueryIter(TestCase):
+    fixtures = ['data.json']
+    databases = ["default", "api"]
+
+    def test_prefetch(self):
+        with self.assertNumQueries(2, using='api'):
+            res = list(client_models.Pizza.objects.prefetch_related("menu"))
+        with self.assertNumQueries(0, using='api'):
+            _ = [p.menu for p in res]
+
 
 class TestQueryCount(TestCase):
     fixtures = ['data.json']
