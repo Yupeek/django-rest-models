@@ -627,6 +627,7 @@ class TestQueryGet(TestCase):
             res = client_models.Pizza.objects.filter(name__in=[])
         self.assertEqual(list(res), [])
 
+
 class TestQueryIter(TestCase):
     fixtures = ['data.json']
     databases = ["default", "api"]
