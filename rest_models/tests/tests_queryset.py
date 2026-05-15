@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import json
+from datetime import timezone
 from unittest import skipIf
 
 from django.conf import settings
@@ -28,8 +29,8 @@ class TestQueryInsert(TestCase):
         p = client_models.Pizza.objects.create(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertIsNotNone(p.pk)
@@ -45,7 +46,7 @@ class TestQueryInsert(TestCase):
         client_created = client_models.Pizza.objects.create(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
+            from_date=datetime.date.today(),
             # to_date has default value
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
@@ -69,8 +70,8 @@ class TestQueryInsert(TestCase):
         p = client_models.Pizza(
             name='savoyarde',
             price=13.3,
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         p.save(force_insert=True)
         self.assertEqual(api_models.Pizza.objects.count(), 1)
@@ -84,8 +85,8 @@ class TestQueryInsert(TestCase):
         with self.assertRaises(ProgrammingError):
             client_models.Pizza.objects.create(
                 name='savoyarde',
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
 
     def test_insert_too_many_data(self):
@@ -95,8 +96,8 @@ class TestQueryInsert(TestCase):
             name='savoyarde',
             price=13.4,
             cost=777,  # cost is a computed value
-            from_date=datetime.datetime.today(),
-            to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+            from_date=datetime.date.today(),
+            to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
         )
         self.assertEqual(api_models.Pizza.objects.count(), 1)
         self.assertIsNotNone(p.pk)
@@ -109,20 +110,20 @@ class TestQueryInsert(TestCase):
             client_models.Pizza(
                 name='savoyarde',
                 price=13.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='vide',
                 price=5,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='poulet',
                 price=11.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
         ]
         client_models.Pizza.objects.bulk_create(pizzas)
@@ -142,20 +143,20 @@ class TestQueryInsert(TestCase):
             client_models.Pizza(
                 name='savoyarde',
                 price=13.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='vide',
                 # cost is missing
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             ),
             client_models.Pizza(
                 name='poulet',
                 price=11.3,
-                from_date=datetime.datetime.today(),
-                to_date=datetime.datetime.today() + datetime.timedelta(days=3)
+                from_date=datetime.date.today(),
+                to_date=datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=3)
             )
         ]
         with self.assertRaises(ProgrammingError):
@@ -201,36 +202,36 @@ class TestM2M(TestCase):
         topping = client_models.Topping.objects.get(pk=6)
         topping2 = client_models.Topping.objects.get(pk=4)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         p.toppings.remove(topping, topping2)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,)])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_set(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
         vals = client_models.Topping.objects.filter(pk__in=[1, 2])
         p.toppings.set(vals)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [2]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (2,)])
         self.assertEqual(list(topping.pizzas.all()), [])
 
     def test_many2many_clear(self):
         p = client_models.Pizza.objects.get(pk=3)
         topping = client_models.Topping.objects.get(pk=6)
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], [6]])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), (6,)])
         self.assertEqual(list(topping.pizzas.all()), [p])
 
         topping.pizzas.clear()
 
-        self.assertEqual(list(p.toppings.all().values_list('pk')), [[1], [4], ])
+        self.assertEqual(list(p.toppings.all().values_list('pk')), [(1,), (4,), ])
         self.assertEqual(list(topping.pizzas.all()), [])
 
 
@@ -306,7 +307,7 @@ class TestJsonLookup(TestCase):
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=False).values_list('pk')),
                          [(t.pk,)])
         self.assertEqual(list(api_models.Topping.objects.filter(metadata__abattage__isnull=True).values_list('pk')),
-                         [[1], [2], [3], [4], [5], [6]])
+                         [(1,), (2,), (3,), (4,), (5,), (6,)])
 
     def test_jsonfield_lookup(self):
         t = api_models.Topping.objects.create(
@@ -393,7 +394,7 @@ class TestQueryGet(TestCase):
                     "name": "supr\u00e8me",
                     "price": 10.0,
                     "from_date": datetime.date(2016, 11, 15),
-                    "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000),
+                    "to_date": datetime.datetime(2016, 11, 20, 8, 46, 2, 16000, tzinfo=timezone.utc),
                 }
             )
 
@@ -434,9 +435,9 @@ class TestQueryGet(TestCase):
         self.assertEqual(
             res,
             [
-                [3, "miam d'oie"],
-                [2, 'flam'],
-                [1, 'suprème']
+                (3, "miam d'oie"),
+                (2, 'flam'),
+                (1, 'suprème')
             ]
         )
 
@@ -445,7 +446,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Pizza.objects.values_list('id', 'menu__name').order_by('-id'))
         self.assertEqual(
             res,
-            [[3, None], [2, None], [1, 'main menu']]
+            [(3, None), (2, None), (1, 'main menu')]
         )
 
     def test_get_values_list_backward_fk(self):
@@ -453,7 +454,7 @@ class TestQueryGet(TestCase):
             res = list(client_models.Menu.objects.values_list('id', 'pizzas__name').order_by('-id'))
         self.assertEqual(
             res,
-            [[1, 'suprème']]
+            [(1, 'suprème')]
         )
 
     def test_get_no_result(self):
@@ -501,7 +502,7 @@ class TestQueryGet(TestCase):
         res = list(api_models.Topping.objects.order_by('pizzas__pk').values_list('pizzas'))
         self.assertEqual(len(res), 10)
         self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
-        # self.assertEqual(res, [[1], [1], [1], [1], [1], [2], [2], [3], [3], [3]])
+        # self.assertEqual(res, [(1,), (1,), (1,), (1,), (1,), (2,), (2,), (3,), (3,), (3,)])
 
     def test_query_backward_values(self):
         # this case differ from the normal database, but it is not a mistake to return the list of all pizzas.
@@ -523,7 +524,7 @@ class TestQueryGet(TestCase):
         # this order is matchin topping1: pizza1,2,3; topping2: pizza1, topping3:pizza1, etc
         if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
             # sqlite compiler take into account the orderby in pizzas__pk.
-            self.assertEqual(res,  [[1], [2], [3], [1], [1], [1], [2], [3], [1]])
+            self.assertEqual(res,  [(1,), (2,), (3,), (1,), (1,), (1,), (2,), (3,), (1,)])
         else:
             # postgresql compiler loos the orderby in the process
             self.assertEqual(len(res), 9)
@@ -612,7 +613,7 @@ class TestQueryGet(TestCase):
             with self.assertNumQueries(1, using='api'):
                 self.assertEqual(
                     list(client_models.Pizza.objects.values_list('pk')),
-                    [[1], [2], [3]]
+                    [(1,), (2,), (3,)]
                 )
         finally:
             SQLCompiler.META_NAME = old_meta_val
@@ -626,6 +627,17 @@ class TestQueryGet(TestCase):
         with self.assertNumQueries(0, using='api'):
             res = client_models.Pizza.objects.filter(name__in=[])
         self.assertEqual(list(res), [])
+
+
+class TestQueryIter(TestCase):
+    fixtures = ['data.json']
+    databases = ["default", "api"]
+
+    def test_prefetch(self):
+        with self.assertNumQueries(2, using='api'):
+            res = list(client_models.Pizza.objects.prefetch_related("menu"))
+        with self.assertNumQueries(0, using='api'):
+            _ = [p.menu for p in res]
 
 
 class TestQueryCount(TestCase):
